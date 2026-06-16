@@ -238,7 +238,7 @@ def no_cache(response):
 
 @app.before_request
 def track_pageview():
-    if request.path.startswith('/static') or request.path.startswith('/track') or request.path.startswith('/admin'):
+    if request.path.startswith('/static') or request.path.startswith('/track') or request.path.startswith('/admin') or request.path == '/favicon.ico':
         return
     view = PageView(
         page=request.path,
@@ -684,12 +684,16 @@ def admin_blog_delete(id):
     flash('Blog post deleted.', 'success')
     return redirect(url_for('admin_blog'))
 
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
+with app.app_context():
+    db.create_all()
+    try:
         if not User.query.first():
             hashed = bcrypt.generate_password_hash('admin123').decode('utf-8')
             db.session.add(User(username='admin', password_hash=hashed))
             db.session.commit()
             print('Default admin user created: admin / admin123')
+    except Exception:
+        db.session.rollback()
+
+if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
