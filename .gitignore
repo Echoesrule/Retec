@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+instance/
+portfolio.db
+*.db
+*.db-wal
+*.db-shm
+.env
+flask_output.txt
+nul
+.venv/
+venv/

@@ -1,0 +1,60 @@
+{% extends "admin/base.html" %}
+{% block title %}Analytics{% endblock %}
+{% set active = "analytics" %}
+{% block content %}
+<div class="admin-page">
+    <h1 class="admin-page__title">Analytics</h1>
+
+    <div class="admin-card">
+        <h2 class="admin-card__title">Page Views</h2>
+        <table class="admin-table">
+            <thead>
+                <tr><th>Page</th><th>IP</th><th>User Agent</th><th>Time</th></tr>
+            </thead>
+            <tbody>
+                {% for v in views.items %}
+                <tr>
+                    <td>{{ v.page }}</td>
+                    <td>{{ v.ip_address or '-' }}</td>
+                    <td class="admin-truncate">{{ v.user_agent or '-' }}</td>
+                    <td>{{ v.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% if views.pages > 1 %}
+        <div class="admin-pagination">
+            {% if views.has_prev %}<a href="?page={{ views.prev_num }}" class="admin-btn admin-btn--sm">&larr; Prev</a>{% endif %}
+            <span>Page {{ views.page }} of {{ views.pages }}</span>
+            {% if views.has_next %}<a href="?page={{ views.next_num }}" class="admin-btn admin-btn--sm">Next &rarr;</a>{% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="admin-card">
+        <h2 class="admin-card__title">Interests / Interactions</h2>
+        <table class="admin-table">
+            <thead>
+                <tr><th>Section</th><th>Action</th><th>IP</th><th>Time</th></tr>
+            </thead>
+            <tbody>
+                {% for i in interests.items %}
+                <tr>
+                    <td>{{ i.section }}</td>
+                    <td>{{ i.action }}</td>
+                    <td>{{ i.ip_address or '-' }}</td>
+                    <td>{{ i.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% if interests.pages > 1 %}
+        <div class="admin-pagination">
+            {% if interests.has_prev %}<a href="?page={{ interests.prev_num }}" class="admin-btn admin-btn--sm">&larr; Prev</a>{% endif %}
+            <span>Page {{ interests.page }} of {{ interests.pages }}</span>
+            {% if interests.has_next %}<a href="?page={{ interests.next_num }}" class="admin-btn admin-btn--sm">Next &rarr;</a>{% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

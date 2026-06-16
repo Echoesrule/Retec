@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section section--light cv">
+    <div class="container">
+        <div class="cv__header">
+            <div class="cv__avatar">
+                <i class="fa-solid fa-user"></i>
+            </div>
+            <h1 class="cv__name">Retro</h1>
+            <p class="cv__title">Founder & Software Developer @ RETEC</p>
+            <div class="cv__contact">
+                <span><i class="fa-solid fa-envelope"></i> hello@retec.dev</span>
+                <span><i class="fa-brands fa-github"></i> github.com/echoesrule</span>
+            </div>
+        </div>
+
+        <div class="cv__section">
+            <h2 class="cv__section-title">About</h2>
+            <p>Software developer focused on building modern websites, web applications, and digital experiences for businesses and creators. Founder of RETEC.</p>
+        </div>
+
+        {% if github_stats %}
+        <div class="cv__section">
+            <h2 class="cv__section-title">GitHub Stats</h2>
+            <div class="cv__stats">
+                <div class="cv__stat">
+                    <span class="cv__stat-value">{{ github_stats.public_repos }}</span>
+                    <span class="cv__stat-label">Public Repos</span>
+                </div>
+                <div class="cv__stat">
+                    <span class="cv__stat-value">{{ github_stats.followers }}</span>
+                    <span class="cv__stat-label">Followers</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="cv__section">
+            <h2 class="cv__section-title">Skills</h2>
+            <div class="cv__tags">
+                <span class="cv__tag">Python</span>
+                <span class="cv__tag">Flask</span>
+                <span class="cv__tag">HTML/CSS</span>
+                <span class="cv__tag">JavaScript</span>
+                <span class="cv__tag">SQL</span>
+                <span class="cv__tag">Web Development</span>
+                <span class="cv__tag">REST APIs</span>
+                <span class="cv__tag">Responsive Design</span>
+            </div>
+        </div>
+
+        <div class="cv__section">
+            <h2 class="cv__section-title">Experience</h2>
+            <div class="cv__item">
+                <h3 class="cv__item-title">Founder & Software Developer</h3>
+                <p class="cv__item-meta">RETEC — Present</p>
+                <p class="cv__item-desc">Building modern web solutions for businesses and creators. Specializing in Python, Flask, and responsive front-end development.</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

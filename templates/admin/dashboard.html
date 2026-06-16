@@ -1,0 +1,87 @@
+{% extends "admin/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% set active = "dashboard" %}
+{% block content %}
+<div class="admin-page">
+    <h1 class="admin-page__title">Dashboard</h1>
+    <div class="admin-stats">
+        <div class="admin-stat">
+            <span class="admin-stat__value">{{ total_views }}</span>
+            <span class="admin-stat__label">Page Views</span>
+        </div>
+        <div class="admin-stat">
+            <span class="admin-stat__value">{{ unique_visitors }}</span>
+            <span class="admin-stat__label">Unique Visitors</span>
+        </div>
+        <div class="admin-stat">
+            <span class="admin-stat__value">{{ project_count }}</span>
+            <span class="admin-stat__label">Projects</span>
+        </div>
+        <div class="admin-stat">
+            <span class="admin-stat__value">{{ total_interests }}</span>
+            <span class="admin-stat__label">Interactions</span>
+        </div>
+        <div class="admin-stat">
+            <span class="admin-stat__value">{{ testimonial_count }}</span>
+            <span class="admin-stat__label">Testimonials</span>
+        </div>
+        <div class="admin-stat">
+            <span class="admin-stat__value">{{ blog_count }}</span>
+            <span class="admin-stat__label">Blog Posts</span>
+        </div>
+    </div>
+
+    <div class="admin-grid">
+        <div class="admin-card">
+            <h2 class="admin-card__title">Top Pages</h2>
+            <table class="admin-table">
+                <thead>
+                    <tr><th>Page</th><th>Views</th></tr>
+                </thead>
+                <tbody>
+                    {% for page, count in top_pages %}
+                    <tr>
+                        <td>{{ page }}</td>
+                        <td>{{ count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="admin-card">
+            <h2 class="admin-card__title">Top Sections</h2>
+            <table class="admin-table">
+                <thead>
+                    <tr><th>Section</th><th>Interactions</th></tr>
+                </thead>
+                <tbody>
+                    {% for section, count in top_sections %}
+                    <tr>
+                        <td>{{ section }}</td>
+                        <td>{{ count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="admin-card">
+        <h2 class="admin-card__title">Recent Page Views</h2>
+        <table class="admin-table">
+            <thead>
+                <tr><th>Page</th><th>IP</th><th>Time</th></tr>
+            </thead>
+            <tbody>
+                {% for v in recent_views %}
+                <tr>
+                    <td>{{ v.page }}</td>
+                    <td>{{ v.ip_address or '-' }}</td>
+                    <td>{{ v.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

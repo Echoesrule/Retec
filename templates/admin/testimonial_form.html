@@ -1,0 +1,50 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ 'Edit' if testimonial else 'Add' }} Testimonial{% endblock %}
+{% set active = "testimonials" %}
+{% block content %}
+<div class="admin-page">
+    <h1 class="admin-page__title">{{ 'Edit' if testimonial else 'Add' }} Testimonial</h1>
+    <div class="admin-card">
+        <form method="POST" enctype="multipart/form-data" class="admin-form">
+            <div class="admin-form__group">
+                <label for="name">Name *</label>
+                <input type="text" id="name" name="name" value="{{ testimonial.name if testimonial else '' }}" required>
+            </div>
+            <div class="admin-form__group">
+                <label for="role">Role / Title</label>
+                <input type="text" id="role" name="role" value="{{ testimonial.role if testimonial else '' }}" placeholder="CEO at Company">
+            </div>
+            <div class="admin-form__group">
+                <label for="text">Testimonial *</label>
+                <textarea id="text" name="text" rows="4" required>{{ testimonial.text if testimonial else '' }}</textarea>
+            </div>
+            <div class="admin-form__group">
+                <label for="avatar">Avatar</label>
+                {% if testimonial and testimonial.avatar_filename %}
+                <div class="admin-form__current-img">
+                    <img src="{{ url_for('static', filename='uploads/' + testimonial.avatar_filename) }}" alt="">
+                    <span>{{ testimonial.avatar_filename }}</span>
+                </div>
+                {% endif %}
+                <input type="file" id="avatar" name="avatar" accept="image/png,image/jpeg,image/gif,image/webp">
+            </div>
+            <div class="admin-form__row">
+                <div class="admin-form__group">
+                    <label for="sort_order">Sort Order</label>
+                    <input type="number" id="sort_order" name="sort_order" value="{{ testimonial.sort_order if testimonial else 0 }}" min="0">
+                </div>
+                <div class="admin-form__group admin-form__group--checkbox">
+                    <label>
+                        <input type="checkbox" name="active" value="1" {% if testimonial and testimonial.active %}checked{% endif %}>
+                        Active
+                    </label>
+                </div>
+            </div>
+            <div class="admin-form__actions">
+                <button type="submit" class="admin-btn admin-btn--primary">{{ 'Update' if testimonial else 'Create' }} Testimonial</button>
+                <a href="{{ url_for('admin_testimonials') }}" class="admin-btn">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "admin/base.html" %}
+{% block title %}Blog Posts{% endblock %}
+{% set active = "blog" %}
+{% block content %}
+<div class="admin-page">
+    <div class="admin-page__head">
+        <h1 class="admin-page__title">Blog Posts</h1>
+        <a href="{{ url_for('admin_blog_add') }}" class="admin-btn admin-btn--primary">+ New Post</a>
+    </div>
+    <div class="admin-card">
+        <table class="admin-table">
+            <thead>
+                <tr><th>Image</th><th>Title</th><th>Slug</th><th>Published</th><th>Date</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+                {% for p in posts %}
+                <tr>
+                    <td>
+                        {% if p.image_filename %}
+                        <img src="{{ url_for('static', filename='uploads/' + p.image_filename) }}" alt="{{ p.title }}" class="admin-thumb">
+                        {% else %}
+                        <span class="admin-thumb admin-thumb--empty">—</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ p.title[:60] }}{% if p.title|length > 60 %}...{% endif %}</td>
+                    <td>{{ p.slug }}</td>
+                    <td>{{ 'Yes' if p.published else 'No' }}</td>
+                    <td>{{ p.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td class="admin-actions">
+                        <a href="{{ url_for('admin_blog_edit', id=p.id) }}" class="admin-btn admin-btn--sm">Edit</a>
+                        <form method="POST" action="{{ url_for('admin_blog_delete', id=p.id) }}" style="display:inline" onsubmit="return confirm('Delete {{ p.title }}?')">
+                            <button type="submit" class="admin-btn admin-btn--sm admin-btn--danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="admin-empty">No blog posts yet. <a href="{{ url_for('admin_blog_add') }}">Create one</a>.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login — RETEC</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v={{ css_version }}">
+</head>
+<body class="admin-login-page">
+    <div class="admin-login">
+        <div class="admin-login__card">
+            <div class="admin-login__brand">
+                <svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <line x1="12" y1="12" x2="52" y2="12" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="32" y1="12" x2="32" y2="48" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M 32 16 A 12 12 0 0 1 32 40" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="42" y1="36" x2="52" y2="48" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <h1 class="admin-login__title">RETEC</h1>
+            <p class="admin-login__subtitle">Admin Portal</p>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <p class="admin-flash admin-flash--{{ category }}">{{ message }}</p>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            <form method="POST" class="admin-login__form">
+                <div class="admin-login__field">
+                    <span class="admin-login__field-icon"><i class="fa-solid fa-user"></i></span>
+                    <input type="text" id="username" name="username" placeholder="Username" required autofocus>
+                </div>
+                <div class="admin-login__field">
+                    <span class="admin-login__field-icon"><i class="fa-solid fa-lock"></i></span>
+                    <input type="password" id="password" name="password" placeholder="Password" required>
+                </div>
+                <button type="submit" class="admin-login__submit">Log In</button>
+            </form>
+            <a href="/" class="admin-login__back">&larr; Back to site</a>
+            <div class="admin-login__footer">
+                <div class="admin-login__line"></div>
+                <span class="admin-login__lock"><i class="fa-solid fa-lock"></i> Secure</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

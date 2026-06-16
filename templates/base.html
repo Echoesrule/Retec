@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{{ meta_desc }}">
+    <meta name="keywords" content="RETEC, web development, portfolio, software developer, Python, Flask">
+    <title>{{ meta_title }}</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta property="og:title" content="{{ meta_title }}">
+    <meta property="og:description" content="{{ meta_desc }}">
+    <meta property="og:url" content="{{ meta_url }}">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="{{ meta_image }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ meta_title }}">
+    <meta name="twitter:description" content="{{ meta_desc }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ css_version }}">
+</head>
+<body>
+
+    <header class="header" id="header">
+        <div class="container">
+            <nav class="nav">
+                <a href="/" class="nav__logo">
+                    <svg width="100" height="28" viewBox="0 0 100 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <g transform="translate(0, 2)">
+                            <line x1="0" y1="6" x2="14" y2="6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="7" y1="6" x2="7" y2="20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M 7 8 A 5 5 0 0 1 7 17" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="12" y1="15" x2="16" y2="20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </g>
+                        <text x="24" y="22" font-family="'Inter','Helvetica Neue',Arial,sans-serif" font-size="16" font-weight="700" letter-spacing="3" fill="currentColor">RETEC</text>
+                    </svg>
+                </a>
+                <div class="nav__menu" id="nav-menu">
+                    <ul class="nav__list">
+                        <li><a href="/" class="nav__link">Home</a></li>
+                        <li><a href="/#work" class="nav__link">Work</a></li>
+                        <li><a href="/#services" class="nav__link">Services</a></li>
+                        <li><a href="/blog" class="nav__link {% if active == 'blog' %}nav__link--active{% endif %}">Blog</a></li>
+                        <li><a href="/cv" class="nav__link {% if active == 'cv' %}nav__link--active{% endif %}">CV</a></li>
+                        <li><a href="/#contact" class="nav__link">Contact</a></li>
+                    </ul>
+                </div>
+                <button class="nav__toggle" id="nav-toggle" aria-label="Menu">
+                    <span></span><span></span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    {% if fun_fact %}
+    <div class="floating-fact" id="floatingFact">
+        <button class="floating-fact__close" id="factClose" aria-label="Dismiss">&times;</button>
+        <span class="floating-fact__label">Did You Know?</span>
+        <p class="floating-fact__text">{{ fun_fact }}</p>
+    </div>
+    {% endif %}
+
+    <a href="https://wa.me/1234567890" target="_blank" rel="noopener" class="floating-whatsapp" aria-label="WhatsApp">
+        <i class="fa-brands fa-whatsapp"></i>
+    </a>
+
+    <main class="page-content" id="pageContent">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer footer--light">
+        <div class="container">
+            <div class="footer__inner">
+                <div class="footer__brand">
+                    <a href="/" class="footer__logo">
+                        <svg width="80" height="24" viewBox="0 0 80 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <g transform="translate(0, 1)">
+                                <line x1="0" y1="5" x2="11" y2="5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <line x1="5.5" y1="5" x2="5.5" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M 5.5 7 A 4 4 0 0 1 5.5 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <line x1="9" y1="13" x2="13" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </g>
+                            <text x="18" y="19" font-family="'Inter','Helvetica Neue',Arial,sans-serif" font-size="13" font-weight="700" letter-spacing="2.5" fill="currentColor">RETEC</text>
+                        </svg>
+                    </a>
+                    <p class="footer__tagline">Retro Spirit. Modern Solutions.</p>
+                </div>
+                <div class="footer__links">
+                    <a href="mailto:hello@retec.dev">Email</a>
+                    <a href="https://github.com/retec" target="_blank" rel="noopener">GitHub</a>
+                    <a href="https://linkedin.com/in/retec" target="_blank" rel="noopener">LinkedIn</a>
+                </div>
+            </div>
+            <div class="footer__bottom">
+                <p>&copy; {{ year }} RETEC. All rights reserved.</p>
+                <p class="footer__admin-link"><a href="/admin">Admin</a></p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+</body>
+</html>

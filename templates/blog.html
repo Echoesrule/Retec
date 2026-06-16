@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section section--light blog-page">
+    <div class="container">
+        <h1 class="section__title">Blog</h1>
+        {% if posts %}
+        <div class="blog__grid">
+            {% for post in posts %}
+            <article class="blog__card">
+                {% if post.image_filename %}
+                <div class="blog__card-image">
+                    <img src="{{ url_for('static', filename='uploads/' + post.image_filename) }}" alt="{{ post.title }}" loading="lazy">
+                </div>
+                {% endif %}
+                <div class="blog__card-body">
+                    <time class="blog__date">{{ post.created_at.strftime('%B %d, %Y') }}</time>
+                    <h2 class="blog__card-title">{{ post.title }}</h2>
+                    {% if post.summary %}
+                    <p class="blog__card-summary">{{ post.summary }}</p>
+                    {% endif %}
+                    <a href="{{ url_for('blog_post', slug=post.slug) }}" class="blog__read-more">
+                        Read More <i class="fa-solid fa-arrow-right"></i>
+                    </a>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="blog__empty">No posts yet. Check back soon.</p>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

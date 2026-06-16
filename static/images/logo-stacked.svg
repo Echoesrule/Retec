@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 220" fill="none">
+  <g transform="translate(68, 20)">
+    <line x1="0" y1="12" x2="40" y2="12" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <line x1="20" y1="12" x2="20" y2="48" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 20 16 A 12 12 0 0 1 20 40" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 30 36 L 40 48" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="100" y="130" text-anchor="middle" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="36" font-weight="700" letter-spacing="10" fill="currentColor">RETEC</text>
+  <line x1="60" y1="150" x2="140" y2="150" stroke="currentColor" stroke-width="1.5"/>
+  <rect x="142" y="148.5" width="3" height="3" fill="currentColor"/>
+</svg>

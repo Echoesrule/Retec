@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section section--light blog-post">
+    <div class="container blog-post__container">
+        <a href="{{ url_for('blog') }}" class="blog-post__back">
+            <i class="fa-solid fa-arrow-left"></i> Back to Blog
+        </a>
+        <article>
+            <header class="blog-post__header">
+                <time class="blog__date">{{ post.created_at.strftime('%B %d, %Y') }}</time>
+                <h1 class="blog-post__title">{{ post.title }}</h1>
+                {% if post.summary %}
+                <p class="blog-post__summary">{{ post.summary }}</p>
+                {% endif %}
+            </header>
+            {% if post.image_filename %}
+            <div class="blog-post__image">
+                <img src="{{ url_for('static', filename='uploads/' + post.image_filename) }}" alt="{{ post.title }}" loading="lazy">
+            </div>
+            {% endif %}
+            <div class="blog-post__content">
+                {{ post.content | safe }}
+            </div>
+        </article>
+    </div>
+</section>
+{% endblock %}

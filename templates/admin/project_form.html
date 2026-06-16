@@ -1,0 +1,58 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ 'Edit' if project else 'Add' }} Project{% endblock %}
+{% set active = "projects" %}
+{% block content %}
+<div class="admin-page">
+    <h1 class="admin-page__title">{{ 'Edit' if project else 'Add' }} Project</h1>
+    <div class="admin-card">
+        <form method="POST" enctype="multipart/form-data" class="admin-form">
+            <div class="admin-form__group">
+                <label for="title">Title *</label>
+                <input type="text" id="title" name="title" value="{{ project.title if project else '' }}" required>
+            </div>
+            <div class="admin-form__group">
+                <label for="description">Description</label>
+                <textarea id="description" name="description" rows="4">{{ project.description if project else '' }}</textarea>
+            </div>
+            <div class="admin-form__group">
+                <label for="category">Category</label>
+                <input type="text" id="category" name="category" value="{{ project.category if project else '' }}" placeholder="web, mobile, api, etc.">
+            </div>
+            <div class="admin-form__group">
+                <label for="tags">Tags (comma-separated)</label>
+                <input type="text" id="tags" name="tags" value="{{ project.tags if project else '' }}" placeholder="Python, Flask, API">
+            </div>
+            <div class="admin-form__group">
+                <label for="github_url">GitHub URL</label>
+                <input type="url" id="github_url" name="github_url" value="{{ project.github_url if project else '' }}" placeholder="https://github.com/echoesrule/repo-name">
+            </div>
+            <div class="admin-form__group">
+                <label for="image">Image</label>
+                {% if project and project.image_filename %}
+                <div class="admin-form__current-img">
+                    <img src="{{ url_for('static', filename='uploads/' + project.image_filename) }}" alt="">
+                    <span>{{ project.image_filename }}</span>
+                </div>
+                {% endif %}
+                <input type="file" id="image" name="image" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml">
+            </div>
+            <div class="admin-form__row">
+                <div class="admin-form__group">
+                    <label for="sort_order">Sort Order</label>
+                    <input type="number" id="sort_order" name="sort_order" value="{{ project.sort_order if project else 0 }}" min="0">
+                </div>
+                <div class="admin-form__group admin-form__group--checkbox">
+                    <label>
+                        <input type="checkbox" name="featured" value="1" {% if project and project.featured %}checked{% endif %}>
+                        Featured
+                    </label>
+                </div>
+            </div>
+            <div class="admin-form__actions">
+                <button type="submit" class="admin-btn admin-btn--primary">{{ 'Update' if project else 'Create' }} Project</button>
+                <a href="{{ url_for('admin_projects') }}" class="admin-btn">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

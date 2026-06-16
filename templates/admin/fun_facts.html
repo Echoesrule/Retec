@@ -1,0 +1,35 @@
+{% extends "admin/base.html" %}
+{% block title %}Fun Facts{% endblock %}
+{% set active = "fun_facts" %}
+{% block content %}
+<div class="admin-page">
+    <div class="admin-page__head">
+        <h1 class="admin-page__title">Fun Facts</h1>
+        <a href="{{ url_for('admin_fun_fact_add') }}" class="admin-btn admin-btn--primary">+ Add Fun Fact</a>
+    </div>
+    <div class="admin-card">
+        <table class="admin-table">
+            <thead>
+                <tr><th>Text</th><th>Active</th><th>Updated</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+                {% for f in facts %}
+                <tr>
+                    <td>{{ f.text[:100] }}{% if f.text|length > 100 %}...{% endif %}</td>
+                    <td>{{ 'Yes' if f.active else 'No' }}</td>
+                    <td>{{ f.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td class="admin-actions">
+                        <a href="{{ url_for('admin_fun_fact_edit', id=f.id) }}" class="admin-btn admin-btn--sm">Edit</a>
+                        <form method="POST" action="{{ url_for('admin_fun_fact_delete', id=f.id) }}" style="display:inline" onsubmit="return confirm('Delete this fun fact?')">
+                            <button type="submit" class="admin-btn admin-btn--sm admin-btn--danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4" class="admin-empty">No fun facts yet. <a href="{{ url_for('admin_fun_fact_add') }}">Add one</a>.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

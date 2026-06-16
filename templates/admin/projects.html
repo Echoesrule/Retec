@@ -1,0 +1,52 @@
+{% extends "admin/base.html" %}
+{% block title %}Projects{% endblock %}
+{% set active = "projects" %}
+{% block content %}
+<div class="admin-page">
+    <div class="admin-page__head">
+        <h1 class="admin-page__title">Projects</h1>
+        <a href="{{ url_for('admin_project_add') }}" class="admin-btn admin-btn--primary">+ Add Project</a>
+    </div>
+    <div class="admin-card">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Image</th>
+                    <th>Title</th>
+                    <th>Tags</th>
+                    <th>Featured</th>
+                    <th>Order</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in projects %}
+                <tr>
+                    <td>
+                        {% if p.image_filename %}
+                        <img src="{{ url_for('static', filename='uploads/' + p.image_filename) }}" alt="{{ p.title }}" class="admin-thumb">
+                        {% else %}
+                        <span class="admin-thumb admin-thumb--empty">—</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ p.title }}</td>
+                    <td>{{ p.tags[:60] }}{% if p.tags|length > 60 %}...{% endif %}</td>
+                    <td>{{ 'Yes' if p.featured else 'No' }}</td>
+                    <td>{{ p.sort_order }}</td>
+                    <td class="admin-actions">
+                        <a href="{{ url_for('admin_project_edit', id=p.id) }}" class="admin-btn admin-btn--sm">Edit</a>
+                        <form method="POST" action="{{ url_for('admin_project_delete', id=p.id) }}" style="display:inline" onsubmit="return confirm('Delete {{ p.title }}?')">
+                            <button type="submit" class="admin-btn admin-btn--sm admin-btn--danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="admin-empty">No projects yet. <a href="{{ url_for('admin_project_add') }}">Add one</a>.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

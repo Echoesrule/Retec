@@ -1,0 +1,44 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ 'Edit' if post else 'Add' }} Blog Post{% endblock %}
+{% set active = "blog" %}
+{% block content %}
+<div class="admin-page">
+    <h1 class="admin-page__title">{{ 'Edit' if post else 'Add' }} Blog Post</h1>
+    <div class="admin-card">
+        <form method="POST" enctype="multipart/form-data" class="admin-form">
+            <div class="admin-form__group">
+                <label for="title">Title *</label>
+                <input type="text" id="title" name="title" value="{{ post.title if post else '' }}" required>
+            </div>
+            <div class="admin-form__group">
+                <label for="summary">Summary</label>
+                <input type="text" id="summary" name="summary" value="{{ post.summary if post else '' }}" placeholder="Brief description for the blog listing">
+            </div>
+            <div class="admin-form__group">
+                <label for="content">Content *</label>
+                <textarea id="content" name="content" rows="12" required>{{ post.content if post else '' }}</textarea>
+            </div>
+            <div class="admin-form__group">
+                <label for="image">Featured Image</label>
+                {% if post and post.image_filename %}
+                <div class="admin-form__current-img">
+                    <img src="{{ url_for('static', filename='uploads/' + post.image_filename) }}" alt="">
+                    <span>{{ post.image_filename }}</span>
+                </div>
+                {% endif %}
+                <input type="file" id="image" name="image" accept="image/png,image/jpeg,image/gif,image/webp">
+            </div>
+            <div class="admin-form__group admin-form__group--checkbox">
+                <label>
+                    <input type="checkbox" name="published" value="1" {% if post and post.published %}checked{% endif %}>
+                    Published
+                </label>
+            </div>
+            <div class="admin-form__actions">
+                <button type="submit" class="admin-btn admin-btn--primary">{{ 'Update' if post else 'Create' }} Post</button>
+                <a href="{{ url_for('admin_blog') }}" class="admin-btn">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

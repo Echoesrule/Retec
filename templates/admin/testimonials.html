@@ -1,0 +1,44 @@
+{% extends "admin/base.html" %}
+{% block title %}Testimonials{% endblock %}
+{% set active = "testimonials" %}
+{% block content %}
+<div class="admin-page">
+    <div class="admin-page__head">
+        <h1 class="admin-page__title">Testimonials</h1>
+        <a href="{{ url_for('admin_testimonial_add') }}" class="admin-btn admin-btn--primary">+ Add Testimonial</a>
+    </div>
+    <div class="admin-card">
+        <table class="admin-table">
+            <thead>
+                <tr><th>Avatar</th><th>Name</th><th>Role</th><th>Text</th><th>Active</th><th>Order</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+                {% for t in testimonials %}
+                <tr>
+                    <td>
+                        {% if t.avatar_filename %}
+                        <img src="{{ url_for('static', filename='uploads/' + t.avatar_filename) }}" alt="{{ t.name }}" class="admin-thumb">
+                        {% else %}
+                        <span class="admin-thumb admin-thumb--empty">—</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ t.name }}</td>
+                    <td>{{ t.role[:40] }}{% if t.role|length > 40 %}...{% endif %}</td>
+                    <td class="admin-truncate">{{ t.text[:80] }}{% if t.text|length > 80 %}...{% endif %}</td>
+                    <td>{{ 'Yes' if t.active else 'No' }}</td>
+                    <td>{{ t.sort_order }}</td>
+                    <td class="admin-actions">
+                        <a href="{{ url_for('admin_testimonial_edit', id=t.id) }}" class="admin-btn admin-btn--sm">Edit</a>
+                        <form method="POST" action="{{ url_for('admin_testimonial_delete', id=t.id) }}" style="display:inline" onsubmit="return confirm('Delete testimonial from {{ t.name }}?')">
+                            <button type="submit" class="admin-btn admin-btn--sm admin-btn--danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="admin-empty">No testimonials yet. <a href="{{ url_for('admin_testimonial_add') }}">Add one</a>.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- ===== HERO ===== -->
+<section class="hero" id="hero">
+    <video class="hero__bg" autoplay muted loop playsinline poster="{{ url_for('static', filename='hero-bg.jpg') }}">
+        <source src="{{ url_for('static', filename='hero-bg.mp4') }}" type="video/mp4">
+    </video>
+    <div class="hero__overlay"></div>
+    <div class="container hero__container">
+        <div class="hero__text">
+            <p class="hero__label">RETEC</p>
+            <h1 class="hero__title">
+                <span class="hero__title-line">Retro Spirit.</span>
+                <span class="hero__title-line hero__title-line--accent">Modern Solutions.</span>
+            </h1>
+            <p class="hero__subtitle">Web Development &bull; Web Applications &bull; Python Solutions</p>
+            <a href="#work" class="hero__cta">
+                View Projects
+                <i class="fa-solid fa-arrow-down"></i>
+            </a>
+            <div class="hero__socials">
+                <a href="https://github.com/retec" target="_blank" rel="noopener noreferrer" class="hero__social-link" aria-label="GitHub">
+                    <i class="fa-brands fa-github"></i>
+                </a>
+                <a href="https://linkedin.com/in/retec" target="_blank" rel="noopener noreferrer" class="hero__social-link" aria-label="LinkedIn">
+                    <i class="fa-brands fa-linkedin-in"></i>
+                </a>
+                <a href="https://wa.me/1234567890" target="_blank" rel="noopener noreferrer" class="hero__social-link" aria-label="WhatsApp">
+                    <i class="fa-brands fa-whatsapp"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== ABOUT ===== -->
+<section class="section about section--light" id="about">
+    <div class="container">
+        <div class="about__content">
+            <h2 class="about__title">Hi, I'm Retro.</h2>
+            <p class="about__text">
+                Founder of RETEC, a software developer focused on building modern websites, web applications, and digital experiences for businesses and creators.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- ===== THREE-COLUMN ===== -->
+<section class="section columns section--light">
+    <div class="container">
+        <div class="columns__grid">
+            <div class="columns__item">
+                <div class="columns__icon">
+                    <i class="fa-solid fa-laptop-code"></i>
+                </div>
+                <h3 class="columns__heading">What I Build</h3>
+                <ul class="columns__list">
+                    <li>
+                        <span class="columns__list-icon">
+                            <i class="fa-solid fa-globe"></i>
+                        </span>
+                        Business Websites
+                    </li>
+                    <li>
+                        <span class="columns__list-icon">
+                            <i class="fa-solid fa-folder"></i>
+                        </span>
+                        Portfolio Websites
+                    </li>
+                    <li>
+                        <span class="columns__list-icon">
+                            <i class="fa-solid fa-display"></i>
+                        </span>
+                        Web Applications
+                    </li>
+                </ul>
+            </div>
+            <div class="columns__item">
+                <div class="columns__icon">
+                    <i class="fa-solid fa-sliders"></i>
+                </div>
+                <h3 class="columns__heading">How I Work</h3>
+                <ul class="columns__list">
+                    <li>
+                        <span class="columns__list-icon">
+                            <i class="fa-solid fa-code"></i>
+                        </span>
+                        Clean Code
+                    </li>
+                    <li>
+                        <span class="columns__list-icon">
+                            <i class="fa-solid fa-mobile-screen"></i>
+                        </span>
+                        Responsive Design
+                    </li>
+                    <li>
+                        <span class="columns__list-icon">
+                            <i class="fa-solid fa-check"></i>
+                        </span>
+                        Reliable Delivery
+                    </li>
+                </ul>
+            </div>
+            <div class="columns__item">
+                <div class="columns__icon">
+                    <i class="fa-solid fa-crosshairs"></i>
+                </div>
+                <h3 class="columns__heading">Current Focus</h3>
+                <ul class="columns__list">
+                    <li>
+                        <span class="columns__list-icon">
+                            <i class="fa-solid fa-code"></i>
+                        </span>
+                        Python
+                    </li>
+                    <li>
+                        <span class="columns__list-icon">
+                            <i class="fa-solid fa-cube"></i>
+                        </span>
+                        Flask
+                    </li>
+                    <li>
+                        <span class="columns__list-icon">
+                            <i class="fa-solid fa-globe"></i>
+                        </span>
+                        Modern Web Development
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== PROJECTS ===== -->
+<section class="section work section--light" id="work">
+    <div class="container">
+        <h2 class="section__title">Selected Projects</h2>
+        {% set categories = projects|selectattr('category')|map(attribute='category')|select|unique|list %}
+        {% if categories %}
+        <div class="work__filters">
+            <button class="work__filter work__filter--active" data-filter="all">All</button>
+            {% for cat in categories %}
+            <button class="work__filter" data-filter="{{ cat }}">{{ cat }}</button>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <div class="work__grid">
+            {% for project in projects %}
+            <article class="work__card" data-category="{{ project.category or '' }}">
+                <div class="work__image">
+                    <div class="work__image-placeholder">
+                        {% if project.image %}
+                        <img src="{{ project.image }}" alt="{{ project.title }}" class="work__image-img" loading="lazy">
+                        {% else %}
+                        <span class="work__image-icon">
+                            <i class="fa-solid fa-display"></i>
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="work__info">
+                    <h3 class="work__title">{{ project.title }}</h3>
+                    <p class="work__description">{{ project.description }}</p>
+                    <div class="work__tags">
+                        {% for tag in project.tags %}
+                        <span class="work__tag">{{ tag }}</span>
+                        {% endfor %}
+                    </div>
+                    <a href="{{ project.github }}" target="_blank" rel="noopener noreferrer" class="work__link">
+                        <i class="fa-brands fa-github"></i>
+                        View on GitHub
+                    </a>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- ===== SERVICES ===== -->
+<section class="section services section--light" id="services">
+    <div class="container">
+        <h2 class="section__title">Services</h2>
+        <div class="services__grid">
+            {% for service in services %}
+            <div class="service__item">{{ service }}</div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- ===== TESTIMONIALS ===== -->
+{% if testimonials %}
+<section class="section testimonials section--light" id="testimonials">
+    <div class="container">
+        <h2 class="section__title">What People Say</h2>
+        <div class="testimonials__grid">
+            {% for t in testimonials %}
+            <div class="testimonial__card">
+                <div class="testimonial__avatar">
+                    {% if t.avatar_filename %}
+                    <img src="{{ url_for('static', filename='uploads/' + t.avatar_filename) }}" alt="{{ t.name }}" loading="lazy">
+                    {% else %}
+                    <i class="fa-solid fa-user"></i>
+                    {% endif %}
+                </div>
+                <p class="testimonial__text">{{ t.text }}</p>
+                <div class="testimonial__author">
+                    <strong>{{ t.name }}</strong>
+                    {% if t.role %}<span>{{ t.role }}</span>{% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- ===== BLOG PREVIEW ===== -->
+{% if blog_posts %}
+<section class="section blog-preview section--light" id="blog">
+    <div class="container">
+        <h2 class="section__title">Latest Thoughts</h2>
+        <div class="blog__grid">
+            {% for post in blog_posts %}
+            <article class="blog__card">
+                {% if post.image_filename %}
+                <div class="blog__card-image">
+                    <img src="{{ url_for('static', filename='uploads/' + post.image_filename) }}" alt="{{ post.title }}" loading="lazy">
+                </div>
+                {% endif %}
+                <div class="blog__card-body">
+                    <time class="blog__date">{{ post.created_at.strftime('%B %d, %Y') }}</time>
+                    <h3 class="blog__card-title">{{ post.title }}</h3>
+                    {% if post.summary %}
+                    <p class="blog__card-summary">{{ post.summary }}</p>
+                    {% endif %}
+                    <a href="{{ url_for('blog_post', slug=post.slug) }}" class="blog__read-more">
+                        Read More <i class="fa-solid fa-arrow-right"></i>
+                    </a>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        <div class="blog-preview__more">
+            <a href="{{ url_for('blog') }}" class="hero__cta">View All Posts <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- ===== CONTACT ===== -->
+<section class="section contact section--light" id="contact">
+    <div class="container">
+        <div class="contact__inner">
+            <div class="contact__info">
+                <h2 class="contact__heading">Let's Build Something Together</h2>
+                <div class="contact__links">
+                    <a href="mailto:hello@retec.dev" class="contact__link">
+                        <i class="fa-solid fa-envelope"></i>
+                        hello@retec.dev
+                    </a>
+                    <a href="https://github.com/retec" target="_blank" rel="noopener" class="contact__link">
+                        <i class="fa-brands fa-github"></i>
+                        GitHub
+                    </a>
+                    <a href="https://linkedin.com/in/retec" target="_blank" rel="noopener" class="contact__link">
+                        <i class="fa-brands fa-linkedin-in"></i>
+                        LinkedIn
+                    </a>
+                </div>
+            </div>
+            <form class="contact__form" method="POST" action="{{ url_for('contact') }}">
+                <div class="form__group">
+                    <label for="name" class="form__label">Name</label>
+                    <input type="text" id="name" name="name" class="form__input" required>
+                </div>
+                <div class="form__group">
+                    <label for="email" class="form__label">Email</label>
+                    <input type="email" id="email" name="email" class="form__input" required>
+                </div>
+                <div class="form__group">
+                    <label for="message" class="form__label">Message</label>
+                    <textarea id="message" name="message" class="form__textarea" required rows="4"></textarea>
+                </div>
+                <button type="submit" class="form__submit">Send Message</button>
+            </form>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ 'Edit' if fact else 'Add' }} Fun Fact{% endblock %}
+{% set active = "fun_facts" %}
+{% block content %}
+<div class="admin-page">
+    <h1 class="admin-page__title">{{ 'Edit' if fact else 'Add' }} Fun Fact</h1>
+    <div class="admin-card">
+        <form method="POST" class="admin-form">
+            <div class="admin-form__group">
+                <label for="text">Fun Fact *</label>
+                <textarea id="text" name="text" rows="3" required>{{ fact.text if fact else '' }}</textarea>
+            </div>
+            <div class="admin-form__group admin-form__group--checkbox">
+                <label>
+                    <input type="checkbox" name="active" value="1" {% if fact and fact.active %}checked{% endif %}>
+                    Active
+                </label>
+            </div>
+            <div class="admin-form__actions">
+                <button type="submit" class="admin-btn admin-btn--primary">{{ 'Update' if fact else 'Create' }} Fun Fact</button>
+                <a href="{{ url_for('admin_fun_facts') }}" class="admin-btn">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
