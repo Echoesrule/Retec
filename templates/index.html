@@ -3,7 +3,7 @@
 
 <!-- ===== HERO ===== -->
 <section class="hero" id="hero">
-    <video class="hero__bg" autoplay muted loop playsinline poster="{{ url_for('static', filename='images/hero-bg.svg') }}">
+    <video class="hero__bg" autoplay muted loop playsinline preload="auto" poster="{{ url_for('static', filename='images/hero-bg.svg') }}" id="heroVideo">
         <source src="{{ url_for('static', filename='hero-bg.mp4') }}" type="video/mp4">
     </video>
     <div class="hero__overlay"></div>
@@ -362,4 +362,38 @@
     </div>
 </section>
 
+<style>
+@media (max-width: 640px) {
+    .hero__bg {
+        display: none;
+    }
+    .hero {
+        background: url('{{ url_for("static", filename="images/hero-bg.svg") }}') center/cover no-repeat #000;
+    }
+}
+@media (min-width: 641px) and (max-width: 1024px) {
+    .hero__bg {
+        object-fit: cover;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var video = document.getElementById('heroVideo');
+    if (video) {
+        var playPromise = video.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(function() {
+                var tryPlay = function() {
+                    var p = video.play();
+                    if (p !== undefined) p.catch(function(){});
+                };
+                document.addEventListener('touchstart', tryPlay, { once: true });
+                document.addEventListener('scroll', tryPlay, { once: true });
+            });
+        }
+    }
+});
+</script>
 {% endblock %}
