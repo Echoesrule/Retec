@@ -371,19 +371,23 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var video = document.getElementById('heroVideo');
-    if (video) {
-        var playPromise = video.play();
-        if (playPromise !== undefined) {
-            playPromise.catch(function() {
-                var tryPlay = function() {
-                    var p = video.play();
-                    if (p !== undefined) p.catch(function(){});
-                };
-                document.addEventListener('touchstart', tryPlay, { once: true });
-                document.addEventListener('scroll', tryPlay, { once: true });
-            });
-        }
+    if (!video) return;
+    var started = false;
+    video.addEventListener('playing', function() { started = true; });
+    var playPromise = video.play();
+    if (playPromise !== undefined) {
+        playPromise.then(function() { started = true; }).catch(function() {
+            var tryPlay = function() {
+                var p = video.play();
+                if (p !== undefined) p.then(function() { started = true; }).catch(function(){});
+            };
+            document.addEventListener('touchstart', tryPlay, { once: true });
+            document.addEventListener('scroll', tryPlay, { once: true });
+        });
     }
+    setTimeout(function() {
+        if (!started) video.classList.add('hero__bg--hidden');
+    }, 3000);
 });
 </script>
 {% endblock %}

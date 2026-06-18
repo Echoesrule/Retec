@@ -112,6 +112,11 @@ ul { list-style: none; }
     display: flex;
     align-items: center;
     overflow: hidden;
+    background: #000 url('../images/hero-bg.svg') center/cover no-repeat;
+}
+
+.hero__bg--hidden {
+    display: none;
 }
 
 .hero__bg {
@@ -1624,12 +1629,19 @@ body {
 .nav__link {
     display: inline-flex;
     align-items: center;
+    gap: 0.5rem;
     min-height: 40px;
     padding: 0 0.85rem;
     border-radius: 6px;
     color: rgba(255, 255, 255, 0.72);
     font-size: 0.88rem;
     font-weight: 600;
+}
+
+.nav__link i {
+    width: 1.1rem;
+    text-align: center;
+    font-size: 0.82rem;
 }
 
 .nav__link:hover,
