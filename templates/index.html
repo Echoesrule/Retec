@@ -363,18 +363,8 @@
 </section>
 
 <style>
-@media (max-width: 640px) {
-    .hero__bg {
-        display: none;
-    }
-    .hero {
-        background: url('{{ url_for("static", filename="images/hero-bg.svg") }}') center/cover no-repeat #000;
-    }
-}
-@media (min-width: 641px) and (max-width: 1024px) {
-    .hero__bg {
-        object-fit: cover;
-    }
+.hero__bg {
+    object-fit: cover;
 }
 </style>
 
