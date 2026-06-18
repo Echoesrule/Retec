@@ -83,12 +83,14 @@ class Interest(db.Model):
     ip_address = db.Column(db.String(45))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-class FunFact(db.Model):
+class LocationLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    text = db.Column(db.String(500), nullable=False)
-    active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    ip_address = db.Column(db.String(45), nullable=False)
+    country = db.Column(db.String(100), default='')
+    city = db.Column(db.String(100), default='')
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+class FunFact(db.Model):
 
 class Testimonial(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -363,6 +365,26 @@ class Subscriber(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 # ===== HELPERS =====
+
+_geo_cache = {}
+
+def lookup_location(ip):
+    if not ip or ip in ('127.0.0.1', '::1', 'localhost'):
+        return None
+    if ip in _geo_cache:
+        return _geo_cache[ip]
+    try:
+        r = requests.get(f'http://ip-api.com/json/{ip}?fields=country,city,query', timeout=3)
+        if r.status_code == 200:
+            data = r.json()
+            if data.get('country'):
+                result = {'country': data['country'], 'city': data.get('city', '')}
+                _geo_cache[ip] = result
+                return result
+    except Exception:
+        pass
+    _geo_cache[ip] = None
+    return None
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -775,13 +797,20 @@ def track_pageview():
         return
     if request.path.startswith('/static') or request.path.startswith('/track') or request.path.startswith('/admin') or request.path == '/favicon.ico':
         return
+    ip = request.remote_addr
     view = PageView(
         page=request.path,
-        ip_address=request.remote_addr,
+        ip_address=ip,
         user_agent=request.headers.get('User-Agent', '')[:500]
     )
     db.session.add(view)
     db.session.commit()
+    geo = lookup_location(ip)
+    if geo:
+        existing = LocationLog.query.filter_by(ip_address=ip).first()
+        if not existing:
+            db.session.add(LocationLog(ip_address=ip, country=geo['country'], city=geo['city']))
+            db.session.commit()
 
 # ===== ERROR HANDLERS =====
 
@@ -895,14 +924,21 @@ def blog_post(slug):
 def track_pageview_ajax():
     if 'admin_id' in session:
         return '', 204
+    ip = request.remote_addr
     data = request.get_json(silent=True) or {}
     view = PageView(
         page=data.get('page', '/'),
-        ip_address=request.remote_addr,
+        ip_address=ip,
         user_agent=request.headers.get('User-Agent', '')[:500]
     )
     db.session.add(view)
     db.session.commit()
+    geo = lookup_location(ip)
+    if geo:
+        existing = LocationLog.query.filter_by(ip_address=ip).first()
+        if not existing:
+            db.session.add(LocationLog(ip_address=ip, country=geo['country'], city=geo['city']))
+            db.session.commit()
     return '', 204
 
 @app.route('/track/interest', methods=['POST'])
@@ -910,14 +946,21 @@ def track_pageview_ajax():
 def track_interest():
     if 'admin_id' in session:
         return '', 204
+    ip = request.remote_addr
     data = request.get_json(silent=True) or {}
     interest = Interest(
         section=data.get('section', 'unknown'),
         action=data.get('action', 'view'),
-        ip_address=request.remote_addr
+        ip_address=ip
     )
     db.session.add(interest)
     db.session.commit()
+    geo = lookup_location(ip)
+    if geo:
+        existing = LocationLog.query.filter_by(ip_address=ip).first()
+        if not existing:
+            db.session.add(LocationLog(ip_address=ip, country=geo['country'], city=geo['city']))
+            db.session.commit()
     return '', 204
 
 # ===== ADMIN ROUTES =====
@@ -1001,7 +1044,16 @@ def admin_dashboard():
 @admin_required
 def admin_projects():
     projects = Project.query.order_by(Project.sort_order, Project.created_at.desc()).all()
-    return render_template('admin/projects.html', projects=projects)
+    github_repos = []
+    try:
+        r = requests.get('https://api.github.com/users/echoesrule/repos?sort=updated&per_page=30', timeout=5)
+        if r.status_code == 200:
+            for repo in r.json():
+                if not repo.get('fork') and isinstance(repo, dict):
+                    github_repos.append(repo)
+    except Exception:
+        pass
+    return render_template('admin/projects.html', projects=projects, github_repos=github_repos)
 
 @app.route('/admin/projects/add', methods=['GET', 'POST'])
 @admin_required
@@ -1032,7 +1084,12 @@ def admin_project_add():
         db.session.commit()
         flash('Project added.', 'success')
         return redirect(url_for('admin_projects'))
-    return render_template('admin/project_form.html', project=None)
+    prefill = {
+        'title': request.args.get('title', ''),
+        'description': request.args.get('description', ''),
+        'github_url': request.args.get('github_url', '')
+    }
+    return render_template('admin/project_form.html', project=None, prefill=prefill)
 
 @app.route('/admin/projects/edit/<int:id>', methods=['GET', 'POST'])
 @admin_required
@@ -1063,7 +1120,7 @@ def admin_project_edit(id):
         db.session.commit()
         flash('Project updated.', 'success')
         return redirect(url_for('admin_projects'))
-    return render_template('admin/project_form.html', project=project)
+    return render_template('admin/project_form.html', project=project, prefill={})
 
 @app.route('/admin/projects/delete/<int:id>', methods=['POST'])
 @admin_required
@@ -1159,12 +1216,27 @@ def admin_analytics_interests_over_time():
     data = [counts.get(d, 0) for d in labels]
     return jsonify({'labels': labels, 'data': data})
 
+@app.route('/admin/api/analytics/locations')
+@admin_required
+def admin_analytics_locations():
+    import sqlalchemy as sa
+    rows = db.session.query(
+        LocationLog.country, sa.func.count(LocationLog.id).label('count')
+    ).group_by(LocationLog.country).order_by(sa.desc('count')).all()
+    total = sum(r.count for r in rows)
+    return jsonify({
+        'labels': [r.country for r in rows],
+        'data': [r.count for r in rows],
+        'total': total
+    })
+
 @app.route('/admin/analytics/clear', methods=['POST'])
 @admin_required
 def admin_analytics_clear():
     try:
         PageView.query.delete()
         Interest.query.delete()
+        LocationLog.query.delete()
         db.session.commit()
         flash('All analytics data cleared.', 'success')
     except Exception as e:

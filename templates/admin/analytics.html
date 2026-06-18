@@ -42,6 +42,11 @@
             <div style="padding:1rem;height:260px;"><canvas id="sectionChart"></canvas></div>
         </div>
     </div>
+
+    <div class="admin-card">
+        <h2 class="admin-card__title">Visitor Locations</h2>
+        <div style="padding:1rem;height:260px;max-width:500px;margin:0 auto;"><canvas id="locationsChart"></canvas></div>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
@@ -107,6 +112,7 @@ document.addEventListener('DOMContentLoaded', function() {
     lineChart('interestsChart', '/admin/api/analytics/interests-over-time', 'Interactions', '#1976d2');
     barChart('topPagesChart', '/admin/api/analytics/top-pages', 'Views');
     pieChart('sectionChart', '/admin/api/analytics/section-interests');
+    pieChart('locationsChart', '/admin/api/analytics/locations');
 });
 </script>
 {% endblock %}

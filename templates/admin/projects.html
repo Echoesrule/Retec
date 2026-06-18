@@ -7,7 +7,31 @@
         <h1 class="admin-page__title">Projects</h1>
         <a href="{{ url_for('admin_project_add') }}" class="admin-btn admin-btn--primary">+ Add Project</a>
     </div>
+
+    {% if github_repos %}
     <div class="admin-card">
+        <h2 class="admin-card__title">GitHub Repositories</h2>
+        <div style="padding:0.5rem 1rem 1rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:0.75rem;">
+            {% for repo in github_repos %}
+            <div style="border:1px solid #eee;padding:0.75rem;border-radius:6px;display:flex;flex-direction:column;gap:0.35rem;">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <a href="{{ repo.html_url }}" target="_blank" rel="noopener" style="font-weight:600;font-size:0.88rem;color:#1a1a1a;">{{ repo.name }}</a>
+                    <span style="font-size:0.72rem;color:#999;">{{ repo.language or 'N/A' }}</span>
+                </div>
+                <p style="font-size:0.78rem;color:#666;line-height:1.4;">{{ repo.description or 'No description' }}</p>
+                <div style="display:flex;gap:0.75rem;font-size:0.72rem;color:#999;">
+                    <span>★ {{ repo.stargazers_count }}</span>
+                    <span>⑂ {{ repo.forks_count }}</span>
+                </div>
+                <a href="{{ url_for('admin_project_add') }}?title={{ repo.name }}&description={{ repo.description or '' }}&github_url={{ repo.html_url }}" class="admin-btn admin-btn--sm" style="align-self:flex-start;margin-top:0.25rem;">Import as Project</a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="admin-card">
+        <h2 class="admin-card__title">Portfolio Projects</h2>
         <table class="admin-table">
             <thead>
                 <tr>
