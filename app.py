@@ -1077,11 +1077,81 @@ def admin_project_delete(id):
 @app.route('/admin/analytics')
 @admin_required
 def admin_analytics():
-    page = request.args.get('page', 1, type=int)
-    per_page = 50
-    views = PageView.query.order_by(PageView.timestamp.desc()).paginate(page=page, per_page=per_page)
-    interests = Interest.query.order_by(Interest.timestamp.desc()).paginate(page=page, per_page=per_page)
-    return render_template('admin/analytics.html', views=views, interests=interests)
+    return render_template('admin/analytics.html')
+
+@app.route('/admin/api/analytics/summary')
+@admin_required
+def admin_analytics_summary():
+    from datetime import datetime, timedelta
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    total_views = PageView.query.count()
+    unique_visitors = db.session.query(PageView.ip_address).distinct().count()
+    total_interests = Interest.query.count()
+    recent_views = PageView.query.filter(PageView.timestamp >= thirty_days_ago).count()
+    return jsonify({
+        'total_views': total_views,
+        'unique_visitors': unique_visitors,
+        'total_interests': total_interests,
+        'recent_views': recent_views
+    })
+
+@app.route('/admin/api/analytics/views-over-time')
+@admin_required
+def admin_analytics_views_over_time():
+    from datetime import datetime, timedelta
+    import sqlalchemy as sa
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    rows = db.session.query(
+        sa.func.date(PageView.timestamp).label('date'),
+        sa.func.count(PageView.id).label('count')
+    ).filter(PageView.timestamp >= thirty_days_ago
+    ).group_by(sa.func.date(PageView.timestamp)
+    ).order_by('date').all()
+    labels = [(datetime.utcnow() - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(29, -1, -1)]
+    counts = {str(r.date): r.count for r in rows}
+    data = [counts.get(d, 0) for d in labels]
+    return jsonify({'labels': labels, 'data': data})
+
+@app.route('/admin/api/analytics/top-pages')
+@admin_required
+def admin_analytics_top_pages():
+    import sqlalchemy as sa
+    rows = db.session.query(
+        PageView.page, sa.func.count(PageView.id).label('count')
+    ).group_by(PageView.page).order_by(sa.desc('count')).limit(10).all()
+    return jsonify({
+        'labels': [r.page for r in rows],
+        'data': [r.count for r in rows]
+    })
+
+@app.route('/admin/api/analytics/section-interests')
+@admin_required
+def admin_analytics_section_interests():
+    import sqlalchemy as sa
+    rows = db.session.query(
+        Interest.section, sa.func.count(Interest.id).label('count')
+    ).group_by(Interest.section).order_by(sa.desc('count')).all()
+    return jsonify({
+        'labels': [r.section for r in rows],
+        'data': [r.count for r in rows]
+    })
+
+@app.route('/admin/api/analytics/interests-over-time')
+@admin_required
+def admin_analytics_interests_over_time():
+    from datetime import datetime, timedelta
+    import sqlalchemy as sa
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    rows = db.session.query(
+        sa.func.date(Interest.timestamp).label('date'),
+        sa.func.count(Interest.id).label('count')
+    ).filter(Interest.timestamp >= thirty_days_ago
+    ).group_by(sa.func.date(Interest.timestamp)
+    ).order_by('date').all()
+    labels = [(datetime.utcnow() - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(29, -1, -1)]
+    counts = {str(r.date): r.count for r in rows}
+    data = [counts.get(d, 0) for d in labels]
+    return jsonify({'labels': labels, 'data': data})
 
 @app.route('/admin/analytics/export.csv')
 @admin_required

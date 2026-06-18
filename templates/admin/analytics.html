@@ -3,58 +3,104 @@
 {% set active = "analytics" %}
 {% block content %}
 <div class="admin-page">
-    <h1 class="admin-page__title">Analytics</h1>
-
-    <div class="admin-card">
-        <h2 class="admin-card__title">Page Views</h2>
-        <table class="admin-table">
-            <thead>
-                <tr><th>Page</th><th>IP</th><th>User Agent</th><th>Time</th></tr>
-            </thead>
-            <tbody>
-                {% for v in views.items %}
-                <tr>
-                    <td>{{ v.page }}</td>
-                    <td>{{ v.ip_address or '-' }}</td>
-                    <td class="admin-truncate">{{ v.user_agent or '-' }}</td>
-                    <td>{{ v.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% if views.pages > 1 %}
-        <div class="admin-pagination">
-            {% if views.has_prev %}<a href="?page={{ views.prev_num }}" class="admin-btn admin-btn--sm">&larr; Prev</a>{% endif %}
-            <span>Page {{ views.page }} of {{ views.pages }}</span>
-            {% if views.has_next %}<a href="?page={{ views.next_num }}" class="admin-btn admin-btn--sm">Next &rarr;</a>{% endif %}
-        </div>
-        {% endif %}
+    <div class="admin-page__head">
+        <h1 class="admin-page__title">Analytics</h1>
+        <a href="{{ url_for('admin_analytics_export') }}" class="admin-btn admin-btn--sm">Export CSV</a>
     </div>
 
-    <div class="admin-card">
-        <h2 class="admin-card__title">Interests / Interactions</h2>
-        <table class="admin-table">
-            <thead>
-                <tr><th>Section</th><th>Action</th><th>IP</th><th>Time</th></tr>
-            </thead>
-            <tbody>
-                {% for i in interests.items %}
-                <tr>
-                    <td>{{ i.section }}</td>
-                    <td>{{ i.action }}</td>
-                    <td>{{ i.ip_address or '-' }}</td>
-                    <td>{{ i.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% if interests.pages > 1 %}
-        <div class="admin-pagination">
-            {% if interests.has_prev %}<a href="?page={{ interests.prev_num }}" class="admin-btn admin-btn--sm">&larr; Prev</a>{% endif %}
-            <span>Page {{ interests.page }} of {{ interests.pages }}</span>
-            {% if interests.has_next %}<a href="?page={{ interests.next_num }}" class="admin-btn admin-btn--sm">Next &rarr;</a>{% endif %}
+    <div class="admin-stats" id="summaryStats">
+        <div class="admin-stat"><span class="admin-stat__value" id="statViews">-</span><span class="admin-stat__label">Total Views</span></div>
+        <div class="admin-stat"><span class="admin-stat__value" id="statUnique">-</span><span class="admin-stat__label">Unique Visitors</span></div>
+        <div class="admin-stat"><span class="admin-stat__value" id="statInterests">-</span><span class="admin-stat__label">Interactions</span></div>
+        <div class="admin-stat"><span class="admin-stat__value" id="statRecent">-</span><span class="admin-stat__label">Views (30d)</span></div>
+    </div>
+
+    <div class="admin-grid">
+        <div class="admin-card">
+            <h2 class="admin-card__title">Page Views (30 days)</h2>
+            <div style="padding:1rem;height:260px;"><canvas id="viewsChart"></canvas></div>
         </div>
-        {% endif %}
+        <div class="admin-card">
+            <h2 class="admin-card__title">Interactions (30 days)</h2>
+            <div style="padding:1rem;height:260px;"><canvas id="interestsChart"></canvas></div>
+        </div>
+    </div>
+
+    <div class="admin-grid">
+        <div class="admin-card">
+            <h2 class="admin-card__title">Top Pages</h2>
+            <div style="padding:1rem;height:260px;"><canvas id="topPagesChart"></canvas></div>
+        </div>
+        <div class="admin-card">
+            <h2 class="admin-card__title">Section Interests</h2>
+            <div style="padding:1rem;height:260px;"><canvas id="sectionChart"></canvas></div>
+        </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var colors = ['#000','#333','#555','#777','#999','#bbb','#d32f2f','#1976d2','#2e7d32','#e65100'];
+
+    fetch('/admin/api/analytics/summary').then(function(r){return r.json()}).then(function(d){
+        document.getElementById('statViews').textContent = d.total_views;
+        document.getElementById('statUnique').textContent = d.unique_visitors;
+        document.getElementById('statInterests').textContent = d.total_interests;
+        document.getElementById('statRecent').textContent = d.recent_views;
+    });
+
+    function lineChart(id, url, label, color) {
+        fetch(url).then(function(r){return r.json()}).then(function(d){
+            new Chart(document.getElementById(id), {
+                type: 'line',
+                data: {
+                    labels: d.labels.map(function(l){var p=l.split('-');return p[1]+'/'+p[2];}),
+                    datasets: [{label:label,data:d.data,borderColor:color,backgroundColor:color+'33',fill:true,tension:0.3,pointRadius:2}]
+                },
+                options: {responsive:true,maintainAspectRatio:false,
+                    plugins:{legend:{display:false}},
+                    scales:{x:{ticks:{font:{size:10}},grid:{display:false}},y:{beginAtZero:true,grid:{color:'#eee'}}}
+                }
+            });
+        });
+    }
+
+    function barChart(id, url, label) {
+        fetch(url).then(function(r){return r.json()}).then(function(d){
+            new Chart(document.getElementById(id), {
+                type: 'bar',
+                data: {
+                    labels: d.labels,
+                    datasets: [{label:label,data:d.data,backgroundColor:d.labels.map(function(_,i){return colors[i%colors.length];})}]
+                },
+                options: {responsive:true,maintainAspectRatio:false,indexAxis:'y',
+                    plugins:{legend:{display:false}},
+                    scales:{x:{beginAtZero:true,grid:{color:'#eee'}},y:{ticks:{font:{size:10}},grid:{display:false}}}
+                }
+            });
+        });
+    }
+
+    function pieChart(id, url) {
+        fetch(url).then(function(r){return r.json()}).then(function(d){
+            new Chart(document.getElementById(id), {
+                type: 'doughnut',
+                data: {
+                    labels: d.labels,
+                    datasets: [{data:d.data,backgroundColor:d.labels.map(function(_,i){return colors[i%colors.length];}),borderWidth:0}]
+                },
+                options: {responsive:true,maintainAspectRatio:false,
+                    plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:10}}}}
+                }
+            });
+        });
+    }
+
+    lineChart('viewsChart', '/admin/api/analytics/views-over-time', 'Views', '#000');
+    lineChart('interestsChart', '/admin/api/analytics/interests-over-time', 'Interactions', '#1976d2');
+    barChart('topPagesChart', '/admin/api/analytics/top-pages', 'Views');
+    pieChart('sectionChart', '/admin/api/analytics/section-interests');
+});
+</script>
 {% endblock %}
