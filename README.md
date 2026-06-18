@@ -52,6 +52,24 @@ The app runs on `http://localhost:5000`. Admin credentials: `admin` / `admin123`
 | `SECRET_KEY` | Flask session secret key |
 | `MAIL_SERVER` | SMTP server (optional) |
 | `MAIL_PORT` | SMTP port (default 587) |
+| `MAIL_USE_TLS` | Use STARTTLS, usually `true` for port 587 |
+| `MAIL_USE_SSL` | Use SMTP SSL, usually `true` for port 465 |
 | `MAIL_USERNAME` | SMTP username |
 | `MAIL_PASSWORD` | SMTP password |
+| `MAIL_FROM` | Sender email address |
 | `MAIL_TO` | Contact form recipient |
+
+## SMTP Setup
+
+Copy `.env.example` to `.env`, then fill in your provider details. For Gmail, enable 2-Step Verification and create an App Password. Use:
+
+```env
+MAIL_SERVER=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USE_TLS=true
+MAIL_USE_SSL=false
+MAIL_USERNAME=your-email@gmail.com
+MAIL_PASSWORD=your-google-app-password
+MAIL_FROM=your-email@gmail.com
+MAIL_TO=contact.retec@gmail.com
+```

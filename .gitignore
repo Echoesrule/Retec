@@ -7,6 +7,9 @@ portfolio.db
 *.db-shm
 .env
 flask_output.txt
+flask.log
+flask_out.txt
+cookies.txt
 nul
 .venv/
 venv/

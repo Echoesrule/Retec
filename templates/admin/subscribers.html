@@ -1,0 +1,58 @@
+{% extends "admin/base.html" %}
+{% block title %}Subscribers{% endblock %}
+{% set active = "subscribers" %}
+{% block content %}
+<div class="admin-page">
+    <div class="admin-page__head">
+        <h1 class="admin-page__title">Subscribers</h1>
+        <a href="{{ url_for('admin_subscribers_export') }}" class="admin-btn admin-btn--secondary">
+            <i class="fa-solid fa-download"></i> Export CSV
+        </a>
+    </div>
+
+    <div class="admin-card">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Name</th>
+                    <th>Source</th>
+                    <th>Valid</th>
+                    <th>Brevo</th>
+                    <th>Active</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in subscribers.items %}
+                <tr>
+                    <td>{{ s.email }}</td>
+                    <td>{{ s.name or '-' }}</td>
+                    <td>{{ s.source }}</td>
+                    <td>{% if s.validated %}<i class="fa-solid fa-check" style="color:var(--green)" title="Validated"></i>{% else %}<i class="fa-solid fa-question" style="color:var(--orange)" title="Unverified"></i>{% endif %}</td>
+                    <td>{% if s.brevo_synced %}<i class="fa-solid fa-check" style="color:var(--green)"></i>{% else %}<i class="fa-solid fa-times" style="color:var(--red)"></i>{% endif %}</td>
+                    <td>{% if s.active %}<i class="fa-solid fa-check" style="color:var(--green)"></i>{% else %}<i class="fa-solid fa-times" style="color:var(--red)"></i>{% endif %}</td>
+                    <td>{{ s.created_at.strftime('%Y-%m-%d') }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted)">No subscribers yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if subscribers.pages > 1 %}
+    <div class="admin-pagination">
+        {% if subscribers.has_prev %}
+        <a href="{{ url_for('admin_subscribers', page=subscribers.prev_num) }}" class="admin-btn admin-btn--sm">&laquo; Prev</a>
+        {% endif %}
+        <span class="admin-pagination__info">Page {{ subscribers.page }} of {{ subscribers.pages }}</span>
+        {% if subscribers.has_next %}
+        <a href="{{ url_for('admin_subscribers', page=subscribers.next_num) }}" class="admin-btn admin-btn--sm">Next &raquo;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

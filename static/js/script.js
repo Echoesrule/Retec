@@ -20,7 +20,9 @@ document.addEventListener('DOMContentLoaded', () => {
         navToggle.addEventListener('click', () => {
             navToggle.classList.toggle('nav__toggle--active');
             navMenu.classList.toggle('nav__menu--open');
-            document.body.style.overflow = navMenu.classList.contains('nav__menu--open') ? 'hidden' : '';
+            const isOpen = navMenu.classList.contains('nav__menu--open');
+            navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            document.body.style.overflow = isOpen ? 'hidden' : '';
         });
     }
 
@@ -28,17 +30,26 @@ document.addEventListener('DOMContentLoaded', () => {
         link.addEventListener('click', () => {
             navToggle.classList.remove('nav__toggle--active');
             navMenu.classList.remove('nav__menu--open');
+            navToggle.setAttribute('aria-expanded', 'false');
             document.body.style.overflow = '';
         });
     });
 
+    const scrollToSection = (hash) => {
+        if (!hash) return false;
+        const target = document.querySelector(hash);
+        if (!target) return false;
+        pageContent?.classList.remove('page-content--fading');
+        target.scrollIntoView({ behavior: 'smooth' });
+        history.pushState(null, '', hash);
+        return true;
+    };
+
     /* ===== SMOOTH SCROLL ===== */
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
-            const target = document.querySelector(this.getAttribute('href'));
-            if (target) {
+            if (scrollToSection(this.getAttribute('href'))) {
                 e.preventDefault();
-                target.scrollIntoView({ behavior: 'smooth' });
             }
         });
     });
@@ -62,12 +73,65 @@ document.addEventListener('DOMContentLoaded', () => {
             const href = link.getAttribute('href');
             if (!href || href.startsWith('#') || href.startsWith('http') || href.startsWith('//') || link.getAttribute('target') === '_blank') return;
             link.addEventListener('click', (e) => {
+                const url = new URL(href, window.location.href);
+                const isSamePageHash = url.pathname === window.location.pathname && url.hash;
+                if (isSamePageHash && scrollToSection(url.hash)) {
+                    e.preventDefault();
+                    return;
+                }
+
                 e.preventDefault();
                 pageContent.classList.add('page-content--fading');
                 setTimeout(() => {
-                    window.location.href = href;
+                    window.location.href = url.href;
                 }, 220);
             });
+        });
+    }
+
+    /* ===== EMAIL VERIFICATION ===== */
+    const emailInput = document.getElementById('subscribe-email');
+    const statusEl = document.getElementById('subscribe-status');
+    const subBtn = document.getElementById('subscribe-btn');
+
+    if (emailInput && statusEl && subBtn) {
+        let checkTimeout;
+        emailInput.addEventListener('input', () => {
+            clearTimeout(checkTimeout);
+            const email = emailInput.value.trim();
+            if (!email) {
+                statusEl.textContent = '';
+                statusEl.className = 'subscribe__status';
+                subBtn.disabled = true;
+                return;
+            }
+            statusEl.textContent = 'Checking...';
+            statusEl.className = 'subscribe__status subscribe__status--checking';
+            subBtn.disabled = true;
+            checkTimeout = setTimeout(() => {
+                fetch('/verify-email', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({email})
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.valid) {
+                        statusEl.textContent = data.message;
+                        statusEl.className = 'subscribe__status subscribe__status--valid';
+                        subBtn.disabled = false;
+                    } else {
+                        statusEl.textContent = data.message;
+                        statusEl.className = 'subscribe__status subscribe__status--invalid';
+                        subBtn.disabled = true;
+                    }
+                })
+                .catch(() => {
+                    statusEl.textContent = 'Could not verify.';
+                    statusEl.className = 'subscribe__status subscribe__status--invalid';
+                    subBtn.disabled = true;
+                });
+            }, 600);
         });
     }
 

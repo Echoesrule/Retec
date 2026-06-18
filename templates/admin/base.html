@@ -50,6 +50,14 @@
                     <i class="fa-solid fa-newspaper"></i>
                     Blog
                 </a>
+                <a href="{{ url_for('admin_subscribers') }}" class="admin-sidebar__link {% if active == 'subscribers' %}admin-sidebar__link--active{% endif %}">
+                    <i class="fa-solid fa-envelope-open-text"></i>
+                    Subscribers
+                </a>
+                <a href="{{ url_for('admin_broadcast') }}" class="admin-sidebar__link {% if active == 'broadcast' %}admin-sidebar__link--active{% endif %}">
+                    <i class="fa-solid fa-bullhorn"></i>
+                    Broadcast
+                </a>
             </nav>
             <div class="admin-sidebar__foot">
                 <a href="/" class="admin-sidebar__link" target="_blank">View Site</a>

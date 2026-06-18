@@ -3,9 +3,13 @@ from datetime import datetime
 import os, requests, csv, io, re, time
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
+from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from functools import wraps
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
+from forms import ContactForm
 
 load_dotenv()
 
@@ -20,15 +24,22 @@ app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', '')
 app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', '')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'true').lower() in ('1', 'true', 'yes', 'on')
+app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'false').lower() in ('1', 'true', 'yes', 'on')
+app.config['MAIL_FROM'] = os.environ.get('MAIL_FROM', app.config['MAIL_USERNAME'])
 app.config['MAIL_TO'] = os.environ.get('MAIL_TO', 'hello@retec.dev')
+app.config['BREVO_API_KEY'] = os.environ.get('BREVO_API_KEY', '')
+app.config['BREVO_LIST_ID'] = os.environ.get('BREVO_LIST_ID', '')
+app.config['ZEROBOUNCE_API_KEY'] = os.environ.get('ZEROBOUNCE_API_KEY', '')
+app.config['WTF_CSRF_TIME_LIMIT'] = 3600
+
+csrf = CSRFProtect(app)
+limiter = Limiter(get_remote_address, app=app, default_limits=['200 per day', '50 per hour'])
 
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
-
-# Track contact submissions per IP for rate limiting
-_contact_log = {}
 
 # ===== MODELS =====
 
@@ -92,6 +103,257 @@ class BlogPost(db.Model):
     summary = db.Column(db.String(500), default='')
     image_filename = db.Column(db.String(200), default='')
     published = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+DISPOSABLE_DOMAINS = {
+    'mailinator.com', 'guerrillamail.com', 'tempmail.com', 'temp-mail.org',
+    'throwaway.com', 'yopmail.com', 'sharklasers.com', '10minutemail.com',
+    'trashmail.com', 'maildrop.cc', 'getairmail.com', 'emailondeck.com',
+    'dispostable.com', 'mailnesia.com', 'mintemail.com', 'spambox.us',
+    'tempmail.net', 'fakeinbox.com', 'throwaway.email', 'mailcatch.com',
+    'mailexpire.com', 'tempinbox.com', 'spamgourmet.com', 'mytrashmail.com',
+    'thankyou2010.com', 'trash2009.com', 'trashymail.com', 'tyldd.com',
+    'uggsrock.com', 'wegwerfmail.de', 'wegwerfmail.net', 'wegwerfmail.org',
+    'wh4f.org', 'whyspam.me', 'willselfdestruct.com', 'winemaven.info',
+    'wronghead.com', 'wuzup.net', 'xagloo.com', 'xemaps.com',
+    'xents.com', 'xmaily.com', 'xoxy.net', 'yep.it', 'yogamaven.com',
+    'yopmail.fr', 'yopmail.net', 'ypmail.webarnak.com', 'yuurok.com',
+    'zehnminutenmail.de', 'zippymail.info', 'zoaxe.com', 'zoemail.org',
+    'spam4.me', 'filzmail.com', 'mailmetrash.com', 'rcpt.at',
+    'trashinbox.net', 'spam.la', 'spam.cr', 'spam.od.ua',
+    '0-mail.com', '0wnd.net', '0wnd.org', '1-8.biz', '1ce.us',
+    '1chuy.com', '1mail.ml', '1pad.de', '1st-forms.com',
+    '2ch.com.au', '2prong.com', '3d-painting.com', '4mail.cf',
+    '4warding.com', '4warding.net', '4warding.org', '5mail.cf',
+    '5ymail.com', '6qoz.com', '6paq.com', '7pcc.com',
+    '7tags.com', '9mail.cf', 'a-bc.net', 'afrobacon.com',
+    'amelijk.com', 'anonymail.dk', 'anonymbox.com', 'antichef.com',
+    'antireg.com', 'antispam24.de', 'apinmail.com', 'armyspy.com',
+    'autowb.com', 'azmeil.com', 'baxomale.ht.cx', 'beddly.com',
+    'bigprofessor.so', 'bigstring.com', 'binkmail.com', 'bio-muesli.net',
+    'bobmail.info', 'bombderfull.com', 'brennendesreich.de', 'broadbandninja.com',
+    'bsnow.net', 'buffemail.com', 'buymoreplays.com', 'byebyemail.com',
+    'card.zapto.org', 'casualdx.com', 'chacuo.net', 'choicemail1.com',
+    'clixser.com', 'cmail.com', 'cool.fr.nf', 'correo.blogos.net',
+    'cosmorph.com', 'courriel.fr.nf', 'courrieltemporaire.com', 'crapmail.org',
+    'cubiclink.com', 'curryworld.de', 'cust.in', 'dacoolest.com',
+    'dandikmail.com', 'dayrep.com', 'deadaddress.com', 'deadspam.com',
+    'delikkt.de', 'despam.it', 'devnullmail.com', 'digitalsanctuary.com',
+    'discard.email', 'discardmail.com', 'discardmail.de', 'dispose.it',
+    'disposeamail.com', 'disposemail.com', 'dm.w3internet.co.uk',
+    'dodgeit.com', 'dodgit.com', 'dodgit.org', 'donemail.ru',
+    'dontreg.com', 'dontsendmespam.de', 'drdrb.com', 'dump-email.info',
+    'dumpedmail.com', 'dumpmail.de', 'dumpyemail.com', 'e-mail.com',
+    'e-mail.org', 'e4ward.com', 'easytrashmail.com', 'elitemail.org',
+    'email-fake.com', 'email.cbes.net', 'email.net', 'emailgo.de',
+    'emailias.com', 'emailigo.de', 'emailinfive.com', 'emailisvalid.com',
+    'emaillime.com', 'emailmenow.de', 'emailmiser.com', 'emailna.co',
+    'emails.ga', 'emails.tf', 'emailsensei.com', 'emailtech.info',
+    'emailtemporanea.com', 'emailtemporanea.net', 'emailtemporar.ro',
+    'emailtemps.com', 'ephemeral.email', 'etranquil.com', 'etranquil.net',
+    'etranquil.org', 'exdonuts.com', 'explodemail.com', 'fake-email.com',
+    'fakeinbox.info', 'fakeinformation.com', 'fakemail.fr', 'fakemailgenerator.com',
+    'fakemailz.com', 'fammix.com', 'fansworldwide.de', 'fantasymail.de',
+    'fdfdsfds.com', 'fightallspam.com', 'fivemail.de', 'fixmail.tk',
+    'fizmail.com', 'flurred.com', 'forgetmail.com', 'freakmail.de',
+    'free-email.ga', 'freebabysittercam.com', 'freemail.ms', 'freemail.tweakly.net',
+    'freemails.cf', 'freemails.ga', 'friendlymail.co.uk', 'fuckingduh.com',
+    'fudgerub.com', 'funnymail.de', 'gafy.net', 'garliclife.com',
+    'gehensiemirnichtaufdensack.de', 'gelitik.in', 'get1mail.com', 'get2mail.fr',
+    'getonemail.com', 'getonemail.net', 'ghosttexter.de', 'girlsindetention.com',
+    'gitmail.ooo', 'goemailgo.com', 'gotmail.com', 'gotmail.org',
+    'gotti.mobi', 'grr.la', 'gsrv.co.uk', 'guerrillamail.biz',
+    'guerrillamail.net', 'guerrillamail.org', 'h7mail.com', 'haltospam.com',
+    'hatespam.org', 'hiddencorner.xyz', 'hiddentragedy.com', 'hidemail.de',
+    'hidemail.pro', 'hix.kr', 'hmail.us', 'hochsitze.com',
+    'hotpop.com', 'hulapla.de', 'ieatspam.eu', 'ieatspam.info',
+    'ignoremail.com', 'ihateyoualot.info', 'ik7gz5.com', 'imails.info',
+    'inbax.tk', 'inbox.si', 'inboxalias.com', 'inboxbear.com',
+    'inboxclean.com', 'inboxclean.org', 'inboxed.pw', 'inboxproxy.com',
+    'incognitomail.com', 'incognitomail.net', 'incognitomail.org',
+    'insorg-mail.info', 'ip6.li', 'irish2me.com', 'iwi.net',
+    'jamieq.com', 'jet-renovation.fr', 'jkalucka.com', 'jourrapide.com',
+    'jsrsolutions.com', 'kaitang.com', 'kasmail.com', 'kaspop.com',
+    'killmail.com', 'killmail.net', 'kingsq.ga', 'kir.ch.tc',
+    'klassmaster.com', 'klassmaster.net', 'kloap.com', 'knolpower.com',
+    'kulturbetrieb.info', 'kurzepost.de', 'l33r.eu', 'laafd.com',
+    'lackmail.net', 'lackmail.ru', 'lags.us', 'landmail.co',
+    'lastmail.co', 'legitmail.club', 'letmymail.com', 'letterboxes.org',
+    'linuxmail.so', 'litedrop.com', 'lobbyist.com', 'locatowa.com',
+    'lol.com', 'lolfreak.net', 'lolmail.biz', 'lookugly.com',
+    'lopl.co.cc', 'loremipsummail.com', 'lotsmail.biz', 'lovescomputers.com',
+    'lr7.us', 'lroid.com', 'lukecarriere.com', 'm4ilweb.info',
+    'maboard.com', 'mail.by', 'mail.mezimages.net', 'mail.om',
+    'mail.wtf', 'mail0.ga', 'mail1.ga', 'mail114.net',
+    'mail2.ga', 'mail2rss.org', 'mail333.com', 'mail4.ga',
+    'mail4trash.com', 'mail666.ru', 'mail707.com', 'mailas.com',
+    'mailbidon.com', 'mailbiz.biz', 'mailbucket.org', 'mailcat.biz',
+    'mailde.de', 'mailde.info', 'maildrop.biz', 'maildrop.gq',
+    'maildu.de', 'maildx.com', 'maileater.com', 'mailed.in',
+    'mailed.ro', 'maileme101.com', 'mailexpire.com', 'mailf5.com',
+    'mailfa.tk', 'mailforspam.com', 'mailfree.ga', 'mailfree.gq',
+    'mailfree.ml', 'mailfs.com', 'mailguard.me', 'mailgutter.com',
+    'mailhang.com', 'mailhazard.com', 'mailhazard.us', 'mailhex.com',
+    'mailimate.com', 'mailin8r.com', 'mailinater.com', 'mailinator.co.uk',
+    'mailinator.net', 'mailinator.org', 'mailinator2.com', 'mailinbox.co',
+    'mailincubator.com', 'mailismagic.com', 'mailjunk.org', 'mailmate.com',
+    'mailme.ga', 'mailme.gq', 'mailmenot.de', 'mailmetrash.com',
+    'mailmoat.com', 'mailms.com', 'mailnator.com', 'mailnull.com',
+    'mailpickup.com', 'mailpooch.com', 'mailproxsy.com', 'mailquack.com',
+    'mailrc.biz', 'mailrock.biz', 'mailsac.com', 'mailscrap.com',
+    'mailseal.de', 'mailshiv.com', 'mailslap.ga', 'mailsmachine.com',
+    'mailspam.xyz', 'mailtemp.info', 'mailtome.de', 'mailtothis.com',
+    'mailtrash.net', 'mailtrix.net', 'mailtv.net', 'mailtv.tv',
+    'mailzi.com', 'mailzilla.com', 'mailzilla.org', 'makemetheking.com',
+    'manybrain.com', 'mbx.cc', 'mciek.com', 'mega.zik.dj',
+    'meinspamschutz.de', 'messagebeamer.de', 'messwiththebestdielikethe.rest',
+    'mhmm.xyz', 'midcoastcustoms.com', 'midcoastcustoms.net', 'midlertidig.com',
+    'midlertidig.net', 'midlertidig.org', 'mierdamail.com', 'mighty.co.za',
+    'migmail.net', 'migmail.pl', 'migumail.com', 'mildin.org.ua',
+    'mindless.com', 'mintemail.com', 'misterpinball.com', 'mmlki.be',
+    'moakt.com', 'moakt.ws', 'mobilemail.ga', 'mobileninja.co.uk',
+    'moncourrier.fr.nf', 'monemail.fr.nf', 'monmail.fr.nf', 'monumentmail.com',
+    'moonwake.com', 'mountainregionallibrary.net', 'mrdrain.com', 'msgos.com',
+    'muellemail.com', 'muell.icu', 'muellmail.com', 'mundodigital.net',
+    'mwarner.org', 'my.bimi.ne', 'my.opendesktop.org', 'my10minutemail.com',
+    'mycard.net.ua', 'mycleaninbox.net', 'mycorneroftheinter.net', 'mydeadaddress.com',
+    'myemailboxy.com', 'myfavemail.com', 'myinterserver.ml', 'mymail-in.net',
+    'mymail90.com', 'mymailoasis.com', 'mynetstore.de', 'myopang.com',
+    'mypacks.net', 'mypartyclip.de', 'mytrashmail.com', 'mywarnet.net',
+    'nabuma.com', 'neomailbox.com', 'nepwk.com', 'nervmich.net',
+    'nervtmich.net', 'net.bitcoin.ph', 'netmails.com', 'netmails.net',
+    'nevermail.de', 'nforget.com', 'nice-ix.com', 'nincsmail.com',
+    'nincsmail.hu', 'nnh.com', 'nnot.net', 'no-spam.ws',
+    'nobulk.com', 'noclickemail.com', 'nogmailspam.info', 'nomail.cf',
+    'nomail.ga', 'nomail.pw', 'nomail.xl.cx', 'nomail2me.com',
+    'nomorespamemails.com', 'nonspam.eu', 'nonspammer.de', 'noref.fr',
+    'nothingtoseehere.ca', 'nowhere.org', 'nowmymail.com', 'ntlhelp.net',
+    'nwldx.com', 'objectmail.com', 'obobbo.com', 'odnorazovoe.ru',
+    'oemail.de', 'oida.icu', 'oil.gov.my', 'oiizz.com',
+    'ok-bodycare.info', 'okmoney.net', 'oldiesmann.com', 'oneironaut.com',
+    'onkwerks.com', 'online.ms', 'onmail.ws', 'onquebec.com',
+    'oneuk.com', 'opayq.com', 'opp24.de', 'ordinaryamerican.net',
+    'otherinbox.com', 'outlawspam.com', 'oxfarm1.com', 'ozyl.de',
+    'pa9e.com', 'pancakemail.com', 'paplease.com', 'pcusers.otherinbox.com',
+    'penisgoes.in', 'petrzilka.net', 'pfui.ru', 'pinknboobies.com',
+    'pjqcn.com', 'plexolan.de', 'poczta.onet.pl', 'politikerclub.de',
+    'poqbox.com', 'politikerclub.de', 'pookmail.com', 'poopiebutt.club',
+    'popesodomy.com', 'popgx.com', 'postonline.cc', 'poutine.autresmouettes.net',
+    'predatorrat.cf', 'prin.be', 'privacy.net', 'privy-mail.de',
+    'privymail.de', 'proxymail.eu', 'prtnx.com', 'prtz.eu',
+    'punkass.com', 'putthisinyourspamdatabase.com', 'pwp.lv', 'qiaua.com',
+    'qisdo.com', 'qisoa.com', 'quickinbox.com', 'quickmail.nl',
+    'ququb.com', 'qvy.me', 'r0.xxx', 'r3t.xxx',
+    'raakkes.com', 'radiku.ye.vc', 'rancidhome.net', 'rbb.org',
+    'rcpt.at', 'reality-concept.club', 'reallymymail.com', 'receiveee.com',
+    'recipeforfailure.com', 'reconmail.com', 'recyclemail.dk', 'redditmail.com',
+    'regbypass.com', 'regspaces.tk', 'rejectmail.com', 'remail.cf',
+    'remail.ga', 'renmail.com', 'rengmail.com', 'resistore.net',
+    'rhyta.com', 'rklips.com', 'rm2rf.com', 'rppkn.com',
+    'rq1.in', 'ruggedinbox.com', 's0ny.net', 'safe-mail.net',
+    'safersignup.com', 'safetymail.info', 'safetypost.de', 'sandelf.de',
+    'sanstr.com', 'saynotospams.com', 'scattermail.com', 'schafmail.de',
+    'schrott-email.de', 'secretemail.de', 'securehost.com.es', 'selfdestructingmail.com',
+    'selfdestructingmail.org', 'sendfree.org', 'sendingspecialflyers.com', 'sendspamhere.com',
+    'senseless-entertainment.com', 'server.ms', 'sexmagnet.com', 'shhmail.com',
+    'shhuut.org', 'shieldedmail.com', 'shipfromto.com', 'shiphazmat.org',
+    'shippingterms.org', 'shortmail.net', 'shotmail.ru', 'showslow.de',
+    'sibmail.com', 'sinnlos-mail.de', 'siteposter.net', 'skarminko.com',
+    'skeefmail.com', 'slaskmail.se', 'slipry.net', 'sly.io',
+    'smap.4next.net', 'smapfree24.com', 'smapfree24.de', 'smapfree24.eu',
+    'smapfree24.info', 'smapfree24.org', 'smapxsmap.net', 'smashmail.de',
+    'smellfear.com', 'smellrear.com', 'snakemail.com', 'snapwet.com',
+    'sneakemail.com', 'sneakerbunko.com', 'snkmail.com', 'snowdayonline.ca',
+    'sofimail.com', 'solar-impact.pro', 'solvemail.info', 'songjoy.net',
+    'soniamail.com', 'spam.2012-2016.ru', 'spam.la', 'spam.su',
+    'spam4.me', 'spamail.de', 'spamarrest.com', 'spamavert.com',
+    'spambob.com', 'spambob.net', 'spambob.org', 'spambog.com',
+    'spambog.de', 'spambog.net', 'spambog.ru', 'spambox.info',
+    'spambox.me', 'spambox.org', 'spambox.us', 'spamcannon.com',
+    'spamcannon.net', 'spamcero.com', 'spamcon.org', 'spamcorptastic.com',
+    'spamcowboy.com', 'spamcowboy.net', 'spamcowboy.org', 'spamday.com',
+    'spamdecoy.net', 'spamex.com', 'spamfree24.com', 'spamfree24.de',
+    'spamfree24.eu', 'spamfree24.info', 'spamfree24.net', 'spamfree24.org',
+    'spamgoes.in', 'spamgourmet.com', 'spamgourmet.net', 'spamgourmet.org',
+    'spamherelots.com', 'spamhereplease.com', 'spamhole.com', 'spamify.com',
+    'spaminator.de', 'spamkill.info', 'spaml.com', 'spamlot.net',
+    'spammotel.com', 'spamobox.com', 'spamoff.de', 'spamsalad.in',
+    'spamserver.de', 'spamslicer.com', 'spamspame.com', 'spamspot.com',
+    'spamstack.net', 'spamthis.co.uk', 'spamthisplease.com', 'spamtrail.com',
+    'spamtroll.net', 'speed.1s.fr', 'spoofmail.de', 'squizzy.com',
+    'ssoia.com', 'startfu.com', 'steambot.net', 'stexsy.com',
+    'stinkysugar.net', 'suburbanthug.com', 'suckmyd.com', 'sudolife.me',
+    'suioe.com', 'supergreatmail.com', 'supermailer.jp', 'superplatyna.com',
+    'superrito.com', 'superstachel.de', 'surfmail.tk', 'susi.ml',
+    'svxr.org', 'sweetxxx.de', 'tafmail.com', 'taginvolve.com',
+    'talkmises.com', 'tanukis.org', 'tapchicuoihoi.com', 'tarzanmail.cf',
+    'techemail.com', 'techgroup.me', 'teleosaurs.xyz', 'teewars.org',
+    'temp-mail.com', 'temp-mail.de', 'temp-mail.org', 'temp.e mail',
+    'temp.emeraldwebmail.com', 'temp.headstrong.de', 'tempail.com',
+    'tempalias.com', 'tempe-mail.com', 'tempemail.biz', 'tempemail.co.za',
+    'tempemail.co', 'tempemail.com', 'tempemail.net', 'tempemail.org',
+    'tempinbox.co.za', 'tempinbox.com', 'tempmail.co', 'tempmail.it',
+    'tempmail4you.com', 'tempmaildemo.com', 'tempmailer.com', 'tempmailer.de',
+    'tempomail.fr', 'temporarily.de', 'temporarioemail.com.br', 'temporaryemail.net',
+    'temporaryemail.us', 'temporaryforwarding.com', 'temporaryinbox.com',
+    'temporarymail.org', 'tempthe.net', 'tempymail.com', 'ternak.com',
+    'testisite.org', 'thankyou2010.com', 'theaviors.com', 'thebearshark.com',
+    'thelightningmail.com', 'thembones.com.au', 'themostemail.com', 'thediamants.com',
+    'thescrapp.us', 'theteastory.com', 'thraml.com', 'throwamail.com',
+    'throwaway.email', 'throwaway.xyz', 'throwawayemail.com', 'throya.com',
+    'thrubay.com', 'tittibit.net', 'tizi.com', 'tmail.com',
+    'tmail.ws', 'tmailinator.com', 'toiea.com', 'toitag.com',
+    'tokem.co', 'tonymanso.com', 'toomail.biz', 'top101.de',
+    'topaddress.net', 'topranklist.de', 'tormail.net', 'tormail.org',
+    'tradermail.info', 'trash-amil.com', 'trash-me.com', 'trash2009.com',
+    'trash2010.com', 'trash2011.com', 'trashdevil.com', 'trashemail.de',
+    'trashemails.de', 'trashinbox.com', 'trashmail.at', 'trashmail.com',
+    'trashmail.de', 'trashmail.me', 'trashmail.net', 'trashmail.org',
+    'trashmail.ws', 'trashmailer.com', 'trashmails.com', 'trashspam.com',
+    'trashymail.net', 'trbvm.com', 'trialmail.de', 'trillianpro.com',
+    'tryalert.com', 'turoid.com', 'turual.com', 'tvchd.com',
+    'twkly.ml', 'two.pw', 'ty.ceed.se', 'tyldd.com',
+    'uacro.com', 'uber-mail.com', 'uggsrock.com', 'uk.to',
+    'umail.net', 'undo.it', 'unimark.org', 'unit7lahaina.com',
+    'upliftnow.com', 'uplipht.com', 'upozowas.info', 'urfunny.net',
+    'uroid.com', 'us.af', 'ux.dob.jp', 'uyhip.com',
+    'valemail.net', 'veanlo.com', 'venompen.com', 'vgtmail.com',
+    'vipmail.name', 'vipmail.pw', 'vixletdev.com', 'vjtimail.com',
+    'vmailing.info', 'vmani.com', 'vnedu.me', 'voidbay.com',
+    'vomoto.com', 'vsimcard.com', 'vubby.com', 'vzw.com',
+    'w3internet.co.uk', 'wakingupesther.com', 'walala.org', 'walkmail.net',
+    'walkmail.ru', 'wasteland.rfc822.org', 'watchandiron.com', 'webm4il.info',
+    'webmail.xyz', 'webuser.in', 'wee.my', 'wefjo.grn.cc',
+    'wegwerfmail.de', 'wegwerfmail.net', 'wegwerfmail.org', 'wetrainbayarea.com',
+    'wetrainbayarea.org', 'wh4f.org', 'whatiaas.com', 'whatpaas.com',
+    'whitemail.org', 'whoever.com', 'wifflemail.com', 'wimsemail.com',
+    'winemaven.info', 'wins.com.br', 'wlist.e', 'wmik.ro',
+    'wmsnorris.com', 'wokcy.com', 'woodlandsummer.com', 'wopr.com',
+    'workmail24.com', 'wovz.cf', 'wralawfirm.com', 'wronghead.com',
+    'wuzup.net', 'xagloo.com', 'xemaps.com', 'xents.com',
+    'xmail.com', 'xmaily.com', 'xoxy.net', 'xweb.dk',
+    'xww.ro', 'yabai-oppai.org', 'yahmail.top', 'yamha.info',
+    'yapped.net', 'yarnpedia.net', 'yep.it', 'yopmail.com',
+    'yopmail.fr', 'yopmail.net', 'yopmail.org', 'youmail.ga',
+    'youmailr.com', 'youneedmore.info', 'yourdomain.com', 'yourewronghereswhy.com',
+    'yoursuccessfulincome.com', 'yourtrap.com', 'youzoko.net', 'ypmail.webarnak.com',
+    'yuurok.com', 'z0d.eu', 'z1p.biz', 'za.com',
+    'zain.site', 'zainmax.net', 'zarabotai.site', 'zehnminutenmail.de',
+    'zehnminutenmail.net', 'zep-hyr.com', 'zhcne.com', 'zhorachu.com',
+    'zipcad.com', 'zippymail.info', 'zoaxe.com', 'zoemail.org',
+    'zomg.info', 'zonedetravail.com', 'zsero.com', 'zumpat.com',
+    'zxcv.com', 'zxcvbnm.com', 'zzz.com'
+}
+
+class Subscriber(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(255), unique=True, nullable=False)
+    name = db.Column(db.String(100), default='')
+    source = db.Column(db.String(100), default='website')
+    brevo_synced = db.Column(db.Boolean, default=False)
+    validated = db.Column(db.Boolean, default=False)
+    active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -163,32 +425,296 @@ def get_github_stats():
     except Exception:
         return None
 
-def send_email(name, email, message):
-    if not app.config['MAIL_SERVER']:
+def send_email(name, email, subject, message, ip_address=''):
+    if not app.config['MAIL_SERVER'] or not app.config['MAIL_FROM'] or not app.config['MAIL_TO']:
+        app.logger.warning('Contact email skipped: SMTP settings are incomplete.')
         return False
     try:
         import smtplib
         from email.message import EmailMessage
+
+        timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')
+        body = (
+            f"New portfolio contact message\n\n"
+            f"Name: {name}\n"
+            f"Email: {email}\n"
+            f"Subject: {subject}\n"
+            f"IP: {ip_address}\n"
+            f"Time: {timestamp}\n\n"
+            f"Message:\n{message}"
+        )
         msg = EmailMessage()
-        msg.set_content(f"From: {name} ({email})\n\n{message}")
-        msg['Subject'] = f"Portfolio Contact: {name}"
-        msg['From'] = app.config['MAIL_USERNAME']
+        msg.set_content(body)
+        msg['Subject'] = f"Portfolio Contact: {subject[:80]}"
+        msg['From'] = app.config['MAIL_FROM']
         msg['To'] = app.config['MAIL_TO']
-        with smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT']) as server:
-            server.starttls()
-            server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
+        msg['Reply-To'] = email
+
+        smtp_class = smtplib.SMTP_SSL if app.config['MAIL_USE_SSL'] else smtplib.SMTP
+        with smtp_class(app.config['MAIL_SERVER'], app.config['MAIL_PORT'], timeout=20) as server:
+            if app.config['MAIL_USE_TLS'] and not app.config['MAIL_USE_SSL']:
+                server.starttls()
+            if app.config['MAIL_USERNAME'] and app.config['MAIL_PASSWORD']:
+                server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
             server.send_message(msg)
+        return True
+    except Exception as exc:
+        app.logger.exception('Contact email failed: %s', exc)
+        return False
+
+RETEC_EMAIL_TEMPLATE = """\
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  body { margin:0; padding:0; background:#f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif; }
+  .wrapper { max-width:600px; margin:0 auto; padding:24px 16px; }
+  .header { text-align:center; padding:32px 0 8px; }
+  .header .logo-box { display:inline-block; border:2px solid #000; border-radius:8px; padding:0; width:56px; height:56px; position:relative; }
+  .header .logo-box .r-mark { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:32px; height:32px; }
+  .header .logo-box .r-mark span { display:block; font-size:28px; font-weight:700; line-height:1; color:#000; text-align:center; }
+  .header h1 { font-size:22px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#000; margin:10px 0 0; }
+  .header p { font-size:11px; color:#999; letter-spacing:2px; text-transform:uppercase; margin:4px 0 0; }
+  .body { background:#fff; border:1px solid #e0e0e0; padding:32px; color:#1a1a1a; font-size:15px; line-height:1.7; }
+  .body a { color:#000; text-decoration:underline; }
+  .footer { text-align:center; padding:24px 0 8px; font-size:12px; color:#999; }
+  .footer a { color:#999; text-decoration:underline; }
+  .social-links { margin:16px 0; }
+  .social-links a { display:inline-block; margin:0 6px; text-decoration:none; }
+  .social-links img { width:20px; height:20px; display:block; border:none; }
+  hr { border:none; border-top:1px solid #eee; margin:24px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="header">
+    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MDAgMTIwIiBmaWxsPSJub25lIj4KICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSg0MCwgMjgpIj4KICAgIDxsaW5lIHgxPSIwIiB5MT0iMTIiIHgyPSI0MCIgeTI9IjEyIiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CiAgICA8bGluZSB4MT0iMjAiIHkxPSIxMiIgeDI9IjIwIiB5Mj0iNDgiIHN0cm9rZT0iIzAwMCIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KICAgIDxwYXRoIGQ9Ik0gMjAgMTYgQSAxMiAxMiAwIDAgMSAyMCA0MCIgc3Ryb2tlPSIjMDAwIiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogICAgPHBhdGggZD0iTSAzMCAzNiBMIDQwIDQ4IiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CiAgPC9nPgogIDx0ZXh0IHg9IjEwMCIgeT0iNzIiIGZvbnQtZmFtaWx5PSInSW50ZXInLCAnSGVsdmV0aWNhIE5ldWUnLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSI1MiIgZm9udC13ZWlnaHQ9IjcwMCIgbGV0dGVyLXNwYWNpbmc9IjEyIiBmaWxsPSIjMDAwIj5SRVRFQzwvdGV4dD4KICA8bGluZSB4MT0iMTAwIiB5MT0iODgiIHgyPSI0MzYiIHkyPSI4OCIgc3Ryb2tlPSIjMDAwIiBzdHJva2Utd2lkdGg9IjEuNSIvPgogIDxyZWN0IHg9IjQ0MCIgeT0iODUuNSIgd2lkdGg9IjMiIGhlaWdodD0iMyIgZmlsbD0iIzAwMCIvPgo8L3N2Zz4=" alt="RETEC" width="320" height="auto" style="display:inline-block;border:none;max-width:100%;">
+    <p style="font-size:11px;color:#999;letter-spacing:2px;text-transform:uppercase;margin:4px 0 0;">Retro Spirit &middot; Modern Solutions</p>
+  </div>
+  <div class="body">{{ content | safe }}</div>
+  <hr>
+  <div class="footer">
+    <div class="social-links">
+      <a href="https://github.com/echoesrule" target="_blank"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/github.svg" alt="GitHub" width="20" height="20"></a>
+      <a href="https://www.linkedin.com/in/emmanuel-kiprono-14a800389" target="_blank"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linkedin.svg" alt="LinkedIn" width="20" height="20"></a>
+      <a href="https://wa.me/0114581500" target="_blank"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/whatsapp.svg" alt="WhatsApp" width="20" height="20"></a>
+    </div>
+    <p>You received this email because you subscribed on <a href="https://retec.dev">retec.dev</a>.</p>
+    <p style="margin-top:4px"><a href="{{ unsubscribe_url }}">Unsubscribe</a></p>
+  </div>
+</div>
+</body>
+</html>"""
+
+def send_broadcast(subject, html_content, test_email=None):
+    if not app.config['MAIL_SERVER'] or not app.config['MAIL_USERNAME'] or not app.config['MAIL_PASSWORD']:
+        return False, "SMTP not configured."
+
+    import smtplib
+    from email.message import EmailMessage
+
+    unsub_placeholder = url_for('home', _external=True) + '#unsubscribe'
+
+    targets = []
+    if test_email:
+        targets = [{'email': test_email, 'name': 'Test'}]
+    else:
+        targets = Subscriber.query.filter_by(active=True).all()
+        if not targets:
+            return False, "No active subscribers."
+
+    sent = 0
+    failed = 0
+    for sub in targets:
+        try:
+            email = sub.email if hasattr(sub, 'email') else sub['email']
+            name = (sub.name or '') if hasattr(sub, 'name') else sub.get('name', '')
+            greeting = f"Hi {name or 'there'},"
+            unsub = url_for('unsubscribe', email=email, _external=True)
+            html = RETEC_EMAIL_TEMPLATE.replace('{{ content | safe }}', f"<p>{greeting}</p>{html_content}").replace('{{ unsubscribe_url }}', unsub)
+
+            msg = EmailMessage()
+            msg.set_content(f"View this email in a browser that supports HTML.\n\nSubject: {subject}")
+            msg.add_alternative(html, subtype='html')
+            msg['Subject'] = subject
+            broadcast_from = app.config.get('MAIL_FROM', 'contact.retec@gmail.com')
+            msg['From'] = f'RETEC <{broadcast_from}>'
+            msg['To'] = email
+
+            smtp_class = smtplib.SMTP_SSL if app.config['MAIL_USE_SSL'] else smtplib.SMTP
+            with smtp_class(app.config['MAIL_SERVER'], app.config['MAIL_PORT'], timeout=20) as server:
+                if app.config['MAIL_USE_TLS'] and not app.config['MAIL_USE_SSL']:
+                    server.starttls()
+                if app.config['MAIL_USERNAME'] and app.config['MAIL_PASSWORD']:
+                    server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
+                server.send_message(msg)
+            sent += 1
+        except Exception as exc:
+            app.logger.exception('Broadcast email failed to %s: %s', email if 'email' in dir() else 'unknown', exc)
+            failed += 1
+    return True, f"Sent: {sent}, Failed: {failed}"
+
+@app.route('/unsubscribe')
+def unsubscribe():
+    email = request.args.get('email', '').strip().lower()
+    if email:
+        sub = Subscriber.query.filter_by(email=email).first()
+        if sub:
+            sub.active = False
+            db.session.commit()
+            flash('You have been unsubscribed.', 'info')
+    return redirect(url_for('home'))
+
+@app.route('/admin/broadcast', methods=['GET', 'POST'])
+@admin_required
+@csrf.exempt
+def admin_broadcast():
+    result = None
+    if request.method == 'POST':
+        subject = request.form.get('subject', '').strip()
+        content = request.form.get('content', '').strip()
+        test = request.form.get('test_email', '').strip()
+        if not subject or not content:
+            flash('Subject and content are required.', 'error')
+        else:
+            ok, msg = send_broadcast(subject, content, test_email=test or None)
+            if ok:
+                flash(f'Broadcast sent. {msg}', 'success')
+            else:
+                flash(f'Failed: {msg}', 'error')
+        return redirect(url_for('admin_broadcast'))
+    subscriber_count = Subscriber.query.filter_by(active=True).count()
+    return render_template('admin/broadcast.html', subscriber_count=subscriber_count)
+
+def is_disposable_email(email):
+    domain = (email or '').split('@')[-1].strip().lower()
+    return domain in DISPOSABLE_DOMAINS
+
+def check_mx_record(domain):
+    try:
+        import socket
+        socket.getaddrinfo(domain, 25, socket.AF_INET, socket.SOCK_STREAM)
         return True
     except Exception:
         return False
 
-def rate_limit_check(ip):
-    now = time.time()
-    _contact_log[ip] = [t for t in _contact_log.get(ip, []) if now - t < 3600]
-    if len(_contact_log[ip]) >= 3:
+BIG_PROVIDERS = {'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'aol.com', 'icloud.com', 'protonmail.com', 'mail.com'}
+
+def smtp_verify(email, timeout=5):
+    domain = email.split('@')[-1]
+    if domain in BIG_PROVIDERS:
+        return None
+    try:
+        import dns.resolver
+        answers = dns.resolver.resolve(domain, 'MX')
+        mx_host = str(sorted(answers, key=lambda r: r.preference)[0].exchange).rstrip('.')
+    except Exception:
+        return None
+    try:
+        import smtplib
+        sock = smtplib.SMTP(timeout=timeout)
+        sock.connect(mx_host, 25)
+        sock.ehlo_or_helo_if_needed()
+        sock.mail('check@example.com')
+        code, _ = sock.rcpt(email)
+        sock.quit()
+        return code == 250
+    except Exception:
+        return None
+
+def verify_email_api(email):
+    api_key = app.config['ZEROBOUNCE_API_KEY']
+    if not api_key:
+        return None
+    try:
+        resp = requests.get(
+            'https://api.zerobounce.net/v2/validate',
+            params={'api_key': api_key, 'email': email},
+            timeout=10
+        )
+        data = resp.json()
+        status = data.get('status', '')  # Valid, Invalid, Catch-All, Unknown, do_not_mail
+        sub_status = data.get('sub_status', '')
+        if status == 'Valid':
+            return True
+        if status == 'do_not_mail' and sub_status in ('role_based', 'disposable'):
+            return False
+        if status == 'Invalid':
+            return False
+        return None
+    except Exception:
+        return None
+
+def is_valid_email(email):
+    if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email or ''):
         return False
-    _contact_log[ip].append(now)
+    if is_disposable_email(email):
+        return False
     return True
+
+def sync_brevo_contact(email, name=''):
+    api_key = app.config['BREVO_API_KEY']
+    list_id = app.config['BREVO_LIST_ID']
+    if not api_key or not list_id:
+        app.logger.info('Brevo sync skipped: BREVO_API_KEY or BREVO_LIST_ID is missing.')
+        return False
+    try:
+        payload = {
+            'email': email,
+            'attributes': {'FIRSTNAME': name} if name else {},
+            'listIds': [int(list_id)],
+            'updateEnabled': True
+        }
+        response = requests.post(
+            'https://api.brevo.com/v3/contacts',
+            headers={
+                'accept': 'application/json',
+                'api-key': api_key,
+                'content-type': 'application/json'
+            },
+            json=payload,
+            timeout=15
+        )
+        if response.status_code in (200, 201, 204):
+            return True
+        app.logger.warning('Brevo sync failed with status %s: %s', response.status_code, response.text[:500])
+    except Exception as exc:
+        app.logger.exception('Brevo sync failed: %s', exc)
+    return False
+
+def save_subscriber(email, name='', source='website'):
+    email = (email or '').strip().lower()
+    name = (name or '').strip()
+    if not is_valid_email(email):
+        return None, False
+
+    subscriber = Subscriber.query.filter_by(email=email).first()
+    created = subscriber is None
+    if created:
+        subscriber = Subscriber(email=email, name=name, source=source)
+        db.session.add(subscriber)
+    else:
+        if name and not subscriber.name:
+            subscriber.name = name
+        subscriber.active = True
+
+    if not subscriber.validated:
+        api_result = verify_email_api(email)
+        if api_result is True:
+            subscriber.validated = True
+        elif api_result is None:
+            smtp_result = smtp_verify(email)
+            if smtp_result is True:
+                subscriber.validated = True
+            elif smtp_result is None:
+                domain = email.split('@')[-1]
+                if check_mx_record(domain):
+                    subscriber.validated = True
+
+    synced = sync_brevo_contact(email, name or subscriber.name)
+    subscriber.brevo_synced = subscriber.brevo_synced or synced
+    db.session.commit()
+    return subscriber, created
 
 def slugify(text):
     text = text.lower().strip()
@@ -256,35 +782,90 @@ def track_pageview():
 def not_found(e):
     return render_template('404.html'), 404
 
+@app.errorhandler(429)
+def rate_limited(e):
+    flash('Too many messages. Please try again later.', 'error')
+    return redirect(url_for('home') + '#contact')
+
 # ===== PUBLIC ROUTES =====
+
+def get_homepage_data():
+    return {
+        'projects': get_projects(),
+        'testimonials': Testimonial.query.filter_by(active=True).order_by(Testimonial.sort_order).all(),
+        'blog_posts': BlogPost.query.filter_by(published=True).order_by(BlogPost.created_at.desc()).limit(3).all(),
+        'services': services
+    }
 
 @app.route('/')
 def home():
-    projects = get_projects()
-    testimonials = Testimonial.query.filter_by(active=True).order_by(Testimonial.sort_order).all()
-    blog_posts = BlogPost.query.filter_by(published=True).order_by(BlogPost.created_at.desc()).limit(3).all()
-    return render_template('index.html', active='home', projects=projects,
-        services=services, testimonials=testimonials, blog_posts=blog_posts)
+    return render_template('index.html', active='home', **get_homepage_data())
 
 @app.route('/contact', methods=['GET', 'POST'])
+@limiter.limit("5 per hour")
+@csrf.exempt
 def contact():
-    if request.method == 'POST':
-        honeypot = request.form.get('website', '')
-        if honeypot:
-            return redirect(url_for('home') + '#contact')
-        if not rate_limit_check(request.remote_addr or '0.0.0.0'):
-            flash('Too many messages. Please try again later.', 'error')
-            return redirect(url_for('home') + '#contact')
-        name = request.form.get('name', '').strip()
-        email = request.form.get('email', '').strip()
-        message = request.form.get('message', '').strip()
-        if not name or not email or not message:
-            flash('All fields are required.', 'error')
-            return redirect(url_for('home') + '#contact')
-        sent = send_email(name, email, message)
-        flash('Thank you for your message. I will get back to you soon.', 'success')
+    form = ContactForm()
+    honeypot = request.form.get('website', '')
+    if form.validate_on_submit() and not honeypot:
+        ip = request.remote_addr or '0.0.0.0'
+        if send_email(form.name.data, form.email.data, form.subject.data, form.message.data, ip):
+            flash('Thank you for your message. I will get back to you soon.', 'success')
+        else:
+            flash('Your message could not be sent right now. Please email me directly.', 'error')
+        save_subscriber(form.email.data, form.name.data, source='contact')
         return redirect(url_for('home') + '#contact')
+    context = get_homepage_data()
+    context['form'] = form
+    context['active'] = 'home'
+    return render_template('index.html', **context)
+
+@app.route('/subscribe', methods=['POST'])
+@csrf.exempt
+def subscribe():
+    honeypot = request.form.get('website', '')
+    if honeypot:
+        return redirect(url_for('home') + '#contact')
+    email = request.form.get('email', '').strip()
+    name = request.form.get('name', '').strip()
+    if not email:
+        flash('Please enter your email address.', 'error')
+        return redirect(url_for('home') + '#contact')
+    subscriber, created = save_subscriber(email, name, source='newsletter')
+    if subscriber:
+        if created:
+            flash('Thanks for subscribing! Stay tuned for updates.', 'success')
+        else:
+            flash('You are already subscribed!', 'info')
+    else:
+        flash('That email address does not look valid.', 'error')
     return redirect(url_for('home') + '#contact')
+
+@app.route('/verify-email', methods=['POST'])
+@csrf.exempt
+def verify_email():
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email', '') or '').strip().lower()
+    if not email:
+        return jsonify({'valid': False, 'message': 'Enter an email address.'})
+    if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+        return jsonify({'valid': False, 'message': 'Invalid email format.'})
+    if is_disposable_email(email):
+        return jsonify({'valid': False, 'message': 'Disposable email not allowed.'})
+    api_result = verify_email_api(email)
+    if api_result is True:
+        return jsonify({'valid': True, 'message': 'Email verified.'})
+    if api_result is False:
+        return jsonify({'valid': False, 'message': 'Email does not appear to exist.'})
+    smtp_result = smtp_verify(email)
+    if smtp_result is True:
+        return jsonify({'valid': True, 'message': 'Email exists.'})
+    if smtp_result is False:
+        return jsonify({'valid': False, 'message': 'Email does not appear to exist.'})
+    domain = email.split('@')[-1]
+    if check_mx_record(domain):
+        return jsonify({'valid': True, 'message': 'Email looks good.'})
+    return jsonify({'valid': False, 'message': 'Could not verify this email.'})
 
 @app.route('/cv')
 def cv():
@@ -303,6 +884,7 @@ def blog_post(slug):
 # ===== TRACKING ROUTES =====
 
 @app.route('/track/pageview', methods=['POST'])
+@csrf.exempt
 def track_pageview_ajax():
     data = request.get_json(silent=True) or {}
     view = PageView(
@@ -315,6 +897,7 @@ def track_pageview_ajax():
     return '', 204
 
 @app.route('/track/interest', methods=['POST'])
+@csrf.exempt
 def track_interest():
     data = request.get_json(silent=True) or {}
     interest = Interest(
@@ -329,6 +912,7 @@ def track_interest():
 # ===== ADMIN ROUTES =====
 
 @app.route('/admin/login', methods=['GET', 'POST'])
+@csrf.exempt
 def admin_login():
     if request.method == 'POST':
         username = request.form.get('username')
@@ -366,12 +950,13 @@ def admin_dashboard():
     top_sections = db.session.query(
         Interest.section, db.func.count(Interest.id).label('count')
     ).group_by(Interest.section).order_by(db.desc('count')).limit(10).all()
+    subscriber_count = Subscriber.query.count()
     return render_template('admin/dashboard.html',
         total_views=total_views, unique_visitors=unique_visitors,
         project_count=project_count, testimonial_count=testimonial_count,
         blog_count=blog_count, top_pages=top_pages,
         recent_views=recent_views, total_interests=total_interests,
-        top_sections=top_sections)
+        top_sections=top_sections, subscriber_count=subscriber_count)
 
 # ----- Projects -----
 
@@ -686,15 +1271,45 @@ def admin_blog_delete(id):
     flash('Blog post deleted.', 'success')
     return redirect(url_for('admin_blog'))
 
+# ----- Subscribers -----
+
+@app.route('/admin/subscribers')
+@admin_required
+def admin_subscribers():
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+    subscribers = Subscriber.query.order_by(Subscriber.created_at.desc()).paginate(page=page, per_page=per_page)
+    return render_template('admin/subscribers.html', subscribers=subscribers)
+
+@app.route('/admin/subscribers/export.csv')
+@admin_required
+def admin_subscribers_export():
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Email', 'Name', 'Source', 'Brevo Synced', 'Active', 'Subscribed At'])
+    for s in Subscriber.query.order_by(Subscriber.created_at.desc()).all():
+        writer.writerow([s.email, s.name or '', s.source, 'Yes' if s.brevo_synced else 'No', 'Yes' if s.active else 'No', s.created_at])
+    output.seek(0)
+    return Response(output.getvalue(), mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment;filename=subscribers.csv'})
+
 with app.app_context():
     db.create_all()
     try:
+        import sqlalchemy as sa
+        inspector = sa.inspect(db.engine)
+        cols = [c['name'] for c in inspector.get_columns('subscriber')]
+        if 'validated' not in cols:
+            db.session.execute(sa.text('ALTER TABLE subscriber ADD COLUMN validated BOOLEAN DEFAULT 0'))
+            db.session.commit()
+            print('Added validated column to subscriber table.')
         if not User.query.first():
             hashed = bcrypt.generate_password_hash('admin123').decode('utf-8')
             db.session.add(User(username='admin', password_hash=hashed))
             db.session.commit()
             print('Default admin user created: admin / admin123')
-    except Exception:
+    except Exception as e:
+        print('Startup note:', e)
         db.session.rollback()
 
 if __name__ == '__main__':

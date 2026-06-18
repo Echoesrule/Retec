@@ -1,0 +1,43 @@
+{% extends "admin/base.html" %}
+{% block title %}Email Broadcast{% endblock %}
+{% set active = "broadcast" %}
+{% block content %}
+<div class="admin-page">
+    <div class="admin-page__head">
+        <h1 class="admin-page__title">Email Broadcast</h1>
+    </div>
+
+    <div class="admin-card" style="margin-bottom:1rem;padding:1rem 1.25rem;font-size:0.88rem;color:#666;">
+        <i class="fa-solid fa-users" style="margin-right:0.4rem;"></i>
+        <strong>{{ subscriber_count }}</strong> active subscriber{% if subscriber_count != 1 %}s{% endif %}
+    </div>
+
+    <div class="admin-card">
+        <form class="admin-form" method="POST">
+            <div class="admin-form__group">
+                <label for="subject">Subject</label>
+                <input type="text" id="subject" name="subject" required placeholder="e.g. New project launched — RETEC Update">
+            </div>
+            <div class="admin-form__group">
+                <label for="content">Email Content (HTML)</label>
+                <textarea id="content" name="content" rows="12" required placeholder="<p>Write your message here...</p>" style="font-family:monospace;font-size:0.85rem;"></textarea>
+                <p style="font-size:0.75rem;color:#999;margin-top:0.35rem;">
+                    HTML is supported. A branded header/footer with unsubscribe link is added automatically.
+                </p>
+            </div>
+            <div class="admin-form__group">
+                <label for="test_email">Send Test First (optional)</label>
+                <input type="email" id="test_email" name="test_email" placeholder="your@email.com">
+                <p style="font-size:0.75rem;color:#999;margin-top:0.35rem;">
+                    If filled, the email will only go to this address — no broadcast to all subscribers.
+                </p>
+            </div>
+            <div class="admin-form__actions">
+                <button type="submit" class="admin-btn admin-btn--primary">
+                    <i class="fa-solid fa-paper-plane"></i> Send Broadcast
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
