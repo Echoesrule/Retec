@@ -192,10 +192,18 @@
                         <span class="work__tag">{{ tag }}</span>
                         {% endfor %}
                     </div>
-                    <a href="{{ project.github }}" target="_blank" rel="noopener noreferrer" class="work__link">
-                        <i class="fa-brands fa-github"></i>
-                        View on GitHub
-                    </a>
+                    <div style="display:flex;gap:1rem;">
+                        {% if project.demo_url %}
+                        <a href="{{ project.demo_url }}" target="_blank" rel="noopener noreferrer" class="work__link">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            Live Demo
+                        </a>
+                        {% endif %}
+                        <a href="{{ project.github }}" target="_blank" rel="noopener noreferrer" class="work__link">
+                            <i class="fa-brands fa-github"></i>
+                            Source
+                        </a>
+                    </div>
                 </div>
             </article>
             {% endfor %}

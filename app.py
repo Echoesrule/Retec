@@ -61,6 +61,7 @@ class Project(db.Model):
     tags = db.Column(db.String(500), default='')
     image_filename = db.Column(db.String(200), default='')
     github_url = db.Column(db.String(500), default='')
+    demo_url = db.Column(db.String(500), default='')
     featured = db.Column(db.Boolean, default=False)
     sort_order = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -436,6 +437,7 @@ def get_projects(category=None):
             'description': p.description or 'No description provided.',
             'tags': p.tag_list(),
             'github': p.github_url or '#',
+            'demo_url': p.demo_url or '',
             'image': url_for('static', filename='uploads/' + p.image_filename) if p.image_filename else '',
             'id': p.id,
             'category': p.category
@@ -1077,6 +1079,7 @@ def admin_project_add():
             tags=request.form.get('tags', ''),
             image_filename=image_filename,
             github_url=request.form.get('github_url', ''),
+            demo_url=request.form.get('demo_url', ''),
             featured=bool(request.form.get('featured')),
             sort_order=int(request.form.get('sort_order', 0))
         )
@@ -1084,12 +1087,14 @@ def admin_project_add():
         db.session.commit()
         flash('Project added.', 'success')
         return redirect(url_for('admin_projects'))
+    categories = db.session.query(Project.category).distinct().order_by(Project.category).all()
+    categories = [c[0] for c in categories if c[0]]
     prefill = {
         'title': request.args.get('title', ''),
         'description': request.args.get('description', ''),
         'github_url': request.args.get('github_url', '')
     }
-    return render_template('admin/project_form.html', project=None, prefill=prefill)
+    return render_template('admin/project_form.html', project=None, prefill=prefill, categories=categories)
 
 @app.route('/admin/projects/edit/<int:id>', methods=['GET', 'POST'])
 @admin_required
@@ -1105,6 +1110,7 @@ def admin_project_edit(id):
         project.category = request.form.get('category', '')
         project.tags = request.form.get('tags', '')
         project.github_url = request.form.get('github_url', '')
+        project.demo_url = request.form.get('demo_url', '')
         project.featured = bool(request.form.get('featured'))
         project.sort_order = int(request.form.get('sort_order', 0))
         if request.files.get('image') and request.files['image'].filename:
@@ -1120,7 +1126,36 @@ def admin_project_edit(id):
         db.session.commit()
         flash('Project updated.', 'success')
         return redirect(url_for('admin_projects'))
-    return render_template('admin/project_form.html', project=project, prefill={})
+    categories = db.session.query(Project.category).distinct().order_by(Project.category).all()
+    categories = [c[0] for c in categories if c[0]]
+    return render_template('admin/project_form.html', project=project, prefill={}, categories=categories)
+
+@app.route('/admin/projects/github-sync', methods=['POST'])
+@admin_required
+def admin_project_github_sync():
+    repo_url = request.form.get('repo_url', '').strip()
+    if not repo_url:
+        flash('GitHub URL is required.', 'error')
+        return redirect(url_for('admin_project_add'))
+    import re
+    match = re.match(r'https?://github\.com/([^/]+)/([^/]+)', repo_url)
+    if not match:
+        flash('Invalid GitHub URL.', 'error')
+        return redirect(url_for('admin_project_add'))
+    owner, repo = match.group(1), match.group(2).rstrip('/')
+    try:
+        r = requests.get(f'https://api.github.com/repos/{owner}/{repo}', timeout=5)
+        if r.status_code == 200:
+            data = r.json()
+            tags = [data.get('language') or ''] + data.get('topics', [])
+            tags = [t for t in tags if t]
+            return jsonify({
+                'description': data.get('description') or '',
+                'tags': ', '.join(tags[:6])
+            })
+    except Exception:
+        pass
+    return jsonify({'error': 'Could not fetch repo data'}), 400
 
 @app.route('/admin/projects/delete/<int:id>', methods=['POST'])
 @admin_required
@@ -1490,11 +1525,18 @@ with app.app_context():
     try:
         import sqlalchemy as sa
         inspector = sa.inspect(db.engine)
-        cols = [c['name'] for c in inspector.get_columns('subscriber')]
-        if 'validated' not in cols:
-            db.session.execute(sa.text('ALTER TABLE subscriber ADD COLUMN validated BOOLEAN DEFAULT 0'))
-            db.session.commit()
-            print('Added validated column to subscriber table.')
+        for table, col, col_def in [
+            ('subscriber', 'validated', 'BOOLEAN DEFAULT 0'),
+            ('project', 'demo_url', 'VARCHAR(500) DEFAULT \'\'')
+        ]:
+            try:
+                cols = [c['name'] for c in inspector.get_columns(table)]
+                if col not in cols:
+                    db.session.execute(sa.text(f'ALTER TABLE {table} ADD COLUMN {col} {col_def}'))
+                    db.session.commit()
+                    print(f'Added {col} column to {table} table.')
+            except Exception:
+                pass
     except Exception as e:
         print('Startup note (migration):', e)
         db.session.rollback()

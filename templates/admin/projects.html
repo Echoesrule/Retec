@@ -31,15 +31,18 @@
     {% endif %}
 
     <div class="admin-card">
-        <h2 class="admin-card__title">Portfolio Projects</h2>
-        <table class="admin-table">
+        <div class="admin-card__title" style="display:flex;align-items:center;justify-content:space-between;">
+            <span>Portfolio Projects</span>
+            <input type="text" id="projectSearch" placeholder="Search projects..." style="padding:0.35rem 0.65rem;border:1px solid #ddd;font-size:0.82rem;width:220px;font-family:inherit;outline:none;">
+        </div>
+        <table class="admin-table" id="projectsTable">
             <thead>
                 <tr>
                     <th>Image</th>
                     <th>Title</th>
                     <th>Tags</th>
                     <th>Featured</th>
-                    <th>Order</th>
+                    <th>Updated</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -48,15 +51,25 @@
                 <tr>
                     <td>
                         {% if p.image_filename %}
-                        <img src="{{ url_for('static', filename='uploads/' + p.image_filename) }}" alt="{{ p.title }}" class="admin-thumb">
+                        <img src="{{ url_for('static', filename='uploads/' + p.image_filename) }}" alt="{{ p.title }}" class="admin-thumb" style="cursor:zoom-in;" onclick="document.getElementById('preview-{{ p.id }}').showModal()">
+                        <dialog id="preview-{{ p.id }}" style="border:none;padding:0;background:transparent;max-width:90vw;" onclick="this.close()">
+                            <img src="{{ url_for('static', filename='uploads/' + p.image_filename) }}" alt="{{ p.title }}" style="max-width:90vw;max-height:90vh;border-radius:4px;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+                        </dialog>
                         {% else %}
                         <span class="admin-thumb admin-thumb--empty">—</span>
                         {% endif %}
                     </td>
-                    <td>{{ p.title }}</td>
+                    <td>
+                        <strong>{{ p.title }}</strong>
+                        <div style="font-size:0.75rem;color:#999;margin-top:0.2rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+                            {% if p.demo_url %}<a href="{{ p.demo_url }}" target="_blank" rel="noopener" title="Live demo">🌐</a>{% endif %}
+                            {% if p.github_url %}<a href="{{ p.github_url }}" target="_blank" rel="noopener" title="GitHub"><i class="fa-brands fa-github"></i></a>{% endif %}
+                            <a href="/#work" target="_blank" title="View on site"><i class="fa-solid fa-eye"></i></a>
+                        </div>
+                    </td>
                     <td>{{ p.tags[:60] }}{% if p.tags|length > 60 %}...{% endif %}</td>
                     <td>{{ 'Yes' if p.featured else 'No' }}</td>
-                    <td>{{ p.sort_order }}</td>
+                    <td style="font-size:0.8rem;color:#888;white-space:nowrap;">{{ p.updated_at.strftime('%Y-%m-%d') if p.updated_at else '-' }}</td>
                     <td class="admin-actions">
                         <a href="{{ url_for('admin_project_edit', id=p.id) }}" class="admin-btn admin-btn--sm">Edit</a>
                         <form method="POST" action="{{ url_for('admin_project_delete', id=p.id) }}" style="display:inline" onsubmit="return confirm('Delete {{ p.title }}?')">
@@ -74,4 +87,14 @@
         </table>
     </div>
 </div>
+
+<script>
+document.getElementById('projectSearch')?.addEventListener('input', function() {
+    var q = this.value.toLowerCase();
+    document.querySelectorAll('#projectsTable tbody tr').forEach(function(row) {
+        if (row.querySelector('.admin-empty')) return;
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+});
+</script>
 {% endblock %}

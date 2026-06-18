@@ -17,23 +17,40 @@
             </div>
             <div class="admin-form__group">
                 <label for="category">Category</label>
-                <input type="text" id="category" name="category" value="{{ project.category if project else '' }}" placeholder="web, mobile, api, etc.">
+                <input type="text" id="category" name="category" value="{{ project.category if project else '' }}" placeholder="web, mobile, api, etc." list="categoryList">
+                <datalist id="categoryList">
+                    {% for cat in categories %}
+                    <option value="{{ cat }}">
+                    {% endfor %}
+                </datalist>
             </div>
             <div class="admin-form__group">
                 <label for="tags">Tags (comma-separated)</label>
-                <input type="text" id="tags" name="tags" value="{{ project.tags if project else '' }}" placeholder="Python, Flask, API">
+                <div style="display:flex;gap:0.5rem;">
+                    <input type="text" id="tags" name="tags" value="{{ project.tags if project else '' }}" placeholder="Python, Flask, API" style="flex:1;">
+                </div>
             </div>
             <div class="admin-form__group">
                 <label for="github_url">GitHub URL</label>
-                <input type="url" id="github_url" name="github_url" value="{{ project.github_url if project else prefill.github_url }}" placeholder="https://github.com/echoesrule/repo-name">
+                <div style="display:flex;gap:0.5rem;">
+                    <input type="url" id="github_url" name="github_url" value="{{ project.github_url if project else prefill.github_url }}" placeholder="https://github.com/echoesrule/repo-name" style="flex:1;">
+                    <button type="button" class="admin-btn admin-btn--sm admin-btn--secondary" id="githubSyncBtn" onclick="syncGitHub()">Sync</button>
+                </div>
+            </div>
+            <div class="admin-form__group">
+                <label for="demo_url">Live Demo URL</label>
+                <input type="url" id="demo_url" name="demo_url" value="{{ project.demo_url if project else '' }}" placeholder="https://myproject.com">
             </div>
             <div class="admin-form__group">
                 <label for="image">Image</label>
                 {% if project and project.image_filename %}
                 <div class="admin-form__current-img">
-                    <img src="{{ url_for('static', filename='uploads/' + project.image_filename) }}" alt="">
+                    <img src="{{ url_for('static', filename='uploads/' + project.image_filename) }}" alt="" style="cursor:pointer;" onclick="document.getElementById('imgPreview').showModal()">
                     <span>{{ project.image_filename }}</span>
                 </div>
+                <dialog id="imgPreview" style="border:none;padding:0;background:transparent;max-width:90vw;" onclick="this.close()">
+                    <img src="{{ url_for('static', filename='uploads/' + project.image_filename) }}" alt="" style="max-width:90vw;max-height:90vh;border-radius:4px;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+                </dialog>
                 {% endif %}
                 <input type="file" id="image" name="image" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml">
             </div>
@@ -56,4 +73,32 @@
         </form>
     </div>
 </div>
+
+<script>
+function syncGitHub() {
+    var url = document.getElementById('github_url').value;
+    if (!url) return;
+    var btn = document.getElementById('githubSyncBtn');
+    btn.textContent = '...';
+    btn.disabled = true;
+    var form = new FormData();
+    form.append('repo_url', url);
+    fetch('/admin/projects/github-sync', {method:'POST', body:form, headers:{'X-CSRFToken':'{{ csrf_token() }}'}})
+        .then(function(r){return r.json()})
+        .then(function(d){
+            if (d.description !== undefined) {
+                document.querySelector('[name="description"]').value = d.description;
+                document.querySelector('[name="tags"]').value = d.tags;
+                btn.textContent = 'Synced!';
+                setTimeout(function(){btn.textContent='Sync';btn.disabled=false;},2000);
+            } else {
+                btn.textContent = 'Error';
+                setTimeout(function(){btn.textContent='Sync';btn.disabled=false;},2000);
+            }
+        }).catch(function(){
+            btn.textContent='Error';
+            setTimeout(function(){btn.textContent='Sync';btn.disabled=false;},2000);
+        });
+}
+</script>
 {% endblock %}
