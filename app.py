@@ -1308,14 +1308,14 @@ with app.app_context():
             db.session.execute(sa.text('ALTER TABLE subscriber ADD COLUMN validated BOOLEAN DEFAULT 0'))
             db.session.commit()
             print('Added validated column to subscriber table.')
-        if not User.query.first():
-            hashed = bcrypt.generate_password_hash('admin123').decode('utf-8')
-            db.session.add(User(username='admin', password_hash=hashed))
-            db.session.commit()
-            print('Default admin user created: admin / admin123')
     except Exception as e:
-        print('Startup note:', e)
+        print('Startup note (migration):', e)
         db.session.rollback()
+    if not User.query.first():
+        hashed = bcrypt.generate_password_hash('admin123').decode('utf-8')
+        db.session.add(User(username='admin', password_hash=hashed))
+        db.session.commit()
+        print('Default admin user created: admin / admin123')
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
