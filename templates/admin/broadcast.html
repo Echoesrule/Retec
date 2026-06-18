@@ -14,6 +14,7 @@
 
     <div class="admin-card">
         <form class="admin-form" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="admin-form__group">
                 <label for="subject">Subject</label>
                 <input type="text" id="subject" name="subject" required placeholder="e.g. New project launched — RETEC Update">

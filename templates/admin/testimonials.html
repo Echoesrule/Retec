@@ -30,6 +30,7 @@
                     <td class="admin-actions">
                         <a href="{{ url_for('admin_testimonial_edit', id=t.id) }}" class="admin-btn admin-btn--sm">Edit</a>
                         <form method="POST" action="{{ url_for('admin_testimonial_delete', id=t.id) }}" style="display:inline" onsubmit="return confirm('Delete testimonial from {{ t.name }}?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="admin-btn admin-btn--sm admin-btn--danger">Delete</button>
                         </form>
                     </td>

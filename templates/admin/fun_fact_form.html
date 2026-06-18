@@ -6,6 +6,7 @@
     <h1 class="admin-page__title">{{ 'Edit' if fact else 'Add' }} Fun Fact</h1>
     <div class="admin-card">
         <form method="POST" class="admin-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="admin-form__group">
                 <label for="text">Fun Fact *</label>
                 <textarea id="text" name="text" rows="3" required>{{ fact.text if fact else '' }}</textarea>
