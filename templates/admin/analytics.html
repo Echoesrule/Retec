@@ -5,7 +5,13 @@
 <div class="admin-page">
     <div class="admin-page__head">
         <h1 class="admin-page__title">Analytics</h1>
-        <a href="{{ url_for('admin_analytics_export') }}" class="admin-btn admin-btn--sm">Export CSV</a>
+        <div style="display:flex;gap:0.5rem;">
+            <a href="{{ url_for('admin_analytics_export') }}" class="admin-btn admin-btn--sm">Export CSV</a>
+            <form method="POST" action="{{ url_for('admin_analytics_clear') }}" onsubmit="return confirm('Clear all analytics data? This cannot be undone.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="admin-btn admin-btn--sm admin-btn--danger">Clear Data</button>
+            </form>
+        </div>
     </div>
 
     <div class="admin-stats" id="summaryStats">

@@ -771,6 +771,8 @@ def no_cache(response):
 
 @app.before_request
 def track_pageview():
+    if 'admin_id' in session:
+        return
     if request.path.startswith('/static') or request.path.startswith('/track') or request.path.startswith('/admin') or request.path == '/favicon.ico':
         return
     view = PageView(
@@ -891,6 +893,8 @@ def blog_post(slug):
 @app.route('/track/pageview', methods=['POST'])
 @csrf.exempt
 def track_pageview_ajax():
+    if 'admin_id' in session:
+        return '', 204
     data = request.get_json(silent=True) or {}
     view = PageView(
         page=data.get('page', '/'),
@@ -904,6 +908,8 @@ def track_pageview_ajax():
 @app.route('/track/interest', methods=['POST'])
 @csrf.exempt
 def track_interest():
+    if 'admin_id' in session:
+        return '', 204
     data = request.get_json(silent=True) or {}
     interest = Interest(
         section=data.get('section', 'unknown'),
@@ -1152,6 +1158,19 @@ def admin_analytics_interests_over_time():
     counts = {str(r.date): r.count for r in rows}
     data = [counts.get(d, 0) for d in labels]
     return jsonify({'labels': labels, 'data': data})
+
+@app.route('/admin/analytics/clear', methods=['POST'])
+@admin_required
+def admin_analytics_clear():
+    try:
+        PageView.query.delete()
+        Interest.query.delete()
+        db.session.commit()
+        flash('All analytics data cleared.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Error clearing analytics: ' + str(e), 'error')
+    return redirect(url_for('admin_analytics'))
 
 @app.route('/admin/analytics/export.csv')
 @admin_required
