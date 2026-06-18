@@ -939,6 +939,32 @@ def admin_logout():
     flash('Logged out.', 'success')
     return redirect(url_for('admin_login'))
 
+@app.route('/admin/change-password', methods=['GET', 'POST'])
+@admin_required
+def admin_change_password():
+    if request.method == 'POST':
+        current = request.form.get('current_password', '')
+        new = request.form.get('new_password', '')
+        confirm = request.form.get('confirm_password', '')
+        user = db.session.get(User, session['admin_id'])
+        if not user:
+            flash('User not found.', 'error')
+            return redirect(url_for('admin_logout'))
+        if not bcrypt.check_password_hash(user.password_hash, current):
+            flash('Current password is incorrect.', 'error')
+            return redirect(url_for('admin_change_password'))
+        if len(new) < 6:
+            flash('New password must be at least 6 characters.', 'error')
+            return redirect(url_for('admin_change_password'))
+        if new != confirm:
+            flash('New passwords do not match.', 'error')
+            return redirect(url_for('admin_change_password'))
+        user.password_hash = bcrypt.generate_password_hash(new).decode('utf-8')
+        db.session.commit()
+        flash('Password changed successfully.', 'success')
+        return redirect(url_for('admin_dashboard'))
+    return render_template('admin/change_password.html')
+
 @app.route('/admin')
 @admin_required
 def admin_dashboard():

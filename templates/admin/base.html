@@ -61,6 +61,7 @@
             </nav>
             <div class="admin-sidebar__foot">
                 <a href="/" class="admin-sidebar__link" target="_blank">View Site</a>
+                <a href="{{ url_for('admin_change_password') }}" class="admin-sidebar__link {% if active == 'change_password' %}admin-sidebar__link--active{% endif %}">Change Password</a>
                 <a href="{{ url_for('admin_logout') }}" class="admin-sidebar__link admin-sidebar__link--danger">Logout</a>
             </div>
         </aside>
