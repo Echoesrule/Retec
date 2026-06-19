@@ -85,7 +85,7 @@
                 <tr>
                     <td>{{ v.page }}</td>
                     <td>{{ v.ip_address or '-' }}</td>
-                    <td>{{ v.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>{{ v.timestamp|localtime|format_datetime }}</td>
                 </tr>
                 {% endfor %}
             </tbody>

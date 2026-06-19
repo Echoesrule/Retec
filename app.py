@@ -44,6 +44,22 @@ limiter = Limiter(get_remote_address, app=app, default_limits=['200 per day', '5
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 
+from zoneinfo import ZoneInfo
+_tz = os.environ.get('TIMEZONE', 'Africa/Nairobi')
+@app.template_filter('localtime')
+def _localtime_filter(dt):
+    if dt is None:
+        return ''
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=ZoneInfo('UTC'))
+    return dt.astimezone(ZoneInfo(_tz))
+
+@app.template_filter('format_datetime')
+def _format_datetime_filter(dt, fmt='%Y-%m-%d %H:%M'):
+    if dt is None:
+        return ''
+    return dt.strftime(fmt)
+
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
 
 # ===== MODELS =====
