@@ -1610,14 +1610,14 @@ with app.app_context():
         import sqlalchemy as sa
         inspector = sa.inspect(db.engine)
         for table, col, col_def in [
-            ('subscriber', 'validated', 'BOOLEAN DEFAULT 0'),
+            ('subscriber', 'validated', 'BOOLEAN DEFAULT false'),
             ('project', 'demo_url', 'VARCHAR(500) DEFAULT \'\''),
-            ('project', 'visible', 'BOOLEAN DEFAULT 1'),
+            ('project', 'visible', 'BOOLEAN DEFAULT true'),
             ('fun_fact', 'text', 'TEXT DEFAULT \'\''),
-            ('fun_fact', 'active', 'BOOLEAN DEFAULT 1'),
+            ('fun_fact', 'active', 'BOOLEAN DEFAULT true'),
             ('fun_fact', 'sort_order', 'INTEGER DEFAULT 0'),
-            ('fun_fact', 'created_at', 'DATETIME'),
-            ('fun_fact', 'updated_at', 'DATETIME')
+            ('fun_fact', 'created_at', 'TIMESTAMP'),
+            ('fun_fact', 'updated_at', 'TIMESTAMP')
         ]:
             try:
                 cols = [c['name'] for c in inspector.get_columns(table)]
@@ -1626,7 +1626,7 @@ with app.app_context():
                     db.session.commit()
                     print(f'Added {col} column to {table} table.')
             except Exception:
-                pass
+                db.session.rollback()
     except Exception as e:
         print('Startup note (migration):', e)
         db.session.rollback()
