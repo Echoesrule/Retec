@@ -10,7 +10,13 @@
 
     {% if github_repos %}
     <div class="admin-card">
-        <h2 class="admin-card__title">GitHub Repositories</h2>
+        <div class="admin-card__title" style="display:flex;align-items:center;justify-content:space-between;">
+            <h2 class="admin-card__title" style="margin:0;">GitHub Repositories</h2>
+            <form method="POST" action="{{ url_for('sync_github_projects') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="admin-btn admin-btn--primary admin-btn--sm">Sync All GitHub Repos</button>
+            </form>
+        </div>
         <div style="padding:0.5rem 1rem 1rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:0.75rem;">
             {% for repo in github_repos %}
             <div style="border:1px solid #eee;padding:0.75rem;border-radius:6px;display:flex;flex-direction:column;gap:0.35rem;">
@@ -23,7 +29,12 @@
                     <span>★ {{ repo.stargazers_count }}</span>
                     <span>⑂ {{ repo.forks_count }}</span>
                 </div>
+                {% set imported = repo.html_url in imported_urls %}
+                {% if imported %}
+                <span style="font-size:0.75rem;color:#2e7d32;font-weight:500;">✓ Imported</span>
+                {% else %}
                 <a href="{{ url_for('admin_project_add') }}?title={{ repo.name }}&description={{ repo.description or '' }}&github_url={{ repo.html_url }}" class="admin-btn admin-btn--sm" style="align-self:flex-start;margin-top:0.25rem;">Import as Project</a>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
@@ -42,6 +53,7 @@
                     <th>Title</th>
                     <th>Tags</th>
                     <th>Featured</th>
+                    <th>Visible</th>
                     <th>Updated</th>
                     <th>Actions</th>
                 </tr>
@@ -69,6 +81,12 @@
                     </td>
                     <td>{{ p.tags[:60] }}{% if p.tags|length > 60 %}...{% endif %}</td>
                     <td>{{ 'Yes' if p.featured else 'No' }}</td>
+                    <td>
+                        <label class="toggle-switch" title="Toggle visibility on public site">
+                            <input type="checkbox" class="vis-toggle" data-id="{{ p.id }}" {{ 'checked' if p.visible else '' }}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </td>
                     <td style="font-size:0.8rem;color:#888;white-space:nowrap;">{{ p.updated_at.strftime('%Y-%m-%d') if p.updated_at else '-' }}</td>
                     <td class="admin-actions">
                         <a href="{{ url_for('admin_project_edit', id=p.id) }}" class="admin-btn admin-btn--sm">Edit</a>
@@ -80,7 +98,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="6" class="admin-empty">No projects yet. <a href="{{ url_for('admin_project_add') }}">Add one</a>.</td>
+                    <td colspan="7" class="admin-empty">No projects yet. <a href="{{ url_for('admin_project_add') }}">Add one</a>.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -94,6 +112,19 @@ document.getElementById('projectSearch')?.addEventListener('input', function() {
     document.querySelectorAll('#projectsTable tbody tr').forEach(function(row) {
         if (row.querySelector('.admin-empty')) return;
         row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+});
+
+document.querySelectorAll('.vis-toggle').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+        var id = this.dataset.id;
+        var checked = this.checked;
+        fetch('{{ url_for("toggle_project_visibility", id=0) }}'.replace('/0', '/' + id), {
+            method: 'POST',
+            headers: {'X-CSRFToken': '{{ csrf_token() }}', 'Content-Type': 'application/json'}
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            if (!data.visible) cb.checked = false;
+        }).catch(function() { cb.checked = !checked; });
     });
 });
 </script>

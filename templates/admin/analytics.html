@@ -19,6 +19,7 @@
         <div class="admin-stat"><span class="admin-stat__value" id="statUnique">-</span><span class="admin-stat__label">Unique Visitors</span></div>
         <div class="admin-stat"><span class="admin-stat__value" id="statInterests">-</span><span class="admin-stat__label">Interactions</span></div>
         <div class="admin-stat"><span class="admin-stat__value" id="statRecent">-</span><span class="admin-stat__label">Views (30d)</span></div>
+        <div class="admin-stat"><span class="admin-stat__value" id="statCountries">-</span><span class="admin-stat__label">Countries</span></div>
     </div>
 
     <div class="admin-grid">
@@ -43,9 +44,33 @@
         </div>
     </div>
 
+    <div class="admin-grid">
+        <div class="admin-card">
+            <h2 class="admin-card__title">Countries</h2>
+            <div style="padding:1rem;height:260px;max-width:400px;margin:0 auto;"><canvas id="locationsChart"></canvas></div>
+        </div>
+        <div class="admin-card">
+            <h2 class="admin-card__title">Cities</h2>
+            <div style="padding:1rem;height:260px;max-width:400px;margin:0 auto;"><canvas id="citiesChart"></canvas></div>
+        </div>
+    </div>
+
     <div class="admin-card">
-        <h2 class="admin-card__title">Visitor Locations</h2>
-        <div style="padding:1rem;height:260px;max-width:500px;margin:0 auto;"><canvas id="locationsChart"></canvas></div>
+        <h2 class="admin-card__title">Top Locations</h2>
+        <div style="padding:1rem;overflow-x:auto;">
+            <table class="admin-table" id="locationsTable">
+                <thead>
+                    <tr>
+                        <th>Country</th>
+                        <th>City</th>
+                        <th>Visitors</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="3" class="admin-empty">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -59,6 +84,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('statUnique').textContent = d.unique_visitors;
         document.getElementById('statInterests').textContent = d.total_interests;
         document.getElementById('statRecent').textContent = d.recent_views;
+        document.getElementById('statCountries').textContent = d.countries_count;
     });
 
     function lineChart(id, url, label, color) {
@@ -113,6 +139,18 @@ document.addEventListener('DOMContentLoaded', function() {
     barChart('topPagesChart', '/admin/api/analytics/top-pages', 'Views');
     pieChart('sectionChart', '/admin/api/analytics/section-interests');
     pieChart('locationsChart', '/admin/api/analytics/locations');
+    pieChart('citiesChart', '/admin/api/analytics/cities');
+
+    fetch('/admin/api/analytics/cities').then(function(r){return r.json()}).then(function(d){
+        var tbody = document.querySelector('#locationsTable tbody');
+        if (!d.cities || d.cities.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="admin-empty">No location data yet.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = d.cities.map(function(city, i){
+            return '<tr><td>' + d.countries[i] + '</td><td>' + city + '</td><td>' + d.data[i] + '</td></tr>';
+        }).join('');
+    });
 });
 </script>
 {% endblock %}

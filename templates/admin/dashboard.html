@@ -33,6 +33,10 @@
             <span class="admin-stat__value">{{ subscriber_count }}</span>
             <span class="admin-stat__label">Subscribers</span>
         </div>
+        <div class="admin-stat">
+            <span class="admin-stat__value">{{ countries_count }}</span>
+            <span class="admin-stat__label">Countries</span>
+        </div>
     </div>
 
     <div class="admin-grid">
@@ -87,5 +91,25 @@
             </tbody>
         </table>
     </div>
+
+    {% if top_locations %}
+    <div class="admin-card">
+        <h2 class="admin-card__title">Top Locations</h2>
+        <table class="admin-table">
+            <thead>
+                <tr><th>Country</th><th>City</th><th>Visitors</th></tr>
+            </thead>
+            <tbody>
+                {% for loc in top_locations %}
+                <tr>
+                    <td>{{ loc.country }}</td>
+                    <td>{{ loc.city or 'Unknown' }}</td>
+                    <td>{{ loc.count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

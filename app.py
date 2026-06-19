@@ -63,6 +63,7 @@ class Project(db.Model):
     github_url = db.Column(db.String(500), default='')
     demo_url = db.Column(db.String(500), default='')
     featured = db.Column(db.Boolean, default=False)
+    visible = db.Column(db.Boolean, default=True)
     sort_order = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -92,6 +93,12 @@ class LocationLog(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 class FunFact(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    text = db.Column(db.Text, nullable=False, default='')
+    active = db.Column(db.Boolean, default=True)
+    sort_order = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class Testimonial(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -427,7 +434,7 @@ def get_github_projects():
         return []
 
 def get_projects(category=None):
-    q = Project.query.order_by(Project.sort_order, Project.created_at.desc())
+    q = Project.query.filter_by(visible=True).order_by(Project.sort_order, Project.created_at.desc())
     if category:
         q = q.filter_by(category=category)
     db_projects = q.all()
@@ -442,7 +449,9 @@ def get_projects(category=None):
             'id': p.id,
             'category': p.category
         } for p in db_projects]
-    return get_github_projects()
+    if Project.query.count() == 0:
+        return get_github_projects()
+    return []
 
 def get_github_stats():
     try:
@@ -1033,12 +1042,19 @@ def admin_dashboard():
         Interest.section, db.func.count(Interest.id).label('count')
     ).group_by(Interest.section).order_by(db.desc('count')).limit(10).all()
     subscriber_count = Subscriber.query.count()
+    countries_count = db.session.query(LocationLog.country).distinct().count()
+    import sqlalchemy as sa
+    top_locations = db.session.query(
+        LocationLog.country, LocationLog.city, sa.func.count(LocationLog.id).label('count')
+    ).group_by(LocationLog.country, LocationLog.city
+    ).order_by(sa.desc('count')).limit(10).all()
     return render_template('admin/dashboard.html',
         total_views=total_views, unique_visitors=unique_visitors,
         project_count=project_count, testimonial_count=testimonial_count,
         blog_count=blog_count, top_pages=top_pages,
         recent_views=recent_views, total_interests=total_interests,
-        top_sections=top_sections, subscriber_count=subscriber_count)
+        top_sections=top_sections, subscriber_count=subscriber_count,
+        countries_count=countries_count, top_locations=top_locations)
 
 # ----- Projects -----
 
@@ -1055,7 +1071,8 @@ def admin_projects():
                     github_repos.append(repo)
     except Exception:
         pass
-    return render_template('admin/projects.html', projects=projects, github_repos=github_repos)
+    imported_urls = {p.github_url for p in projects if p.github_url}
+    return render_template('admin/projects.html', projects=projects, github_repos=github_repos, imported_urls=imported_urls)
 
 @app.route('/admin/projects/add', methods=['GET', 'POST'])
 @admin_required
@@ -1081,6 +1098,7 @@ def admin_project_add():
             github_url=request.form.get('github_url', ''),
             demo_url=request.form.get('demo_url', ''),
             featured=bool(request.form.get('featured')),
+            visible=bool(request.form.get('visible')),
             sort_order=int(request.form.get('sort_order', 0))
         )
         db.session.add(project)
@@ -1112,6 +1130,7 @@ def admin_project_edit(id):
         project.github_url = request.form.get('github_url', '')
         project.demo_url = request.form.get('demo_url', '')
         project.featured = bool(request.form.get('featured'))
+        project.visible = bool(request.form.get('visible'))
         project.sort_order = int(request.form.get('sort_order', 0))
         if request.files.get('image') and request.files['image'].filename:
             file = request.files['image']
@@ -1170,6 +1189,54 @@ def admin_project_delete(id):
     flash('Project deleted.', 'success')
     return redirect(url_for('admin_projects'))
 
+@app.route('/admin/projects/sync-github', methods=['POST'])
+@admin_required
+def sync_github_projects():
+    try:
+        r = requests.get('https://api.github.com/users/echoesrule/repos?sort=updated&per_page=30', timeout=10)
+        if r.status_code != 200:
+            flash('Could not fetch GitHub repos.', 'error')
+            return redirect(url_for('admin_projects'))
+        repos = r.json()
+        if not isinstance(repos, list):
+            flash('Unexpected response from GitHub.', 'error')
+            return redirect(url_for('admin_projects'))
+        added = 0
+        for repo in repos:
+            if repo.get('fork'):
+                continue
+            github_url = repo['html_url']
+            exists = Project.query.filter_by(github_url=github_url).first()
+            if exists:
+                continue
+            tags = []
+            if repo.get('language'):
+                tags.append(repo['language'])
+            tags.extend(repo.get('topics', [])[:4])
+            project = Project(
+                title=repo['name'].replace('-', ' ').replace('_', ' ').title(),
+                description=repo.get('description') or '',
+                tags=', '.join(tags) if tags else '',
+                github_url=github_url,
+                visible=True
+            )
+            db.session.add(project)
+            added += 1
+        db.session.commit()
+        flash(f'Synced {added} new project(s) from GitHub.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Sync failed: {str(e)}', 'error')
+    return redirect(url_for('admin_projects'))
+
+@app.route('/admin/projects/toggle-visibility/<int:id>', methods=['POST'])
+@admin_required
+def toggle_project_visibility(id):
+    project = Project.query.get_or_404(id)
+    project.visible = not project.visible
+    db.session.commit()
+    return jsonify({'visible': project.visible})
+
 # ----- Analytics + CSV Export -----
 
 @app.route('/admin/analytics')
@@ -1186,11 +1253,13 @@ def admin_analytics_summary():
     unique_visitors = db.session.query(PageView.ip_address).distinct().count()
     total_interests = Interest.query.count()
     recent_views = PageView.query.filter(PageView.timestamp >= thirty_days_ago).count()
+    countries_count = db.session.query(LocationLog.country).distinct().count()
     return jsonify({
         'total_views': total_views,
         'unique_visitors': unique_visitors,
         'total_interests': total_interests,
-        'recent_views': recent_views
+        'recent_views': recent_views,
+        'countries_count': countries_count
     })
 
 @app.route('/admin/api/analytics/views-over-time')
@@ -1263,6 +1332,21 @@ def admin_analytics_locations():
         'labels': [r.country for r in rows],
         'data': [r.count for r in rows],
         'total': total
+    })
+
+@app.route('/admin/api/analytics/cities')
+@admin_required
+def admin_analytics_cities():
+    import sqlalchemy as sa
+    rows = db.session.query(
+        LocationLog.country, LocationLog.city, sa.func.count(LocationLog.id).label('count')
+    ).group_by(LocationLog.country, LocationLog.city
+    ).order_by(sa.desc('count')).limit(15).all()
+    return jsonify({
+        'labels': [f"{r.city}, {r.country}" if r.city else r.country for r in rows],
+        'cities': [r.city or 'Unknown' for r in rows],
+        'countries': [r.country for r in rows],
+        'data': [r.count for r in rows]
     })
 
 @app.route('/admin/analytics/clear', methods=['POST'])
@@ -1527,7 +1611,13 @@ with app.app_context():
         inspector = sa.inspect(db.engine)
         for table, col, col_def in [
             ('subscriber', 'validated', 'BOOLEAN DEFAULT 0'),
-            ('project', 'demo_url', 'VARCHAR(500) DEFAULT \'\'')
+            ('project', 'demo_url', 'VARCHAR(500) DEFAULT \'\''),
+            ('project', 'visible', 'BOOLEAN DEFAULT 1'),
+            ('fun_fact', 'text', 'TEXT DEFAULT \'\''),
+            ('fun_fact', 'active', 'BOOLEAN DEFAULT 1'),
+            ('fun_fact', 'sort_order', 'INTEGER DEFAULT 0'),
+            ('fun_fact', 'created_at', 'DATETIME'),
+            ('fun_fact', 'updated_at', 'DATETIME')
         ]:
             try:
                 cols = [c['name'] for c in inspector.get_columns(table)]

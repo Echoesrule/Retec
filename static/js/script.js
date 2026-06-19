@@ -1,5 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
 
+    AOS.init({
+        duration: 600,
+        easing: 'ease-out-cubic',
+        once: true,
+        offset: 60
+    });
+
     const header = document.getElementById('header');
     const navToggle = document.getElementById('nav-toggle');
     const navMenu = document.getElementById('nav-menu');
@@ -67,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (pageContent) {
         window.addEventListener('pageshow', () => {
             pageContent.classList.remove('page-content--fading');
+            AOS.refresh();
         });
 
         document.querySelectorAll('a[href]').forEach(link => {

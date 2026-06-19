@@ -2,25 +2,30 @@
 {% block content %}
 <section class="section section--light cv">
     <div class="container">
-        <div class="cv__header">
+
+        <div class="cv__header" data-aos="fade-down">
             <div class="cv__avatar">
                 <i class="fa-solid fa-user"></i>
             </div>
             <h1 class="cv__name">Retro</h1>
-            <p class="cv__title">Founder & Software Developer @ RETEC</p>
-            <div class="cv__contact">
-                <span><i class="fa-solid fa-envelope"></i> hello@retec.dev</span>
-                <span><i class="fa-brands fa-github"></i> github.com/echoesrule</span>
+            <p class="cv__title">Founder &amp; Software Developer @ RETEC</p>
+            <div class="cv__actions">
+                <a href="mailto:contact.retec@gmail.com" class="cv__action-btn" aria-label="Email">
+                    <i class="fa-solid fa-envelope"></i> Email
+                </a>
+                <a href="https://github.com/echoesrule" target="_blank" rel="noopener" class="cv__action-btn" aria-label="GitHub">
+                    <i class="fa-brands fa-github"></i> GitHub
+                </a>
             </div>
         </div>
 
-        <div class="cv__section">
+        <div class="cv__section" data-aos="fade-up">
             <h2 class="cv__section-title">About</h2>
             <p>Software developer focused on building modern websites, web applications, and digital experiences for businesses and creators. Founder of RETEC.</p>
         </div>
 
         {% if github_stats %}
-        <div class="cv__section">
+        <div class="cv__section" data-aos="fade-up" data-aos-delay="100">
             <h2 class="cv__section-title">GitHub Stats</h2>
             <div class="cv__stats">
                 <div class="cv__stat">
@@ -35,7 +40,7 @@
         </div>
         {% endif %}
 
-        <div class="cv__section">
+        <div class="cv__section" data-aos="fade-up" data-aos-delay="150">
             <h2 class="cv__section-title">Skills</h2>
             <div class="cv__tags">
                 <span class="cv__tag">Python</span>
@@ -49,14 +54,16 @@
             </div>
         </div>
 
-        <div class="cv__section">
+        <div class="cv__section" data-aos="fade-up" data-aos-delay="200">
             <h2 class="cv__section-title">Experience</h2>
-            <div class="cv__item">
-                <h3 class="cv__item-title">Founder & Software Developer</h3>
+            <div class="cv__item" data-aos="fade-up" data-aos-delay="250">
+                <div class="cv__item-line"></div>
+                <h3 class="cv__item-title">Founder &amp; Software Developer</h3>
                 <p class="cv__item-meta">RETEC — Present</p>
                 <p class="cv__item-desc">Building modern web solutions for businesses and creators. Specializing in Python, Flask, and responsive front-end development.</p>
             </div>
         </div>
+
     </div>
 </section>
 {% endblock %}

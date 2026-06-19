@@ -2,20 +2,20 @@
 {% block content %}
 
 <!-- ===== HERO ===== -->
-<section class="hero" id="hero">
+<section class="hero" id="hero" data-aos="fade-in" data-aos-duration="800">
     <video class="hero__bg" autoplay muted loop playsinline preload="auto" poster="{{ url_for('static', filename='images/hero-bg.svg') }}" id="heroVideo">
         <source src="{{ url_for('static', filename='hero-bg.mp4') }}" type="video/mp4">
     </video>
     <div class="hero__overlay"></div>
     <div class="container hero__container">
         <div class="hero__text">
-            <p class="hero__label">RETEC Studio</p>
+            <p class="hero__label" data-aos="fade-down" data-aos-delay="100">RETEC Studio</p>
             <h1 class="hero__title">
-                <span class="hero__title-line">Retro Spirit.</span>
-                <span class="hero__title-line hero__title-line--accent">Modern Solutions.</span>
+                <span class="hero__title-line" data-aos="fade-right" data-aos-delay="200">Retro Spirit.</span>
+                <span class="hero__title-line hero__title-line--accent" data-aos="fade-right" data-aos-delay="350">Modern Solutions.</span>
             </h1>
-            <p class="hero__subtitle">I design and build fast, responsive websites and Flask-powered web apps for businesses, creators, and growing ideas.</p>
-            <div class="hero__actions">
+            <p class="hero__subtitle" data-aos="fade-up" data-aos-delay="450">I design and build fast, responsive websites and Flask-powered web apps for businesses, creators, and growing ideas.</p>
+            <div class="hero__actions" data-aos="fade-up" data-aos-delay="550">
                 <a href="#work" class="hero__cta">
                     View Projects
                     <i class="fa-solid fa-arrow-down"></i>
@@ -25,12 +25,12 @@
                     <i class="fa-solid fa-arrow-right"></i>
                 </a>
             </div>
-            <div class="hero__stats" aria-label="Highlights">
+            <div class="hero__stats" aria-label="Highlights" data-aos="fade-up" data-aos-delay="650">
                 <span><strong>Python</strong> solutions</span>
                 <span><strong>Flask</strong> apps</span>
                 <span><strong>Responsive</strong> UI</span>
             </div>
-            <div class="hero__socials">
+            <div class="hero__socials" data-aos="fade-up" data-aos-delay="750">
                 <a href="https://github.com/echoesrule" target="_blank" rel="noopener noreferrer" class="hero__social-link" aria-label="GitHub">
                     <i class="fa-brands fa-github" aria-hidden="true"></i>
                     <svg class="social-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
@@ -57,7 +57,7 @@
 <!-- ===== ABOUT ===== -->
 <section class="section about section--light" id="about">
     <div class="container">
-        <div class="about__content">
+        <div class="about__content" data-aos="fade-up">
             <p class="section__eyebrow">About</p>
             <h2 class="about__title">Hi, I'm Retro.</h2>
             <p class="about__text">
@@ -71,82 +71,37 @@
 <section class="section columns section--light">
     <div class="container">
         <div class="columns__grid">
-            <div class="columns__item">
+            <div class="columns__item" data-aos="fade-up" data-aos-delay="0">
                 <div class="columns__icon">
                     <i class="fa-solid fa-laptop-code"></i>
                 </div>
                 <h3 class="columns__heading">What I Build</h3>
                 <ul class="columns__list">
-                    <li>
-                        <span class="columns__list-icon">
-                            <i class="fa-solid fa-globe"></i>
-                        </span>
-                        Business Websites
-                    </li>
-                    <li>
-                        <span class="columns__list-icon">
-                            <i class="fa-solid fa-folder"></i>
-                        </span>
-                        Portfolio Websites
-                    </li>
-                    <li>
-                        <span class="columns__list-icon">
-                            <i class="fa-solid fa-display"></i>
-                        </span>
-                        Web Applications
-                    </li>
+                    <li><span class="columns__list-icon"><i class="fa-solid fa-globe"></i></span>Business Websites</li>
+                    <li><span class="columns__list-icon"><i class="fa-solid fa-folder"></i></span>Portfolio Websites</li>
+                    <li><span class="columns__list-icon"><i class="fa-solid fa-display"></i></span>Web Applications</li>
                 </ul>
             </div>
-            <div class="columns__item">
+            <div class="columns__item" data-aos="fade-up" data-aos-delay="100">
                 <div class="columns__icon">
                     <i class="fa-solid fa-sliders"></i>
                 </div>
                 <h3 class="columns__heading">How I Work</h3>
                 <ul class="columns__list">
-                    <li>
-                        <span class="columns__list-icon">
-                            <i class="fa-solid fa-code"></i>
-                        </span>
-                        Clean Code
-                    </li>
-                    <li>
-                        <span class="columns__list-icon">
-                            <i class="fa-solid fa-mobile-screen"></i>
-                        </span>
-                        Responsive Design
-                    </li>
-                    <li>
-                        <span class="columns__list-icon">
-                            <i class="fa-solid fa-check"></i>
-                        </span>
-                        Reliable Delivery
-                    </li>
+                    <li><span class="columns__list-icon"><i class="fa-solid fa-code"></i></span>Clean Code</li>
+                    <li><span class="columns__list-icon"><i class="fa-solid fa-mobile-screen"></i></span>Responsive Design</li>
+                    <li><span class="columns__list-icon"><i class="fa-solid fa-check"></i></span>Reliable Delivery</li>
                 </ul>
             </div>
-            <div class="columns__item">
+            <div class="columns__item" data-aos="fade-up" data-aos-delay="200">
                 <div class="columns__icon">
                     <i class="fa-solid fa-crosshairs"></i>
                 </div>
                 <h3 class="columns__heading">Current Focus</h3>
                 <ul class="columns__list">
-                    <li>
-                        <span class="columns__list-icon">
-                            <i class="fa-solid fa-code"></i>
-                        </span>
-                        Python
-                    </li>
-                    <li>
-                        <span class="columns__list-icon">
-                            <i class="fa-solid fa-cube"></i>
-                        </span>
-                        Flask
-                    </li>
-                    <li>
-                        <span class="columns__list-icon">
-                            <i class="fa-solid fa-globe"></i>
-                        </span>
-                        Modern Web Development
-                    </li>
+                    <li><span class="columns__list-icon"><i class="fa-solid fa-code"></i></span>Python</li>
+                    <li><span class="columns__list-icon"><i class="fa-solid fa-cube"></i></span>Flask</li>
+                    <li><span class="columns__list-icon"><i class="fa-solid fa-globe"></i></span>Modern Web Development</li>
                 </ul>
             </div>
         </div>
@@ -156,7 +111,7 @@
 <!-- ===== PROJECTS ===== -->
 <section class="section work section--light" id="work">
     <div class="container">
-        <div class="section__header">
+        <div class="section__header" data-aos="fade-up">
             <p class="section__eyebrow">Portfolio</p>
             <h2 class="section__title">Selected Projects</h2>
             <p class="section__intro">A quick look at web work, app experiments, and code-backed builds from the RETEC bench.</p>
@@ -172,7 +127,7 @@
         {% endif %}
         <div class="work__grid">
             {% for project in projects %}
-            <article class="work__card" data-category="{{ project.category or '' }}">
+            <article class="work__card" data-category="{{ project.category or '' }}" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 }}">
                 <div class="work__image">
                     <div class="work__image-placeholder">
                         {% if project.image %}
@@ -214,7 +169,7 @@
 <!-- ===== SERVICES ===== -->
 <section class="section services section--light" id="services">
     <div class="container">
-        <div class="section__header">
+        <div class="section__header" data-aos="fade-up">
             <p class="section__eyebrow">Services</p>
             <h2 class="section__title">Ways I Can Help</h2>
             <p class="section__intro">Focused support for getting a polished digital product online and keeping it useful after launch.</p>
@@ -228,7 +183,7 @@
                 'Website Maintenance': 'fa-screwdriver-wrench'
             } %}
             {% for service in services %}
-            <div class="service__item">
+            <div class="service__item" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 80 }}">
                 <span class="service__icon" aria-hidden="true">
                     <i class="fa-solid {{ service_icons.get(service, 'fa-code') }}"></i>
                 </span>
@@ -243,10 +198,10 @@
 {% if testimonials %}
 <section class="section testimonials section--light" id="testimonials">
     <div class="container">
-        <h2 class="section__title">What People Say</h2>
+        <h2 class="section__title" data-aos="fade-up">What People Say</h2>
         <div class="testimonials__grid">
             {% for t in testimonials %}
-            <div class="testimonial__card">
+            <div class="testimonial__card" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 }}">
                 <div class="testimonial__avatar">
                     {% if t.avatar_filename %}
                     <img src="{{ url_for('static', filename='uploads/' + t.avatar_filename) }}" alt="{{ t.name }}" loading="lazy">
@@ -270,10 +225,10 @@
 {% if blog_posts %}
 <section class="section blog-preview section--light" id="blog">
     <div class="container">
-        <h2 class="section__title">Latest Thoughts</h2>
+        <h2 class="section__title" data-aos="fade-up">Latest Thoughts</h2>
         <div class="blog__grid">
             {% for post in blog_posts %}
-            <article class="blog__card">
+            <article class="blog__card" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 }}">
                 {% if post.image_filename %}
                 <div class="blog__card-image">
                     <img src="{{ url_for('static', filename='uploads/' + post.image_filename) }}" alt="{{ post.title }}" loading="lazy">
@@ -303,7 +258,7 @@
 <section class="section contact section--light" id="contact">
     <div class="container">
         <div class="contact__inner">
-            <div class="contact__info">
+            <div class="contact__info" data-aos="fade-right">
                 <p class="section__eyebrow">Contact</p>
                 <h2 class="contact__heading">Let's Build Something Together</h2>
                 <p class="contact__text">Tell me what you are building, where it needs to go, and what would make it feel successful. I will reply with a practical next step.</p>
@@ -322,7 +277,7 @@
                     </a>
                 </div>
             </div>
-            <form class="contact__form" method="POST" action="{{ url_for('contact') }}">
+            <form class="contact__form" method="POST" action="{{ url_for('contact') }}" data-aos="fade-left">
                 <input type="hidden" name="csrf_token" value="{{ form.csrf_token._value() if form else '' }}">
                 <input type="text" name="website" tabindex="-1" autocomplete="off" class="form__honeypot" aria-hidden="true">
                 <div class="form__group">
@@ -354,7 +309,7 @@
 <!-- ===== SUBSCRIBE / NEWSLETTER ===== -->
 <section class="section subscribe section--light" id="subscribe">
     <div class="container">
-        <div class="subscribe__inner">
+        <div class="subscribe__inner" data-aos="fade-up">
             <p class="section__eyebrow">Newsletter</p>
             <h2 class="subscribe__heading">Stay Updated</h2>
             <p class="subscribe__text">Get monthly updates on new projects, tools, and tips — no spam, unsubscribe anytime.</p>

@@ -454,3 +454,32 @@ img { max-width: 100%; display: block; }
     .admin-table { font-size: 0.8rem; }
     .admin-table th, .admin-table td { padding: 0.5rem 0.65rem; }
 }
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+    cursor: pointer;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: #ccc;
+    border-radius: 20px;
+    transition: 0.25s;
+}
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    left: 3px;
+    bottom: 3px;
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    border-radius: 50%;
+    transition: 0.25s;
+}
+.toggle-switch input:checked + .toggle-slider { background: #2e7d32; }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); }

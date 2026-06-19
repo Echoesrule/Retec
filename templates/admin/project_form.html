@@ -65,6 +65,12 @@
                         Featured
                     </label>
                 </div>
+                <div class="admin-form__group admin-form__group--checkbox">
+                    <label>
+                        <input type="checkbox" name="visible" value="1" {% if (project and project.visible) or not project %}checked{% endif %}>
+                        Visible on site
+                    </label>
+                </div>
             </div>
             <div class="admin-form__actions">
                 <button type="submit" class="admin-btn admin-btn--primary">{{ 'Update' if project else 'Create' }} Project</button>
