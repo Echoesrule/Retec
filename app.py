@@ -376,6 +376,12 @@ class Subscriber(db.Model):
 
 _geo_cache = {}
 
+def get_client_ip():
+    forwarded = request.headers.get('X-Forwarded-For', '')
+    if forwarded:
+        return forwarded.split(',')[0].strip()
+    return request.remote_addr
+
 def lookup_location(ip):
     if not ip or ip in ('127.0.0.1', '::1', 'localhost'):
         return None
@@ -808,7 +814,7 @@ def track_pageview():
         return
     if request.path.startswith('/static') or request.path.startswith('/track') or request.path.startswith('/admin') or request.path == '/favicon.ico':
         return
-    ip = request.remote_addr
+    ip = get_client_ip()
     view = PageView(
         page=request.path,
         ip_address=ip,
@@ -855,7 +861,7 @@ def contact():
     form = ContactForm()
     honeypot = request.form.get('website', '')
     if form.validate_on_submit() and not honeypot:
-        ip = request.remote_addr or '0.0.0.0'
+        ip = get_client_ip() or '0.0.0.0'
         if send_email(form.name.data, form.email.data, form.subject.data, form.message.data, ip):
             flash('Thank you for your message. I will get back to you soon.', 'success')
         else:
@@ -935,7 +941,7 @@ def blog_post(slug):
 def track_pageview_ajax():
     if 'admin_id' in session:
         return '', 204
-    ip = request.remote_addr
+    ip = get_client_ip()
     data = request.get_json(silent=True) or {}
     view = PageView(
         page=data.get('page', '/'),
@@ -957,7 +963,7 @@ def track_pageview_ajax():
 def track_interest():
     if 'admin_id' in session:
         return '', 204
-    ip = request.remote_addr
+    ip = get_client_ip()
     data = request.get_json(silent=True) or {}
     interest = Interest(
         section=data.get('section', 'unknown'),
