@@ -443,11 +443,11 @@ def upload_image(file):
     if not allowed_file(file.filename):
         return ''
     filename = secure_filename(f"{datetime.now().timestamp()}_{file.filename}")
-    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    saved_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(saved_path)
     if _cloudinary_url:
         try:
-            file.seek(0)
-            result = cloudinary.uploader.upload(file, folder='portfolio')
+            result = cloudinary.uploader.upload(saved_path, folder='portfolio')
             print(f'[UPLOAD] Cloudinary success: {result["secure_url"][:60]}...')
             return result['secure_url']
         except Exception as e:
