@@ -865,8 +865,8 @@ def inject_globals():
         'meta_url': meta_url,
         'meta_image': meta_image,
         'get_image_url': get_image_url,
-        'hero_video_url': SiteSetting.query.filter_by(key='hero_video').first().value if SiteSetting.query.filter_by(key='hero_video').first() else url_for('static', filename='hero-bg.mp4'),
-        'hero_poster_url': SiteSetting.query.filter_by(key='hero_poster').first().value if SiteSetting.query.filter_by(key='hero_poster').first() else url_for('static', filename='images/hero-bg.svg')
+        'hero_video_url': get_image_url(SiteSetting.query.filter_by(key='hero_video').first().value) if SiteSetting.query.filter_by(key='hero_video').first() else url_for('static', filename='hero-bg.mp4'),
+        'hero_poster_url': get_image_url(SiteSetting.query.filter_by(key='hero_poster').first().value) if SiteSetting.query.filter_by(key='hero_poster').first() else url_for('static', filename='images/hero-bg.svg')
     }
 
 # ===== AFTER REQUEST =====
