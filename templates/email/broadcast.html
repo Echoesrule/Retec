@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  body { margin:0; padding:0; background:#f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif; }
+  .wrapper { max-width:600px; margin:0 auto; padding:24px 16px; }
+  .header { text-align:center; padding:32px 0 8px; }
+  .header p { font-size:11px; color:#999; letter-spacing:2px; text-transform:uppercase; margin:4px 0 0; }
+  .body { background:#fff; border:1px solid #e0e0e0; padding:32px; color:#1a1a1a; font-size:15px; line-height:1.7; }
+  .body a { color:#000; text-decoration:underline; }
+  .footer { text-align:center; padding:24px 0 8px; font-size:12px; color:#999; }
+  .footer a { color:#999; text-decoration:underline; }
+  .social-links { margin:16px 0; }
+  .social-links a { display:inline-block; margin:0 6px; text-decoration:none; }
+  .social-links img { width:20px; height:20px; display:block; border:none; }
+  hr { border:none; border-top:1px solid #eee; margin:24px 0; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="header">
+    <img src="https://res.cloudinary.com/ddvo4rrjs/image/upload/v1782216415/portfolio/igjmboznptc1dguvyfi9.svg" alt="RETEC" width="320" style="display:inline-block;border:none;max-width:100%;height:auto;">
+    <p>Retro Spirit &middot; Modern Solutions</p>
+  </div>
+  <div class="body">{{ content | safe }}</div>
+  <hr>
+  <div class="footer">
+    <div class="social-links">
+      <a href="https://github.com/echoesrule" target="_blank"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/github.svg" alt="GitHub" width="20" height="20"></a>
+      <a href="https://www.linkedin.com/in/emmanuel-kiprono-14a800389" target="_blank"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linkedin.svg" alt="LinkedIn" width="20" height="20"></a>
+      <a href="https://wa.me/0114581500" target="_blank"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/whatsapp.svg" alt="WhatsApp" width="20" height="20"></a>
+    </div>
+    <p>You received this email because you subscribed on <a href="https://retec.dev">retec.dev</a>.</p>
+    <p style="margin-top:4px"><a href="{{ unsubscribe_url }}">Unsubscribe</a></p>
+  </div>
+</div>
+</body>
+</html>
