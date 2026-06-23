@@ -23,7 +23,7 @@
                 <label for="avatar">Avatar</label>
                 {% if testimonial and testimonial.avatar_filename %}
                 <div class="admin-form__current-img">
-                    <img src="{{ url_for('static', filename='uploads/' + testimonial.avatar_filename) }}" alt="">
+                    <img src="{{ get_image_url(testimonial.avatar_filename) }}" alt="">
                     <span>{{ testimonial.avatar_filename }}</span>
                 </div>
                 {% endif %}

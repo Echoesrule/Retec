@@ -9,7 +9,7 @@
             <article class="blog__card">
                 {% if post.image_filename %}
                 <div class="blog__card-image">
-                    <img src="{{ url_for('static', filename='uploads/' + post.image_filename) }}" alt="{{ post.title }}" loading="lazy">
+                    <img src="{{ get_image_url(post.image_filename) }}" alt="{{ post.title }}" loading="lazy">
                 </div>
                 {% endif %}
                 <div class="blog__card-body">

@@ -17,7 +17,7 @@
                 <tr>
                     <td>
                         {% if t.avatar_filename %}
-                        <img src="{{ url_for('static', filename='uploads/' + t.avatar_filename) }}" alt="{{ t.name }}" class="admin-thumb">
+                        <img src="{{ get_image_url(t.avatar_filename) }}" alt="{{ t.name }}" class="admin-thumb">
                         {% else %}
                         <span class="admin-thumb admin-thumb--empty">—</span>
                         {% endif %}

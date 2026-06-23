@@ -63,9 +63,9 @@
                 <tr>
                     <td>
                         {% if p.image_filename %}
-                        <img src="{{ url_for('static', filename='uploads/' + p.image_filename) }}" alt="{{ p.title }}" class="admin-thumb" style="cursor:zoom-in;" onclick="document.getElementById('preview-{{ p.id }}').showModal()">
+                        <img src="{{ get_image_url(p.image_filename) }}" alt="{{ p.title }}" class="admin-thumb" style="cursor:zoom-in;" onclick="document.getElementById('preview-{{ p.id }}').showModal()">
                         <dialog id="preview-{{ p.id }}" style="border:none;padding:0;background:transparent;max-width:90vw;" onclick="this.close()">
-                            <img src="{{ url_for('static', filename='uploads/' + p.image_filename) }}" alt="{{ p.title }}" style="max-width:90vw;max-height:90vh;border-radius:4px;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+                            <img src="{{ get_image_url(p.image_filename) }}" alt="{{ p.title }}" style="max-width:90vw;max-height:90vh;border-radius:4px;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
                         </dialog>
                         {% else %}
                         <span class="admin-thumb admin-thumb--empty">—</span>

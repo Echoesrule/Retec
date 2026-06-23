@@ -204,7 +204,7 @@
             <div class="testimonial__card" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 }}">
                 <div class="testimonial__avatar">
                     {% if t.avatar_filename %}
-                    <img src="{{ url_for('static', filename='uploads/' + t.avatar_filename) }}" alt="{{ t.name }}" loading="lazy">
+                    <img src="{{ get_image_url(t.avatar_filename) }}" alt="{{ t.name }}" loading="lazy">
                     {% else %}
                     <i class="fa-solid fa-user"></i>
                     {% endif %}
@@ -231,7 +231,7 @@
             <article class="blog__card" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 }}">
                 {% if post.image_filename %}
                 <div class="blog__card-image">
-                    <img src="{{ url_for('static', filename='uploads/' + post.image_filename) }}" alt="{{ post.title }}" loading="lazy">
+                    <img src="{{ get_image_url(post.image_filename) }}" alt="{{ post.title }}" loading="lazy">
                 </div>
                 {% endif %}
                 <div class="blog__card-body">

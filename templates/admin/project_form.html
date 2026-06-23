@@ -45,11 +45,11 @@
                 <label for="image">Image</label>
                 {% if project and project.image_filename %}
                 <div class="admin-form__current-img">
-                    <img src="{{ url_for('static', filename='uploads/' + project.image_filename) }}" alt="" style="cursor:pointer;" onclick="document.getElementById('imgPreview').showModal()">
+                    <img src="{{ get_image_url(project.image_filename) }}" alt="" style="cursor:pointer;" onclick="document.getElementById('imgPreview').showModal()">
                     <span>{{ project.image_filename }}</span>
                 </div>
                 <dialog id="imgPreview" style="border:none;padding:0;background:transparent;max-width:90vw;" onclick="this.close()">
-                    <img src="{{ url_for('static', filename='uploads/' + project.image_filename) }}" alt="" style="max-width:90vw;max-height:90vh;border-radius:4px;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+                    <img src="{{ get_image_url(project.image_filename) }}" alt="" style="max-width:90vw;max-height:90vh;border-radius:4px;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
                 </dialog>
                 {% endif %}
                 <input type="file" id="image" name="image" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml">

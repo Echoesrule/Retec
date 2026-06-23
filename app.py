@@ -12,6 +12,10 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from dotenv import load_dotenv
 from forms import ContactForm
 
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -36,7 +40,12 @@ app.config['MAIL_TO'] = os.environ.get('MAIL_TO', 'hello@retec.dev')
 app.config['BREVO_API_KEY'] = os.environ.get('BREVO_API_KEY', '')
 app.config['BREVO_LIST_ID'] = os.environ.get('BREVO_LIST_ID', '')
 app.config['ZEROBOUNCE_API_KEY'] = os.environ.get('ZEROBOUNCE_API_KEY', '')
+app.config['CLOUDINARY_URL'] = os.environ.get('CLOUDINARY_URL', '')
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600
+
+_cloudinary_url = app.config['CLOUDINARY_URL']
+if _cloudinary_url:
+    cloudinary.config(cloudinary_url=_cloudinary_url)
 
 csrf = CSRFProtect(app)
 limiter = Limiter(get_remote_address, app=app, default_limits=['200 per day', '50 per hour'])
@@ -419,6 +428,44 @@ def lookup_location(ip):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def upload_image(file):
+    if not file or not file.filename:
+        return ''
+    if not allowed_file(file.filename):
+        return ''
+    filename = secure_filename(f"{datetime.now().timestamp()}_{file.filename}")
+    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    if _cloudinary_url:
+        try:
+            file.seek(0)
+            result = cloudinary.uploader.upload(file, folder='portfolio')
+            return result['secure_url']
+        except Exception:
+            pass
+    return filename
+
+def get_image_url(image_filename):
+    if not image_filename:
+        return ''
+    if image_filename.startswith(('http://', 'https://')):
+        return image_filename
+    return url_for('static', filename='uploads/' + image_filename)
+
+def delete_image(image_filename):
+    if not image_filename:
+        return
+    if image_filename.startswith(('http://', 'https://')):
+        if _cloudinary_url and 'cloudinary' in image_filename:
+            try:
+                public_id = image_filename.split('/portfolio/')[-1].rsplit('.', 1)[0]
+                cloudinary.uploader.destroy(f'portfolio/{public_id}')
+            except Exception:
+                pass
+        return
+    path = os.path.join(app.config['UPLOAD_FOLDER'], image_filename)
+    if os.path.exists(path):
+        os.remove(path)
+
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -467,7 +514,7 @@ def get_projects(category=None):
             'tags': p.tag_list(),
             'github': p.github_url or '#',
             'demo_url': p.demo_url or '',
-            'image': url_for('static', filename='uploads/' + p.image_filename) if p.image_filename else '',
+            'image': get_image_url(p.image_filename),
             'id': p.id,
             'category': p.category
         } for p in db_projects]
@@ -810,7 +857,8 @@ def inject_globals():
         'meta_title': 'RETEC — Retro Spirit. Modern Solutions.',
         'meta_desc': 'RETEC is a software developer building modern websites, web applications, and digital experiences.',
         'meta_url': meta_url,
-        'meta_image': meta_image
+        'meta_image': meta_image,
+        'get_image_url': get_image_url
     }
 
 # ===== AFTER REQUEST =====
@@ -1104,13 +1152,7 @@ def admin_project_add():
         if not title:
             flash('Title is required.', 'error')
             return redirect(url_for('admin_project_add'))
-        image_filename = ''
-        if request.files.get('image'):
-            file = request.files['image']
-            if file and allowed_file(file.filename):
-                filename = secure_filename(f"{datetime.now().timestamp()}_{file.filename}")
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                image_filename = filename
+        image_filename = upload_image(request.files.get('image'))
         project = Project(
             title=title,
             description=request.form.get('description', ''),
@@ -1155,15 +1197,8 @@ def admin_project_edit(id):
         project.visible = bool(request.form.get('visible'))
         project.sort_order = int(request.form.get('sort_order', 0))
         if request.files.get('image') and request.files['image'].filename:
-            file = request.files['image']
-            if allowed_file(file.filename):
-                if project.image_filename:
-                    old_path = os.path.join(app.config['UPLOAD_FOLDER'], project.image_filename)
-                    if os.path.exists(old_path):
-                        os.remove(old_path)
-                filename = secure_filename(f"{datetime.now().timestamp()}_{file.filename}")
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                project.image_filename = filename
+            delete_image(project.image_filename)
+            project.image_filename = upload_image(request.files['image'])
         db.session.commit()
         flash('Project updated.', 'success')
         return redirect(url_for('admin_projects'))
@@ -1202,10 +1237,7 @@ def admin_project_github_sync():
 @admin_required
 def admin_project_delete(id):
     project = Project.query.get_or_404(id)
-    if project.image_filename:
-        path = os.path.join(app.config['UPLOAD_FOLDER'], project.image_filename)
-        if os.path.exists(path):
-            os.remove(path)
+    delete_image(project.image_filename)
     db.session.delete(project)
     db.session.commit()
     flash('Project deleted.', 'success')
@@ -1464,13 +1496,7 @@ def admin_testimonial_add():
         if not name or not text:
             flash('Name and text are required.', 'error')
             return redirect(url_for('admin_testimonial_add'))
-        avatar = ''
-        if request.files.get('avatar'):
-            file = request.files['avatar']
-            if file and allowed_file(file.filename):
-                filename = secure_filename(f"{datetime.now().timestamp()}_{file.filename}")
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                avatar = filename
+        avatar = upload_image(request.files.get('avatar'))
         testimonial = Testimonial(name=name, role=request.form.get('role', ''),
             text=text, avatar_filename=avatar,
             active=bool(request.form.get('active')),
@@ -1497,15 +1523,8 @@ def admin_testimonial_edit(id):
         testimonial.active = bool(request.form.get('active'))
         testimonial.sort_order = int(request.form.get('sort_order', 0))
         if request.files.get('avatar') and request.files['avatar'].filename:
-            file = request.files['avatar']
-            if allowed_file(file.filename):
-                if testimonial.avatar_filename:
-                    old_path = os.path.join(app.config['UPLOAD_FOLDER'], testimonial.avatar_filename)
-                    if os.path.exists(old_path):
-                        os.remove(old_path)
-                filename = secure_filename(f"{datetime.now().timestamp()}_{file.filename}")
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                testimonial.avatar_filename = filename
+            delete_image(testimonial.avatar_filename)
+            testimonial.avatar_filename = upload_image(request.files['avatar'])
         db.session.commit()
         flash('Testimonial updated.', 'success')
         return redirect(url_for('admin_testimonials'))
@@ -1515,10 +1534,7 @@ def admin_testimonial_edit(id):
 @admin_required
 def admin_testimonial_delete(id):
     testimonial = Testimonial.query.get_or_404(id)
-    if testimonial.avatar_filename:
-        path = os.path.join(app.config['UPLOAD_FOLDER'], testimonial.avatar_filename)
-        if os.path.exists(path):
-            os.remove(path)
+    delete_image(testimonial.avatar_filename)
     db.session.delete(testimonial)
     db.session.commit()
     flash('Testimonial deleted.', 'success')
@@ -1545,13 +1561,7 @@ def admin_blog_add():
         existing = BlogPost.query.filter_by(slug=slug).first()
         if existing:
             slug = f"{slug}-{int(datetime.now().timestamp())}"
-        image = ''
-        if request.files.get('image'):
-            file = request.files['image']
-            if file and allowed_file(file.filename):
-                filename = secure_filename(f"{datetime.now().timestamp()}_{file.filename}")
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                image = filename
+        image = upload_image(request.files.get('image'))
         post = BlogPost(title=title, slug=slug, content=content,
             summary=request.form.get('summary', ''),
             image_filename=image,
@@ -1577,15 +1587,8 @@ def admin_blog_edit(id):
         post.summary = request.form.get('summary', '')
         post.published = bool(request.form.get('published'))
         if request.files.get('image') and request.files['image'].filename:
-            file = request.files['image']
-            if allowed_file(file.filename):
-                if post.image_filename:
-                    old_path = os.path.join(app.config['UPLOAD_FOLDER'], post.image_filename)
-                    if os.path.exists(old_path):
-                        os.remove(old_path)
-                filename = secure_filename(f"{datetime.now().timestamp()}_{file.filename}")
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                post.image_filename = filename
+            delete_image(post.image_filename)
+            post.image_filename = upload_image(request.files['image'])
         db.session.commit()
         flash('Blog post updated.', 'success')
         return redirect(url_for('admin_blog'))
@@ -1595,10 +1598,7 @@ def admin_blog_edit(id):
 @admin_required
 def admin_blog_delete(id):
     post = BlogPost.query.get_or_404(id)
-    if post.image_filename:
-        path = os.path.join(app.config['UPLOAD_FOLDER'], post.image_filename)
-        if os.path.exists(path):
-            os.remove(path)
+    delete_image(post.image_filename)
     db.session.delete(post)
     db.session.commit()
     flash('Blog post deleted.', 'success')

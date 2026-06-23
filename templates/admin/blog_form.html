@@ -23,7 +23,7 @@
                 <label for="image">Featured Image</label>
                 {% if post and post.image_filename %}
                 <div class="admin-form__current-img">
-                    <img src="{{ url_for('static', filename='uploads/' + post.image_filename) }}" alt="">
+                    <img src="{{ get_image_url(post.image_filename) }}" alt="">
                     <span>{{ post.image_filename }}</span>
                 </div>
                 {% endif %}
