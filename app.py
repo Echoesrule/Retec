@@ -588,31 +588,36 @@ def send_email(name, email, subject, message, ip_address=''):
         return False
 
 def send_verification_code(email, code):
-    if not email or not app.config['MAIL_SERVER'] or not app.config['MAIL_FROM']:
-        app.logger.warning('Verification email skipped: SMTP settings are incomplete.')
+    if not email:
+        app.logger.warning('Verification email skipped: no recipient email.')
+        return False
+    api_key = app.config['BREVO_API_KEY']
+    if not api_key:
+        app.logger.warning('Verification email skipped: BREVO_API_KEY not configured.')
         return False
     try:
-        import smtplib
-        from email.message import EmailMessage
-
-        msg = EmailMessage()
-        msg.set_content(
-            f"Your Retec admin verification code is: {code}\n\n"
-            f"This code will expire in 10 minutes.\n\n"
-            f"If you did not request this, please ignore this email."
+        resp = requests.post(
+            'https://api.brevo.com/v3/smtp/email',
+            headers={
+                'api-key': api_key,
+                'Content-Type': 'application/json',
+            },
+            json={
+                'sender': {'email': app.config['MAIL_FROM'] or email},
+                'to': [{'email': email}],
+                'subject': 'Your Retec Admin Verification Code',
+                'textContent': (
+                    f"Your Retec admin verification code is: {code}\n\n"
+                    f"This code will expire in 10 minutes.\n\n"
+                    f"If you did not request this, please ignore this email."
+                ),
+            },
+            timeout=15,
         )
-        msg['Subject'] = "Your Retec Admin Verification Code"
-        msg['From'] = app.config['MAIL_FROM']
-        msg['To'] = email
-
-        smtp_class = smtplib.SMTP_SSL if app.config['MAIL_USE_SSL'] else smtplib.SMTP
-        with smtp_class(app.config['MAIL_SERVER'], app.config['MAIL_PORT'], timeout=20) as server:
-            if app.config['MAIL_USE_TLS'] and not app.config['MAIL_USE_SSL']:
-                server.starttls()
-            if app.config['MAIL_USERNAME'] and app.config['MAIL_PASSWORD']:
-                server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
-            server.send_message(msg)
-        return True
+        if resp.ok:
+            return True
+        app.logger.error('Brevo API error %s: %s', resp.status_code, resp.text)
+        return False
     except Exception as exc:
         app.logger.exception('Verification email failed: %s', exc)
         return False
