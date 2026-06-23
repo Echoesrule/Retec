@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_from_directory, abort, Response
 from datetime import datetime
-import os, requests, csv, io, re, time
+import os, requests, csv, io, re, time, secrets
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_wtf.csrf import CSRFProtect
@@ -73,6 +73,7 @@ def _format_datetime_filter(dt, fmt='%Y-%m-%d %H:%M'):
     return dt.strftime(fmt)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'mp4', 'webm', 'ogg'}
+VIDEO_EXTENSIONS = {'mp4', 'webm', 'ogg'}
 
 # ===== MODELS =====
 
@@ -447,7 +448,11 @@ def upload_image(file):
     file.save(saved_path)
     if _cloudinary_url:
         try:
-            result = cloudinary.uploader.upload(saved_path, folder='portfolio')
+            ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+            params = {'folder': 'portfolio'}
+            if ext in VIDEO_EXTENSIONS:
+                params['resource_type'] = 'video'
+            result = cloudinary.uploader.upload(saved_path, **params)
             print(f'[UPLOAD] Cloudinary success: {result["secure_url"][:60]}...')
             return result['secure_url']
         except Exception as e:
@@ -470,7 +475,8 @@ def delete_image(image_filename):
         if _cloudinary_url and 'cloudinary' in image_filename:
             try:
                 public_id = image_filename.split('/portfolio/')[-1].rsplit('.', 1)[0]
-                cloudinary.uploader.destroy(f'portfolio/{public_id}')
+                resource_type = 'video' if '/video/' in image_filename else 'image'
+                cloudinary.uploader.destroy(f'portfolio/{public_id}', resource_type=resource_type)
             except Exception:
                 pass
         return
@@ -579,6 +585,36 @@ def send_email(name, email, subject, message, ip_address=''):
         return True
     except Exception as exc:
         app.logger.exception('Contact email failed: %s', exc)
+        return False
+
+def send_verification_code(email, code):
+    if not email or not app.config['MAIL_SERVER'] or not app.config['MAIL_FROM']:
+        app.logger.warning('Verification email skipped: SMTP settings are incomplete.')
+        return False
+    try:
+        import smtplib
+        from email.message import EmailMessage
+
+        msg = EmailMessage()
+        msg.set_content(
+            f"Your Retec admin verification code is: {code}\n\n"
+            f"This code will expire in 10 minutes.\n\n"
+            f"If you did not request this, please ignore this email."
+        )
+        msg['Subject'] = "Your Retec Admin Verification Code"
+        msg['From'] = app.config['MAIL_FROM']
+        msg['To'] = email
+
+        smtp_class = smtplib.SMTP_SSL if app.config['MAIL_USE_SSL'] else smtplib.SMTP
+        with smtp_class(app.config['MAIL_SERVER'], app.config['MAIL_PORT'], timeout=20) as server:
+            if app.config['MAIL_USE_TLS'] and not app.config['MAIL_USE_SSL']:
+                server.starttls()
+            if app.config['MAIL_USERNAME'] and app.config['MAIL_PASSWORD']:
+                server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
+            server.send_message(msg)
+        return True
+    except Exception as exc:
+        app.logger.exception('Verification email failed: %s', exc)
         return False
 
 RETEC_EMAIL_TEMPLATE = """\
@@ -1117,28 +1153,79 @@ def admin_hero_settings():
 @app.route('/admin/change-password', methods=['GET', 'POST'])
 @admin_required
 def admin_change_password():
-    if request.method == 'POST':
-        current = request.form.get('current_password', '')
-        new = request.form.get('new_password', '')
+    user = db.session.get(User, session['admin_id'])
+    if not user:
+        flash('User not found.', 'error')
+        return redirect(url_for('admin_logout'))
+
+    if request.method == 'POST' and 'verification_code' in request.form:
+        code = request.form.get('verification_code', '').strip()
+        new_password = request.form.get('new_password', '')
         confirm = request.form.get('confirm_password', '')
-        user = db.session.get(User, session['admin_id'])
-        if not user:
-            flash('User not found.', 'error')
-            return redirect(url_for('admin_logout'))
+
+        stored_code = session.get('pwd_change_code')
+        expiry = session.get('pwd_change_expiry', 0)
+
+        if not stored_code or not expiry:
+            flash('No verification code was sent. Please start again.', 'error')
+            session.pop('pwd_change_code', None)
+            session.pop('pwd_change_expiry', None)
+            return redirect(url_for('admin_change_password'))
+
+        if time.time() > expiry:
+            flash('Verification code has expired. Please request a new one.', 'error')
+            session.pop('pwd_change_code', None)
+            session.pop('pwd_change_expiry', None)
+            return redirect(url_for('admin_change_password'))
+
+        if code != stored_code:
+            flash('Invalid verification code.', 'error')
+            return render_template('admin/change_password.html', step=2)
+
+        if len(new_password) < 6:
+            flash('New password must be at least 6 characters.', 'error')
+            return render_template('admin/change_password.html', step=2)
+
+        if new_password != confirm:
+            flash('New passwords do not match.', 'error')
+            return render_template('admin/change_password.html', step=2)
+
+        user.password_hash = bcrypt.generate_password_hash(new_password).decode('utf-8')
+        db.session.commit()
+
+        session.pop('pwd_change_code', None)
+        session.pop('pwd_change_expiry', None)
+
+        flash('Password changed successfully.', 'success')
+        return redirect(url_for('admin_dashboard'))
+
+    if request.method == 'POST' and 'current_password' in request.form:
+        current = request.form.get('current_password', '')
+
         if not bcrypt.check_password_hash(user.password_hash, current):
             flash('Current password is incorrect.', 'error')
             return redirect(url_for('admin_change_password'))
-        if len(new) < 6:
-            flash('New password must be at least 6 characters.', 'error')
+
+        code = str(secrets.randbelow(900000) + 100000)
+        email_to = app.config['MAIL_TO']
+
+        if send_verification_code(email_to, code):
+            session['pwd_change_code'] = code
+            session['pwd_change_expiry'] = time.time() + 600
+            flash(f'A verification code has been sent to {email_to}.', 'success')
+            return render_template('admin/change_password.html', step=2)
+        else:
+            flash('Failed to send verification email. Please check SMTP settings.', 'error')
             return redirect(url_for('admin_change_password'))
-        if new != confirm:
-            flash('New passwords do not match.', 'error')
-            return redirect(url_for('admin_change_password'))
-        user.password_hash = bcrypt.generate_password_hash(new).decode('utf-8')
-        db.session.commit()
-        flash('Password changed successfully.', 'success')
-        return redirect(url_for('admin_dashboard'))
-    return render_template('admin/change_password.html')
+
+    code = session.get('pwd_change_code')
+    expiry = session.get('pwd_change_expiry', 0)
+    if code and expiry and time.time() < expiry:
+        return render_template('admin/change_password.html', step=2)
+
+    session.pop('pwd_change_code', None)
+    session.pop('pwd_change_expiry', None)
+    return render_template('admin/change_password.html', step=1)
 
 @app.route('/admin')
 @admin_required

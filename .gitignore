@@ -13,3 +13,4 @@ cookies.txt
 nul
 .venv/
 venv/
+.env.example
