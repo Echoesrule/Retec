@@ -858,7 +858,9 @@ def inject_globals():
         'meta_desc': 'RETEC is a software developer building modern websites, web applications, and digital experiences.',
         'meta_url': meta_url,
         'meta_image': meta_image,
-        'get_image_url': get_image_url
+        'get_image_url': get_image_url,
+        'hero_video_url': os.environ.get('HERO_VIDEO_URL') or url_for('static', filename='hero-bg.mp4'),
+        'hero_poster_url': os.environ.get('HERO_POSTER_URL') or url_for('static', filename='images/hero-bg.svg')
     }
 
 # ===== AFTER REQUEST =====
