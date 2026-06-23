@@ -1479,6 +1479,11 @@ ul { list-style: none; }
     }
 
     /* Hero */
+    .hero__overlay {
+        background:
+            linear-gradient(90deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.4) 60%, rgba(0, 0, 0, 0.2) 100%),
+            linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.5));
+    }
     .hero__title-line {
         font-size: 2.5rem;
     }

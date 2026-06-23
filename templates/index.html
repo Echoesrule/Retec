@@ -348,9 +348,6 @@ document.addEventListener('DOMContentLoaded', function() {
             document.addEventListener('scroll', tryPlay, { once: true });
         });
     }
-    setTimeout(function() {
-        if (!started) video.classList.add('hero__bg--hidden');
-    }, 3000);
 });
 </script>
 {% endblock %}
