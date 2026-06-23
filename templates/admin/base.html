@@ -58,6 +58,10 @@
                     <i class="fa-solid fa-bullhorn"></i>
                     Broadcast
                 </a>
+                <a href="{{ url_for('admin_hero_settings') }}" class="admin-sidebar__link {% if active == 'hero_settings' %}admin-sidebar__link--active{% endif %}">
+                    <i class="fa-solid fa-video"></i>
+                    Hero Settings
+                </a>
             </nav>
             <div class="admin-sidebar__foot">
                 <a href="/" class="admin-sidebar__link" target="_blank">View Site</a>

@@ -69,7 +69,7 @@ def _format_datetime_filter(dt, fmt='%Y-%m-%d %H:%M'):
         return ''
     return dt.strftime(fmt)
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'mp4', 'webm', 'ogg'}
 
 # ===== MODELS =====
 
@@ -144,6 +144,12 @@ class BlogPost(db.Model):
     image_filename = db.Column(db.String(200), default='')
     published = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class SiteSetting(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(100), unique=True, nullable=False)
+    value = db.Column(db.Text, default='')
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 DISPOSABLE_DOMAINS = {
@@ -859,8 +865,8 @@ def inject_globals():
         'meta_url': meta_url,
         'meta_image': meta_image,
         'get_image_url': get_image_url,
-        'hero_video_url': os.environ.get('HERO_VIDEO_URL') or url_for('static', filename='hero-bg.mp4'),
-        'hero_poster_url': os.environ.get('HERO_POSTER_URL') or url_for('static', filename='images/hero-bg.svg')
+        'hero_video_url': SiteSetting.query.filter_by(key='hero_video').first().value if SiteSetting.query.filter_by(key='hero_video').first() else url_for('static', filename='hero-bg.mp4'),
+        'hero_poster_url': SiteSetting.query.filter_by(key='hero_poster').first().value if SiteSetting.query.filter_by(key='hero_poster').first() else url_for('static', filename='images/hero-bg.svg')
     }
 
 # ===== AFTER REQUEST =====
@@ -1070,6 +1076,37 @@ def admin_logout():
     session.pop('admin_username', None)
     flash('Logged out.', 'success')
     return redirect(url_for('admin_login'))
+
+@app.route('/admin/hero-settings', methods=['GET', 'POST'])
+@admin_required
+def admin_hero_settings():
+    if request.method == 'POST':
+        if request.files.get('video') and request.files['video'].filename:
+            url = upload_image(request.files['video'])
+            if url:
+                setting = SiteSetting.query.filter_by(key='hero_video').first()
+                if setting:
+                    setting.value = url
+                else:
+                    db.session.add(SiteSetting(key='hero_video', value=url))
+                db.session.commit()
+                flash('Hero video updated.', 'success')
+        if request.files.get('poster') and request.files['poster'].filename:
+            url = upload_image(request.files['poster'])
+            if url:
+                setting = SiteSetting.query.filter_by(key='hero_poster').first()
+                if setting:
+                    setting.value = url
+                else:
+                    db.session.add(SiteSetting(key='hero_poster', value=url))
+                db.session.commit()
+                flash('Hero poster updated.', 'success')
+        return redirect(url_for('admin_hero_settings'))
+    hero_video = SiteSetting.query.filter_by(key='hero_video').first()
+    hero_poster = SiteSetting.query.filter_by(key='hero_poster').first()
+    return render_template('admin/hero_settings.html',
+        hero_video=hero_video.value if hero_video else '',
+        hero_poster=hero_poster.value if hero_poster else '')
 
 @app.route('/admin/change-password', methods=['GET', 'POST'])
 @admin_required

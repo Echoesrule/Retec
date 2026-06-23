@@ -1,0 +1,37 @@
+{% extends "admin/base.html" %}
+{% block title %}Hero Settings{% endblock %}
+{% set active = "hero_settings" %}
+{% block content %}
+<div class="admin-page">
+    <h1 class="admin-page__title">Hero Settings</h1>
+    <div class="admin-card">
+        <form method="POST" enctype="multipart/form-data" class="admin-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="admin-form__group">
+                <label for="video">Hero Video (mp4, webm, ogg)</label>
+                {% if hero_video %}
+                <div class="admin-form__current-img">
+                    <video src="{{ hero_video }}" style="max-width:300px;max-height:180px;border-radius:4px;" controls></video>
+                    <span style="word-break:break-all;font-size:0.8rem;">{{ hero_video }}</span>
+                </div>
+                {% endif %}
+                <input type="file" id="video" name="video" accept="video/mp4,video/webm,video/ogg">
+            </div>
+            <div class="admin-form__group">
+                <label for="poster">Hero Poster Image (fallback when video can't play)</label>
+                {% if hero_poster %}
+                <div class="admin-form__current-img">
+                    <img src="{{ hero_poster }}" alt="" style="max-width:200px;max-height:120px;border-radius:4px;">
+                    <span style="word-break:break-all;font-size:0.8rem;">{{ hero_poster }}</span>
+                </div>
+                {% endif %}
+                <input type="file" id="poster" name="poster" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml">
+            </div>
+            <div class="admin-form__actions">
+                <button type="submit" class="admin-btn admin-btn--primary">Save Changes</button>
+                <a href="{{ url_for('admin_dashboard') }}" class="admin-btn">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
