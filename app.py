@@ -46,6 +46,9 @@ app.config['WTF_CSRF_TIME_LIMIT'] = 3600
 _cloudinary_url = app.config['CLOUDINARY_URL']
 if _cloudinary_url:
     cloudinary.config(cloudinary_url=_cloudinary_url)
+    print(f'[STARTUP] Cloudinary configured: {_cloudinary_url[:40]}...')
+else:
+    print('[STARTUP] CLOUDINARY_URL not set, using local file storage')
 
 csrf = CSRFProtect(app)
 limiter = Limiter(get_remote_address, app=app, default_limits=['200 per day', '50 per hour'])
@@ -445,9 +448,12 @@ def upload_image(file):
         try:
             file.seek(0)
             result = cloudinary.uploader.upload(file, folder='portfolio')
+            print(f'[UPLOAD] Cloudinary success: {result["secure_url"][:60]}...')
             return result['secure_url']
-        except Exception:
-            pass
+        except Exception as e:
+            print(f'[UPLOAD] Cloudinary failed for {filename}: {e}')
+    else:
+        print(f'[UPLOAD] No CLOUDINARY_URL set, saving locally: {filename}')
     return filename
 
 def get_image_url(image_filename):
