@@ -29,13 +29,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', '')
-app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
-app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', '')
-app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
-app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'true').lower() in ('1', 'true', 'yes', 'on')
-app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'false').lower() in ('1', 'true', 'yes', 'on')
-app.config['MAIL_FROM'] = os.environ.get('MAIL_FROM', app.config['MAIL_USERNAME'])
+app.config['MAIL_FROM'] = os.environ.get('MAIL_FROM', 'contact.retec@gmail.com')
 app.config['MAIL_TO'] = os.environ.get('MAIL_TO', 'hello@retec.dev')
 app.config['BREVO_API_KEY'] = os.environ.get('BREVO_API_KEY', '')
 app.config['BREVO_LIST_ID'] = os.environ.get('BREVO_LIST_ID', '')
@@ -551,13 +545,11 @@ def get_github_stats():
         return None
 
 def send_email(name, email, subject, message, ip_address=''):
-    if not app.config['MAIL_SERVER'] or not app.config['MAIL_FROM'] or not app.config['MAIL_TO']:
-        app.logger.warning('Contact email skipped: SMTP settings are incomplete.')
+    api_key = app.config['BREVO_API_KEY']
+    if not api_key or not app.config['MAIL_FROM'] or not app.config['MAIL_TO']:
+        app.logger.warning('Contact email skipped: BREVO_API_KEY or sender/recipient not configured.')
         return False
     try:
-        import smtplib
-        from email.message import EmailMessage
-
         timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')
         body = (
             f"New portfolio contact message\n\n"
@@ -568,21 +560,22 @@ def send_email(name, email, subject, message, ip_address=''):
             f"Time: {timestamp}\n\n"
             f"Message:\n{message}"
         )
-        msg = EmailMessage()
-        msg.set_content(body)
-        msg['Subject'] = f"Portfolio Contact: {subject[:80]}"
-        msg['From'] = app.config['MAIL_FROM']
-        msg['To'] = app.config['MAIL_TO']
-        msg['Reply-To'] = email
-
-        smtp_class = smtplib.SMTP_SSL if app.config['MAIL_USE_SSL'] else smtplib.SMTP
-        with smtp_class(app.config['MAIL_SERVER'], app.config['MAIL_PORT'], timeout=20) as server:
-            if app.config['MAIL_USE_TLS'] and not app.config['MAIL_USE_SSL']:
-                server.starttls()
-            if app.config['MAIL_USERNAME'] and app.config['MAIL_PASSWORD']:
-                server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
-            server.send_message(msg)
-        return True
+        resp = requests.post(
+            'https://api.brevo.com/v3/smtp/email',
+            headers={'api-key': api_key, 'Content-Type': 'application/json'},
+            json={
+                'sender': {'email': app.config['MAIL_FROM']},
+                'to': [{'email': app.config['MAIL_TO']}],
+                'replyTo': {'email': email},
+                'subject': f"Portfolio Contact: {subject[:80]}",
+                'textContent': body,
+            },
+            timeout=15,
+        )
+        if resp.ok:
+            return True
+        app.logger.error('Brevo contact email error %s: %s', resp.status_code, resp.text)
+        return False
     except Exception as exc:
         app.logger.exception('Contact email failed: %s', exc)
         return False
@@ -667,13 +660,10 @@ RETEC_EMAIL_TEMPLATE = """\
 </html>"""
 
 def send_broadcast(subject, html_content, test_email=None):
-    if not app.config['MAIL_SERVER'] or not app.config['MAIL_USERNAME'] or not app.config['MAIL_PASSWORD']:
-        return False, "SMTP not configured."
-
-    import smtplib
-    from email.message import EmailMessage
-
-    unsub_placeholder = url_for('home', _external=True) + '#unsubscribe'
+    api_key = app.config['BREVO_API_KEY']
+    broadcast_from = app.config.get('MAIL_FROM', 'contact.retec@gmail.com')
+    if not api_key:
+        return False, "BREVO_API_KEY not configured."
 
     targets = []
     if test_email:
@@ -693,24 +683,25 @@ def send_broadcast(subject, html_content, test_email=None):
             unsub = url_for('unsubscribe', email=email, _external=True)
             html = RETEC_EMAIL_TEMPLATE.replace('{{ content | safe }}', f"<p>{greeting}</p>{html_content}").replace('{{ unsubscribe_url }}', unsub)
 
-            msg = EmailMessage()
-            msg.set_content(f"View this email in a browser that supports HTML.\n\nSubject: {subject}")
-            msg.add_alternative(html, subtype='html')
-            msg['Subject'] = subject
-            broadcast_from = app.config.get('MAIL_FROM', 'contact.retec@gmail.com')
-            msg['From'] = f'RETEC <{broadcast_from}>'
-            msg['To'] = email
-
-            smtp_class = smtplib.SMTP_SSL if app.config['MAIL_USE_SSL'] else smtplib.SMTP
-            with smtp_class(app.config['MAIL_SERVER'], app.config['MAIL_PORT'], timeout=20) as server:
-                if app.config['MAIL_USE_TLS'] and not app.config['MAIL_USE_SSL']:
-                    server.starttls()
-                if app.config['MAIL_USERNAME'] and app.config['MAIL_PASSWORD']:
-                    server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
-                server.send_message(msg)
-            sent += 1
+            resp = requests.post(
+                'https://api.brevo.com/v3/smtp/email',
+                headers={'api-key': api_key, 'Content-Type': 'application/json'},
+                json={
+                    'sender': {'email': broadcast_from, 'name': 'RETEC'},
+                    'to': [{'email': email}],
+                    'subject': subject,
+                    'htmlContent': html,
+                    'textContent': f"View this email in a browser that supports HTML.\n\nSubject: {subject}",
+                },
+                timeout=15,
+            )
+            if resp.ok:
+                sent += 1
+            else:
+                app.logger.error('Brevo broadcast error %s to %s: %s', resp.status_code, email, resp.text)
+                failed += 1
         except Exception as exc:
-            app.logger.exception('Broadcast email failed to %s: %s', email if 'email' in dir() else 'unknown', exc)
+            app.logger.exception('Broadcast email failed to %s', email if 'email' in dir() else 'unknown')
             failed += 1
     return True, f"Sent: {sent}, Failed: {failed}"
 
