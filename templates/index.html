@@ -2,7 +2,8 @@
 {% block content %}
 
 <!-- ===== HERO ===== -->
-<section class="hero hero--image" id="hero" data-aos="fade-in" data-aos-duration="800" data-hero="{{ hero_image_url or url_for('static', filename='images/hero-bg.svg') }}">
+<section class="hero" id="hero" data-aos="fade-in" data-aos-duration="800">
+    <video id="heroVideo" class="hero__bg" src="{{ hero_video_url or url_for('static', filename='hero-bg.mp4') }}" autoplay muted loop playsinline poster="{{ hero_poster_url or url_for('static', filename='images/hero-bg.svg') }}"></video>
     <div class="hero__overlay"></div>
     <div class="container hero__container">
         <div class="hero__text">
@@ -334,12 +335,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-// set hero background from data attribute (avoids inline Jinja in CSS)
-document.addEventListener('DOMContentLoaded', function() {
-    var hero = document.getElementById('hero');
-    if (!hero) return;
-    var src = hero.dataset.hero;
-    if (src) hero.style.backgroundImage = 'url("' + src + '")';
-});
+
 </script>
 {% endblock %}
