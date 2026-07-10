@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_from_directory, abort, Response
-from datetime import datetime
+from datetime import datetime, timezone
 import os, requests, csv, io, re, time, secrets
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
@@ -50,15 +50,23 @@ limiter = Limiter(get_remote_address, app=app, default_limits=['200 per day', '5
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 
-from zoneinfo import ZoneInfo
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    ZoneInfo = None
 _tz = os.environ.get('TIMEZONE', 'Africa/Nairobi')
 @app.template_filter('localtime')
 def _localtime_filter(dt):
     if dt is None:
         return ''
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=ZoneInfo('UTC'))
-    return dt.astimezone(ZoneInfo(_tz))
+        dt = dt.replace(tzinfo=timezone.utc)
+    if ZoneInfo:
+        try:
+            return dt.astimezone(ZoneInfo(_tz))
+        except Exception:
+            pass
+    return dt.astimezone(timezone.utc)
 
 @app.template_filter('format_datetime')
 def _format_datetime_filter(dt, fmt='%Y-%m-%d %H:%M'):
