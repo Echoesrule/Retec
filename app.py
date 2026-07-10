@@ -859,7 +859,9 @@ def inject_globals():
         'meta_url': meta_url,
         'meta_image': meta_image,
         'get_image_url': get_image_url,
+        'hero_bg_type': SiteSetting.query.filter_by(key='hero_bg_type').first().value if SiteSetting.query.filter_by(key='hero_bg_type').first() else 'video',
         'hero_video_url': get_image_url(SiteSetting.query.filter_by(key='hero_video').first().value) if SiteSetting.query.filter_by(key='hero_video').first() else url_for('static', filename='hero-bg.mp4'),
+        'hero_image_url': get_image_url(SiteSetting.query.filter_by(key='hero_image').first().value) if SiteSetting.query.filter_by(key='hero_image').first() else url_for('static', filename='images/hero-bg.svg'),
         'hero_poster_url': get_image_url(SiteSetting.query.filter_by(key='hero_poster').first().value) if SiteSetting.query.filter_by(key='hero_poster').first() else url_for('static', filename='images/hero-bg.svg')
     }
 
@@ -1075,31 +1077,54 @@ def admin_logout():
 @admin_required
 def admin_hero_settings():
     if request.method == 'POST':
-        if request.files.get('video') and request.files['video'].filename:
-            url = upload_image(request.files['video'])
-            if url:
-                setting = SiteSetting.query.filter_by(key='hero_video').first()
-                if setting:
-                    setting.value = url
-                else:
-                    db.session.add(SiteSetting(key='hero_video', value=url))
-                db.session.commit()
-                flash('Hero video updated.', 'success')
-        if request.files.get('poster') and request.files['poster'].filename:
-            url = upload_image(request.files['poster'])
-            if url:
-                setting = SiteSetting.query.filter_by(key='hero_poster').first()
-                if setting:
-                    setting.value = url
-                else:
-                    db.session.add(SiteSetting(key='hero_poster', value=url))
-                db.session.commit()
-                flash('Hero poster updated.', 'success')
+        bg_type = request.form.get('hero_bg_type', 'video')
+        setting = SiteSetting.query.filter_by(key='hero_bg_type').first()
+        if setting:
+            setting.value = bg_type
+        else:
+            db.session.add(SiteSetting(key='hero_bg_type', value=bg_type))
+        db.session.commit()
+        if bg_type == 'video':
+            if request.files.get('video') and request.files['video'].filename:
+                url = upload_image(request.files['video'])
+                if url:
+                    setting = SiteSetting.query.filter_by(key='hero_video').first()
+                    if setting:
+                        setting.value = url
+                    else:
+                        db.session.add(SiteSetting(key='hero_video', value=url))
+                    db.session.commit()
+                    flash('Hero video updated.', 'success')
+            if request.files.get('poster') and request.files['poster'].filename:
+                url = upload_image(request.files['poster'])
+                if url:
+                    setting = SiteSetting.query.filter_by(key='hero_poster').first()
+                    if setting:
+                        setting.value = url
+                    else:
+                        db.session.add(SiteSetting(key='hero_poster', value=url))
+                    db.session.commit()
+                    flash('Hero poster updated.', 'success')
+        else:
+            if request.files.get('hero_image') and request.files['hero_image'].filename:
+                url = upload_image(request.files['hero_image'])
+                if url:
+                    setting = SiteSetting.query.filter_by(key='hero_image').first()
+                    if setting:
+                        setting.value = url
+                    else:
+                        db.session.add(SiteSetting(key='hero_image', value=url))
+                    db.session.commit()
+                    flash('Hero image updated.', 'success')
         return redirect(url_for('admin_hero_settings'))
+    hero_bg_type = SiteSetting.query.filter_by(key='hero_bg_type').first()
     hero_video = SiteSetting.query.filter_by(key='hero_video').first()
+    hero_image = SiteSetting.query.filter_by(key='hero_image').first()
     hero_poster = SiteSetting.query.filter_by(key='hero_poster').first()
     return render_template('admin/hero_settings.html',
+        hero_bg_type=hero_bg_type.value if hero_bg_type else 'video',
         hero_video=hero_video.value if hero_video else '',
+        hero_image=hero_image.value if hero_image else '',
         hero_poster=hero_poster.value if hero_poster else '')
 
 @app.route('/admin/change-password', methods=['GET', 'POST'])

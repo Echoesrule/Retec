@@ -2,13 +2,16 @@
 {% block content %}
 
 <!-- ===== HERO ===== -->
-<section class="hero" id="hero" data-aos="fade-in" data-aos-duration="800">
-    <video id="heroVideo" class="hero__bg" src="{{ hero_video_url or url_for('static', filename='hero-bg.mp4') }}" autoplay muted loop playsinline poster="{{ hero_poster_url or url_for('static', filename='images/hero-bg.svg') }}"></video>
+<section class="hero {% if hero_bg_type == 'image' %}hero--image{% endif %}" id="hero" data-aos="fade-in" data-aos-duration="800" {% if hero_bg_type == 'image' %}style="background-image:url('{{ hero_image_url }}')"{% endif %}>
+    {% if hero_bg_type == 'video' %}
+    <video id="heroVideo" class="hero__bg" src="{{ hero_video_url }}" autoplay muted loop playsinline poster="{{ hero_poster_url }}"></video>
+    {% endif %}
     <div class="hero__overlay"></div>
     <div class="container hero__container">
         <div class="hero__text">
             <p class="hero__label" data-aos="fade-down" data-aos-delay="100">RETEC</p>
-            <h1 class="hero__title" data-aos="fade-right" data-aos-delay="200">Retro Spirit. Modern Solutions.</h1>
+            <h1 class="hero__title" data-aos="fade-right" data-aos-delay="200">Retro Spirit. 
+                <span >Modern</span> Solutions.</h1>
             <p class="hero__subtitle" data-aos="fade-up" data-aos-delay="350">We design and build fast, responsive websites and Flask-powered web apps for businesses, creators, and growing ideas.</p>
             <div class="hero__actions" data-aos="fade-up" data-aos-delay="450">
                 <a href="#about" class="hero__cta hero__cta--white">SCROLL ON</a>
