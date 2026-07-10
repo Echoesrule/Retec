@@ -176,6 +176,7 @@ ul { list-style: none; }
     z-index: 1;
     pointer-events: none;
 }
+/*.hero--image .hero__overlay { display: none; } */
 
 .hero__container {
     position: relative;
@@ -907,7 +908,8 @@ ul { list-style: none; }
 .floating-fact__close:hover { color: var(--white); }
 
 .floating-fact__label {
-    display: block;
+    display: flex;
+    align-items: center;
     font-size: 0.65rem;
     font-weight: 600;
     text-transform: uppercase;

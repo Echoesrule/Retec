@@ -81,7 +81,7 @@
     {% if fun_fact %}
     <div class="floating-fact" id="floatingFact">
         <button class="floating-fact__close" id="factClose" aria-label="Dismiss">&times;</button>
-        <span class="floating-fact__label">Did You Know?</span>
+        <span class="floating-fact__label"><img src="{{ url_for('static', filename='images/lightbulb.png') }}" alt="" style="width:18px;height:18px;margin-right:6px;"><q> Quote Of The Day </q></span>
         <p class="floating-fact__text">{{ fun_fact }}</p>
     </div>
     {% endif %}

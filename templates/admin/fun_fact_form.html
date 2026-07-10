@@ -11,6 +11,10 @@
                 <label for="text">Fun Fact *</label>
                 <textarea id="text" name="text" rows="3" required>{{ fact.text if fact else '' }}</textarea>
             </div>
+            <div class="admin-form__group">
+                <label for="duration_seconds">Display Duration (seconds)</label>
+                <input type="number" id="duration_seconds" name="duration_seconds" value="{{ fact.duration_seconds if fact else 6 }}" min="2" step="1">
+            </div>
             <div class="admin-form__group admin-form__group--checkbox">
                 <label>
                     <input type="checkbox" name="active" value="1" {% if fact and fact.active %}checked{% endif %}>

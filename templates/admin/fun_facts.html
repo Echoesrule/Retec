@@ -10,12 +10,13 @@
     <div class="admin-card">
         <table class="admin-table">
             <thead>
-                <tr><th>Text</th><th>Active</th><th>Updated</th><th>Actions</th></tr>
+                <tr><th>Text</th><th>Duration</th><th>Active</th><th>Updated</th><th>Actions</th></tr>
             </thead>
             <tbody>
                 {% for f in facts %}
                 <tr>
                     <td>{{ f.text[:100] }}{% if f.text|length > 100 %}...{% endif %}</td>
+                    <td>{{ f.duration_seconds }}s</td>
                     <td>{{ 'Yes' if f.active else 'No' }}</td>
                     <td>{{ f.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
                     <td class="admin-actions">
@@ -27,7 +28,7 @@
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="4" class="admin-empty">No fun facts yet. <a href="{{ url_for('admin_fun_fact_add') }}">Add one</a>.</td></tr>
+                <tr><td colspan="5" class="admin-empty">No fun facts yet. <a href="{{ url_for('admin_fun_fact_add') }}">Add one</a>.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

@@ -54,6 +54,11 @@
                     <input type="file" id="hero_image" name="hero_image" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml">
                 </div>
             </div>
+            <div class="admin-form__group">
+                <label for="hero_quote_interval">Hero Quote Rotation (ms) — set in Fun Facts</label>
+                <input type="number" id="hero_quote_interval" name="hero_quote_interval" value="{{ hero_quote_interval }}" min="2000" step="1000">
+                <span style="font-size:0.8rem;opacity:0.7;">How long each quote shows before cycling to the next. 6000ms = 6 seconds.</span>
+            </div>
             <div class="admin-form__actions">
                 <button type="submit" class="admin-btn admin-btn--primary">Save Changes</button>
                 <a href="{{ url_for('admin_dashboard') }}" class="admin-btn">Cancel</a>

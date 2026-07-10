@@ -128,6 +128,7 @@ class FunFact(db.Model):
     text = db.Column(db.Text, nullable=False, default='')
     active = db.Column(db.Boolean, default=True)
     sort_order = db.Column(db.Integer, default=0)
+    duration_seconds = db.Column(db.Integer, default=6)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -849,7 +850,7 @@ services = [
 
 @app.context_processor
 def inject_globals():
-    fun_fact = FunFact.query.filter_by(active=True).order_by(FunFact.updated_at.desc()).first()
+    fun_facts = FunFact.query.filter_by(active=True).order_by(FunFact.sort_order).all()
     github_stats = get_github_stats()
     try:
         meta_url = request.url
@@ -860,7 +861,8 @@ def inject_globals():
     return {
         'year': datetime.now().year,
         'css_version': int(datetime.now().timestamp()),
-        'fun_fact': fun_fact.text if fun_fact else None,
+        'fun_facts': fun_facts,
+        'fun_fact': fun_facts[0].text if fun_facts else None,
         'github_stats': github_stats,
         'meta_title': 'RETEC — Retro Spirit. Modern Solutions.',
         'meta_desc': 'RETEC is a software developer building modern websites, web applications, and digital experiences.',
@@ -870,7 +872,8 @@ def inject_globals():
         'hero_bg_type': SiteSetting.query.filter_by(key='hero_bg_type').first().value if SiteSetting.query.filter_by(key='hero_bg_type').first() else 'video',
         'hero_video_url': get_image_url(SiteSetting.query.filter_by(key='hero_video').first().value) if SiteSetting.query.filter_by(key='hero_video').first() else url_for('static', filename='hero-bg.mp4'),
         'hero_image_url': get_image_url(SiteSetting.query.filter_by(key='hero_image').first().value) if SiteSetting.query.filter_by(key='hero_image').first() else url_for('static', filename='images/hero-bg.svg'),
-        'hero_poster_url': get_image_url(SiteSetting.query.filter_by(key='hero_poster').first().value) if SiteSetting.query.filter_by(key='hero_poster').first() else url_for('static', filename='images/hero-bg.svg')
+        'hero_poster_url': get_image_url(SiteSetting.query.filter_by(key='hero_poster').first().value) if SiteSetting.query.filter_by(key='hero_poster').first() else url_for('static', filename='images/hero-bg.svg'),
+        'hero_quote_interval': SiteSetting.query.filter_by(key='hero_quote_interval').first().value if SiteSetting.query.filter_by(key='hero_quote_interval').first() else '6000'
     }
 
 # ===== AFTER REQUEST =====
@@ -1092,6 +1095,13 @@ def admin_hero_settings():
         else:
             db.session.add(SiteSetting(key='hero_bg_type', value=bg_type))
         db.session.commit()
+        quote_interval = request.form.get('hero_quote_interval', '6000')
+        setting = SiteSetting.query.filter_by(key='hero_quote_interval').first()
+        if setting:
+            setting.value = quote_interval
+        else:
+            db.session.add(SiteSetting(key='hero_quote_interval', value=quote_interval))
+        db.session.commit()
         if bg_type == 'video':
             if request.files.get('video') and request.files['video'].filename:
                 url = upload_image(request.files['video'])
@@ -1129,11 +1139,13 @@ def admin_hero_settings():
     hero_video = SiteSetting.query.filter_by(key='hero_video').first()
     hero_image = SiteSetting.query.filter_by(key='hero_image').first()
     hero_poster = SiteSetting.query.filter_by(key='hero_poster').first()
+    hero_quote_interval = SiteSetting.query.filter_by(key='hero_quote_interval').first()
     return render_template('admin/hero_settings.html',
         hero_bg_type=hero_bg_type.value if hero_bg_type else 'video',
         hero_video=hero_video.value if hero_video else '',
         hero_image=hero_image.value if hero_image else '',
-        hero_poster=hero_poster.value if hero_poster else '')
+        hero_poster=hero_poster.value if hero_poster else '',
+        hero_quote_interval=hero_quote_interval.value if hero_quote_interval else '6000')
 
 @app.route('/admin/change-password', methods=['GET', 'POST'])
 @admin_required
@@ -1564,7 +1576,12 @@ def admin_fun_fact_add():
         if not text:
             flash('Fun fact text is required.', 'error')
             return redirect(url_for('admin_fun_fact_add'))
-        fact = FunFact(text=text, active=bool(request.form.get('active')))
+        duration = request.form.get('duration_seconds', 6)
+        try:
+            duration = int(duration)
+        except ValueError:
+            duration = 6
+        fact = FunFact(text=text, active=bool(request.form.get('active')), duration_seconds=duration)
         db.session.add(fact)
         db.session.commit()
         flash('Fun fact added.', 'success')
@@ -1582,6 +1599,11 @@ def admin_fun_fact_edit(id):
             return redirect(url_for('admin_fun_fact_edit', id=id))
         fact.text = text
         fact.active = bool(request.form.get('active'))
+        duration = request.form.get('duration_seconds', 6)
+        try:
+            fact.duration_seconds = int(duration)
+        except ValueError:
+            fact.duration_seconds = 6
         db.session.commit()
         flash('Fun fact updated.', 'success')
         return redirect(url_for('admin_fun_facts'))
@@ -1752,6 +1774,7 @@ with app.app_context():
             ('subscriber', 'validated', 'BOOLEAN DEFAULT false'),
             ('project', 'demo_url', 'VARCHAR(500) DEFAULT \'\''),
             ('project', 'visible', 'BOOLEAN DEFAULT true'),
+            ('fun_fact', 'duration_seconds', 'INTEGER DEFAULT 6'),
             ('fun_fact', 'text', 'TEXT DEFAULT \'\''),
             ('fun_fact', 'active', 'BOOLEAN DEFAULT true'),
             ('fun_fact', 'sort_order', 'INTEGER DEFAULT 0'),
