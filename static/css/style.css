@@ -165,7 +165,7 @@ ul { list-style: none; }
     position: absolute;
     inset: 0;
     background:
-        linear-gradient(135deg, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0.35) 50%, rgba(0, 0, 0, 0.6) 100%),
+        linear-gradient(135deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.15) 50%, rgba(0, 0, 0, 0.3) 100%),
         repeating-linear-gradient(
             0deg,
             transparent,
