@@ -8,18 +8,19 @@
         <a href="{{ url_for('admin_fun_fact_add') }}" class="admin-btn admin-btn--primary">+ Add Fun Fact</a>
     </div>
     <div class="admin-card">
-        <table class="admin-table">
+        <div class="admin-table-wrap">
+        <table class="admin-table admin-table--cards">
             <thead>
                 <tr><th>Text</th><th>Duration</th><th>Active</th><th>Updated</th><th>Actions</th></tr>
             </thead>
             <tbody>
                 {% for f in facts %}
                 <tr>
-                    <td>{{ f.text[:100] }}{% if f.text|length > 100 %}...{% endif %}</td>
-                    <td>{{ f.duration_seconds }}s</td>
-                    <td>{{ 'Yes' if f.active else 'No' }}</td>
-                    <td>{{ f.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                    <td class="admin-actions">
+                    <td class="admin-card__primary" data-label="">{{ f.text[:100] }}{% if f.text|length > 100 %}...{% endif %}</td>
+                    <td class="admin-card__label" data-label="Duration">{{ f.duration_seconds }}s</td>
+                    <td class="admin-card__label" data-label="Active">{{ 'Yes' if f.active else 'No' }}</td>
+                    <td class="admin-card__label" data-label="Updated">{{ f.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td class="admin-actions admin-card__actions">
                         <a href="{{ url_for('admin_fun_fact_edit', id=f.id) }}" class="admin-btn admin-btn--sm">Edit</a>
                         <form method="POST" action="{{ url_for('admin_fun_fact_delete', id=f.id) }}" style="display:inline" onsubmit="return confirm('Delete this fun fact?')">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -32,6 +33,7 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
     </div>
 </div>
 {% endblock %}

@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alexander Smith · Software Engineer CV</title>
+    <!-- Font Awesome for subtle icons (optional but adds polish) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #eef2f5;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem 1rem;
+            line-height: 1.5;
+            color: #1e2b37;
+        }
+
+        /* main card – crisp white with subtle shadow */
+        .resume-card {
+            max-width: 1100px;
+            width: 100%;
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px -12px rgba(0, 20, 30, 0.15);
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        /* ===== HEADER / TOP BAR ===== */
+        .resume-header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem 2.5rem;
+            background: #f9fcff;
+            border-bottom: 1px solid #e9edf2;
+        }
+
+        .name-title h1 {
+            font-size: 2.4rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: #0b1a26;
+            margin-bottom: 0.2rem;
+        }
+
+        .name-title .badge {
+            display: inline-block;
+            background: #dce5ed;
+            padding: 0.3rem 1.2rem;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            color: #1f3a4b;
+            margin-top: 0.2rem;
+        }
+
+        .contact-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.2rem 1.8rem;
+            font-size: 0.9rem;
+            color: #2f4558;
+        }
+
+        .contact-info span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .contact-info i {
+            color: #3c6e8f;
+            width: 1.1rem;
+            font-size: 0.95rem;
+        }
+
+        .contact-info a {
+            color: #1e3a4f;
+            text-decoration: none;
+            border-bottom: 1px dotted transparent;
+            transition: border-color 0.15s;
+        }
+
+        .contact-info a:hover {
+            border-bottom-color: #3c6e8f;
+        }
+
+        /* ===== MAIN LAYOUT ===== */
+        .resume-grid {
+            display: grid;
+            grid-template-columns: 1fr 2.2fr;
+            gap: 0;
+            background: #ffffff;
+        }
+
+        /* ===== SIDEBAR (left) ===== */
+        .sidebar {
+            background: #f5f9fe;
+            padding: 2rem 1.8rem;
+            border-right: 1px solid #e6ecf3;
+        }
+
+        .sidebar-section {
+            margin-bottom: 2.2rem;
+        }
+
+        .sidebar-section h3 {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+            color: #2b4f67;
+            border-bottom: 2px solid #d0dde9;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.2rem;
+        }
+
+        /* summary */
+        .summary-text {
+            font-size: 0.9rem;
+            color: #1d3343;
+            line-height: 1.6;
+        }
+
+        /* skills / lists */
+        .skill-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .skill-list li {
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            padding: 0.3rem 0;
+            border-bottom: 1px dashed #dee7f0;
+        }
+
+        .skill-list li:last-child {
+            border-bottom: none;
+        }
+
+        .skill-list i {
+            color: #3c6e8f;
+            width: 1.1rem;
+            font-size: 0.8rem;
+        }
+
+        .skill-tag {
+            display: inline-block;
+            background: #e2eaf3;
+            padding: 0.2rem 0.8rem;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #1a3547;
+            margin: 0.15rem 0.1rem;
+        }
+
+        .lang-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            padding: 0.4rem 0;
+            border-bottom: 1px solid #e1e9f2;
+        }
+
+        .lang-item:last-child {
+            border-bottom: none;
+        }
+
+        .lang-level {
+            color: #3f617a;
+            font-weight: 500;
+        }
+
+        /* ===== MAIN CONTENT (right) ===== */
+        .main-content {
+            padding: 2rem 2.2rem;
+            background: #ffffff;
+        }
+
+        .main-section {
+            margin-bottom: 2.2rem;
+        }
+
+        .main-section h3 {
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+            color: #1e3f55;
+            border-bottom: 2px solid #dde6ef;
+            padding-bottom: 0.4rem;
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .main-section h3 i {
+            color: #3c6e8f;
+            font-size: 1.1rem;
+        }
+
+        /* work entries */
+        .work-entry {
+            margin-bottom: 1.8rem;
+        }
+
+        .work-entry:last-child {
+            margin-bottom: 0;
+        }
+
+        .work-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            margin-bottom: 0.2rem;
+        }
+
+        .work-header h4 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #0b2a3d;
+        }
+
+        .work-header .company {
+            font-weight: 600;
+            color: #1d4b66;
+        }
+
+        .work-header .date {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #4b6a82;
+            background: #eaf1f9;
+            padding: 0.15rem 0.8rem;
+            border-radius: 30px;
+            white-space: nowrap;
+        }
+
+        .work-desc {
+            list-style: none;
+            margin-top: 0.5rem;
+            padding-left: 0.2rem;
+        }
+
+        .work-desc li {
+            font-size: 0.9rem;
+            color: #1d3345;
+            padding: 0.2rem 0 0.2rem 1.4rem;
+            position: relative;
+            line-height: 1.5;
+        }
+
+        .work-desc li::before {
+            content: "▹";
+            position: absolute;
+            left: 0;
+            color: #3c6e8f;
+            font-weight: 600;
+        }
+
+        /* education */
+        .edu-item {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 0.3rem 0;
+            border-bottom: 1px solid #ecf2f8;
+        }
+
+        .edu-item:last-child {
+            border-bottom: none;
+        }
+
+        .edu-item .degree {
+            font-weight: 700;
+            color: #0b2a3d;
+        }
+
+        .edu-item .school {
+            color: #1f425b;
+            font-weight: 500;
+        }
+
+        .edu-item .edu-date {
+            font-size: 0.8rem;
+            color: #4f6f88;
+            background: #eaf1f9;
+            padding: 0.1rem 0.7rem;
+            border-radius: 30px;
+        }
+
+        /* projects */
+        .project-item {
+            margin-bottom: 0.8rem;
+        }
+        .project-item strong {
+            color: #0b2a3d;
+            font-weight: 700;
+        }
+        .project-item .project-link {
+            color: #1f5a7a;
+            text-decoration: none;
+            font-weight: 500;
+            border-bottom: 1px dotted #b3ccde;
+        }
+        .project-item .project-link:hover {
+            border-bottom-style: solid;
+        }
+
+        /* ===== FOOTER / WATERMARK ===== */
+        .resume-footer {
+            background: #fafdff;
+            border-top: 1px solid #e6ecf3;
+            padding: 0.8rem 2.5rem;
+            display: flex;
+            justify-content: flex-end;
+            font-size: 0.7rem;
+            color: #7a96ae;
+            letter-spacing: 0.3px;
+        }
+
+        /* responsive */
+        @media (max-width: 800px) {
+            .resume-grid {
+                grid-template-columns: 1fr;
+            }
+            .sidebar {
+                border-right: none;
+                border-bottom: 1px solid #e6ecf3;
+            }
+            .resume-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            .contact-info {
+                gap: 0.8rem 1.2rem;
+            }
+        }
+
+        @media (max-width: 500px) {
+            .resume-header {
+                padding: 1.5rem;
+            }
+            .main-content {
+                padding: 1.5rem;
+            }
+            .sidebar {
+                padding: 1.5rem;
+            }
+            .work-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="resume-card">
+
+    <!-- HEADER: name + contact -->
+    <header class="resume-header">
+        <div class="name-title">
+            <h1>ALEXANDER SMITH</h1>
+            <span class="badge"><i class="fas fa-code" style="margin-right: 6px;"></i>SOFTWARE ENGINEER</span>
+        </div>
+        <div class="contact-info">
+            <span><i class="fas fa-phone-alt"></i> +1 555 456 7890</span>
+            <span><i class="fas fa-envelope"></i> <a href="mailto:alexander-smith@mail.com">alexander-smith@mail.com</a></span>
+            <span><i class="fas fa-globe"></i> <a href="#">www.alexander-website.com</a></span>
+            <span><i class="fas fa-map-pin"></i> 23St. Tec City, Los Angeles, CA</span>
+        </div>
+    </header>
+
+    <!-- MAIN GRID -->
+    <div class="resume-grid">
+
+        <!-- SIDEBAR (left) -->
+        <aside class="sidebar">
+            <!-- SUMMARY -->
+            <section class="sidebar-section">
+                <h3><i class="fas fa-user-circle" style="margin-right: 6px;"></i> Summary</h3>
+                <div class="summary-text">
+                    Dynamic Software Engineer with over 5 years of experience specializing in system architecture and development. Adept at optimizing code and integrating new innovative solutions to increase efficiency and scalability. Passionate about agile methodologies and ready to bring technical acumen to a progressive team.
+                </div>
+            </section>
+
+            <!-- SKILLS · TECHNICAL -->
+            <section class="sidebar-section">
+                <h3><i class="fas fa-microchip"></i> Technical</h3>
+                <ul class="skill-list">
+                    <li><i class="fas fa-cogs"></i> System Architecture</li>
+                    <li><i class="fab fa-java"></i> Java &amp; Python</li>
+                    <li><i class="fas fa-cloud"></i> RESTful APIs</li>
+                    <li><i class="fas fa-users-cog"></i> Agile &amp; Scrum</li>
+                </ul>
+                <div style="margin-top: 0.8rem;">
+                    <span class="skill-tag">Django</span>
+                    <span class="skill-tag">Machine Learning</span>
+                    <span class="skill-tag">Containerization</span>
+                    <span class="skill-tag">Security</span>
+                </div>
+            </section>
+
+            <!-- PROFESSIONAL SKILLS -->
+            <section class="sidebar-section">
+                <h3><i class="fas fa-briefcase"></i> Professional</h3>
+                <ul class="skill-list">
+                    <li><i class="fas fa-comments"></i> Effective Communication</li>
+                    <li><i class="fas fa-chess-queen"></i> Strategic Planning</li>
+                    <li><i class="fas fa-check-double"></i> Decision Making</li>
+                    <li><i class="fas fa-clock"></i> Time Management</li>
+                    <li><i class="fas fa-sync-alt"></i> Adaptability &amp; Flexibility</li>
+                </ul>
+            </section>
+
+            <!-- LANGUAGES -->
+            <section class="sidebar-section">
+                <h3><i class="fas fa-language"></i> Languages</h3>
+                <div class="lang-item"><span>English</span> <span class="lang-level">Fluent</span></div>
+                <div class="lang-item"><span>Spanish</span> <span class="lang-level">Intermediate</span></div>
+            </section>
+        </aside>
+
+        <!-- MAIN CONTENT (right) -->
+        <main class="main-content">
+
+            <!-- WORK EXPERIENCE -->
+            <section class="main-section">
+                <h3><i class="fas fa-briefcase"></i> Work Experience</h3>
+
+                <div class="work-entry">
+                    <div class="work-header">
+                        <div><span class="company">LEAD SOFTWARE ENGINEER</span> · Digital Innovations Inc</div>
+                        <span class="date">June 2021 – Present</span>
+                    </div>
+                    <ul class="work-desc">
+                        <li>Orchestrated a diverse team of 10 engineers effectively in developing innovative and scalable software solutions, significantly improving project delivery by 35%.</li>
+                        <li>Adeptly implemented Django, RESTful APIs, and other services, greatly enhancing system interoperability, functionality, and overall performance.</li>
+                        <li>Optimized complex data systems, resulting in a 20% increase in performance.</li>
+                        <li>Led the strategic and successful adoptions of several agile methodologies, significantly improving overall team efficiency and effective collaboration.</li>
+                        <li>Spearheaded the development of a machine learning-based analytics tool, enhancing data-driven decision-making.</li>
+                    </ul>
+                </div>
+
+                <div class="work-entry">
+                    <div class="work-header">
+                        <div><span class="company">SOFTWARE ENGINEER</span> · CloudTech Solutions</div>
+                        <span class="date">July 2018 – May 2021</span>
+                    </div>
+                    <ul class="work-desc">
+                        <li>Developed 8 cloud-based applications, improving main system reliability by 30% from concept to final deployment and maintenance.</li>
+                        <li>Collaborated with cross-functional teams to integrate user-friendly features.</li>
+                        <li>Streamlined the deployment process effectively using advanced and cutting-edge containerization technologies, thereby reducing overall deployment time by 25%.</li>
+                        <li>Designed and implemented robust security protocols, ensuring the integrity and confidentiality of data.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- EDUCATION -->
+            <section class="main-section">
+                <h3><i class="fas fa-graduation-cap"></i> Education</h3>
+                <div class="edu-item">
+                    <span><span class="degree">Master of Science in Software Engineering</span> · <span class="school">Standard University</span></span>
+                    <span class="edu-date">Sep 2016 – Jun 2018</span>
+                </div>
+                <!-- Additional education line (if needed) but we keep only one as per content -->
+            </section>
+
+            <!-- PROJECTS -->
+            <section class="main-section">
+                <h3><i class="fas fa-project-diagram"></i> Projects</h3>
+                <div class="project-item">
+                    <strong>E-commerce Platform:</strong> a scalable solution for online retail. 
+                    <a href="#" class="project-link">[link]</a>
+                </div>
+                <div class="project-item">
+                    <strong>Health Tracking App:</strong> complex app for monitoring daily health metrics. 
+                    <a href="#" class="project-link">[link]</a>
+                </div>
+                <!-- small note: the original had a "www.resumeMayor.com" watermark, we place it in footer -->
+            </section>
+
+        </main>
+    </div>
+
+    <!-- FOOTER with subtle watermark -->
+    <div class="resume-footer">
+        <span><i class="far fa-file-alt" style="margin-right: 6px;"></i> www.resumeMayor.com</span>
+    </div>
+
+</div>
+<!-- end resume-card -->
+</body>
+</html>

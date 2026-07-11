@@ -1,0 +1,72 @@
+{% raw %}
+<!-- Full backup of templates/cv.html created 2026-07-11 00:01 -->
+{% endraw %}
+
+{% extends "base.html" %}
+{% block content %}
+<section class="section section--light cv">
+    <div class="container">
+        <div class="cv__toolbar no-print">
+            <button onclick="window.print()" class="cv__print-btn">
+                <i class="fa-solid fa-print"></i> Print / Save PDF
+            </button>
+        </div>
+
+        <div class="cv__paper" data-aos="fade-up">
+            <header class="cv__hero">
+                <div>
+                    <h1 class="cv__name">RETRO</h1>
+                    <span class="cv__role"><i class="fa-solid fa-code" style="margin-right: 6px;"></i>Software Engineer</span>
+                </div>
+                <div class="cv__contacts">
+                    <a href="mailto:contact.retec@gmail.com" class="cv__contact">
+                        <i class="fa-solid fa-envelope"></i>
+                        <span>contact.retec@gmail.com</span>
+                    </a>
+                    <a href="https://github.com/echoesrule" target="_blank" rel="noopener" class="cv__contact">
+                        <i class="fa-brands fa-github"></i>
+                        <span>github.com/echoesrule</span>
+                    </a>
+                    <span class="cv__contact">
+                        <i class="fa-solid fa-location-dot"></i>
+                        <span>Nairobi, Kenya</span>
+                    </span>
+                </div>
+            </header>
+
+            <div class="cv__body">
+                <aside class="cv__sidebar">
+                    <section class="cv__sidebar-card">
+                        <h3 class="cv__sidebar-title">
+                            <i class="fa-solid fa-user-circle"></i>
+                            Summary
+                        </h3>
+                        <p class="cv__text">Founder of RETEC with experience building modern web solutions, web applications, and responsive digital experiences. Skilled in Python, Flask, and product-led development.</p>
+                    </section>
+
+                    <section class="cv__sidebar-card">
+                        <h3 class="cv__sidebar-title">
+                            <i class="fa-solid fa-code"></i>
+                            Skills
+                        </h3>
+                        <div class="cv__skill-group">
+                            <span class="cv__skill-label">Languages</span>
+                            <div class="cv__tags">
+                                <span class="cv__tag">Python</span>
+                                <span class="cv__tag">JavaScript</span>
+                            </div>
+                        </div>
+                    </section>
+                </aside>
+
+                <main class="cv__main">
+                    <section class="cv__section">
+                        <h2 class="cv__section-title">Work Experience</h2>
+                        <p class="cv__text">(Work entries were backed up to cv_full_backup_20260711_0001.html)</p>
+                    </section>
+                </main>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

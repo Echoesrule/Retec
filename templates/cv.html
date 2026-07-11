@@ -2,68 +2,113 @@
 {% block content %}
 <section class="section section--light cv">
     <div class="container">
-
-        <div class="cv__header" data-aos="fade-down">
-            <div class="cv__avatar">
-                <i class="fa-solid fa-user"></i>
-            </div>
-            <h1 class="cv__name">Retro</h1>
-            <p class="cv__title">Founder &amp; Software Developer @ RETEC</p>
-            <div class="cv__actions">
-                <a href="mailto:contact.retec@gmail.com" class="cv__action-btn" aria-label="Email">
-                    <i class="fa-solid fa-envelope"></i> Email
-                </a>
-                <a href="https://github.com/echoesrule" target="_blank" rel="noopener" class="cv__action-btn" aria-label="GitHub">
-                    <i class="fa-brands fa-github"></i> GitHub
-                </a>
-            </div>
+        <div class="cv__toolbar no-print">
+            <button onclick="window.print()" class="cv__print-btn">
+                <i class="fa-solid fa-print"></i> Print / Save PDF
+            </button>
         </div>
 
-        <div class="cv__section" data-aos="fade-up">
-            <h2 class="cv__section-title">About</h2>
-            <p>Software developer focused on building modern websites, web applications, and digital experiences for businesses and creators. Founder of RETEC.</p>
-        </div>
+        <div class="cv__paper" data-aos="fade-up">
 
-        {% if github_stats %}
-        <div class="cv__section" data-aos="fade-up" data-aos-delay="100">
-            <h2 class="cv__section-title">GitHub Stats</h2>
-            <div class="cv__stats">
-                <div class="cv__stat">
-                    <span class="cv__stat-value">{{ github_stats.public_repos }}</span>
-                    <span class="cv__stat-label">Public Repos</span>
+            <header class="cv__hero">
+                <div class="cv__name-title">
+                    <div class="cv__name-title-inner">
+                        <img src="static/images/icon.svg" alt="image" class="cv__avatar">
+                        <h1>RETRO</h1>
+                    </div>
+
+                        <span class="cv__badge"><i class="fas fa-code" style="margin-right: 6px;"></i>Software Engineer</span>
                 </div>
-                <div class="cv__stat">
-                    <span class="cv__stat-value">{{ github_stats.followers }}</span>
-                    <span class="cv__stat-label">Followers</span>
+                <div class="cv__contacts">
+                    <span><i class="fas fa-envelope"></i> <a href="mailto:contact.retec@gmail.com">contact.retec@gmail.com</a></span>
+                    <span><i class="fab fa-github"></i> <a href="https://github.com/echoesrule" target="_blank" rel="noopener">github.com/echoesrule</a></span>
+                    <span><i class="fas fa-map-pin"></i> Nairobi, Kenya</span>
                 </div>
+            </header>
+
+            <div class="cv__body">
+
+                <aside class="cv__sidebar">
+                    <section class="cv__sidebar-section">
+                        <h3 class="cv__sidebar-title"><i class="fas fa-user-circle"></i> Summary</h3>
+                        <div class="cv__text">Founder of RETEC with experience building modern web solutions, web applications, and responsive digital experiences. Skilled in Python, Flask, and product-led development.</div>
+                    </section>
+
+                    <section class="cv__sidebar-section">
+                        <h3 class="cv__sidebar-title"><i class="fas fa-code"></i> Technical</h3>
+                        <ul class="cv__skill-list">
+                            <li><i class="fas fa-cogs"></i> System Architecture</li>
+                            <li><i class="fab fa-python"></i> Python &amp; Flask</li>
+                            <li><i class="fas fa-cloud"></i> RESTful APIs</li>
+                            <li><i class="fas fa-users-cog"></i> Agile &amp; Scrum</li>
+                        </ul>
+                        <div class="cv__tags">
+                            <span class="cv__tag">Flask</span>
+                            <span class="cv__tag">JavaScript</span>
+                            <span class="cv__tag">Linux</span>
+                            <span class="cv__tag">Cloudinary</span>
+                        </div>
+                    </section>
+
+                    {% if github_stats %}
+                    <section class="cv__sidebar-section">
+                        <h3 class="cv__sidebar-title"><i class="fab fa-github"></i> GitHub</h3>
+                        <div class="cv__gh-stats">
+                            <div class="cv__gh-stat">
+                                <span class="cv__gh-stat-value">{{ github_stats.public_repos }}</span>
+                                <span class="cv__gh-stat-label">Repos</span>
+                            </div>
+                            <div class="cv__gh-stat">
+                                <span class="cv__gh-stat-value">{{ github_stats.followers }}</span>
+                                <span class="cv__gh-stat-label">Followers</span>
+                            </div>
+                        </div>
+                    </section>
+                    {% endif %}
+
+                    <section class="cv__sidebar-section">
+                        <h3 class="cv__sidebar-title"><i class="fas fa-language"></i> Languages</h3>
+                        <div class="cv__lang"><span>English</span> <span class="cv__lang-level">Fluent</span></div>
+                        <div class="cv__lang"><span>Swahili</span> <span class="cv__lang-level">Native</span></div>
+                    </section>
+                </aside>
+
+                <main class="cv__main">
+                    <section class="cv__section">
+                        <h3><i class="fas fa-briefcase"></i> Work Experience</h3>
+
+                        <div class="cv__work-entry">
+                            <div class="cv__work-head">
+                                <div class="cv__work-head-title"><span class="cv__company">Founder &amp; Software Developer</span> · RETEC</div>
+                                <span class="cv__date">Present</span>
+                            </div>
+                            <ul class="cv__work-desc">
+                                <li>Built modern web solutions and web applications using Python and Flask.</li>
+                                <li>Designed responsive front-ends and maintained production deployments.</li>
+                                <li>Led product improvements and performance optimizations.</li>
+                            </ul>
+                        </div>
+
+                        <div class="cv__work-entry">
+                            <div class="cv__work-head">
+                                <div class="cv__work-head-title"><span class="cv__company">Freelance Web Developer</span> · Remote</div>
+                            </div>
+                            <ul class="cv__work-desc">
+                                <li>Delivered custom websites and web applications for startups and creatives.</li>
+                                <li>Focused on UX, performance and maintainable code.</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <section class="cv__section">
+                        <h3><i class="fas fa-project-diagram"></i> Projects</h3>
+                        <div class="cv__project-item"><strong>Portfolio Website:</strong> Custom Flask portfolio with CMS, analytics, and newsletter system.</div>
+                        <div class="cv__project-item"><strong>Web App Prototype:</strong> API-driven MVP with responsive UI and modern architecture.</div>
+                    </section>
+                </main>
+
             </div>
         </div>
-        {% endif %}
-
-        <div class="cv__section" data-aos="fade-up" data-aos-delay="150">
-            <h2 class="cv__section-title">Skills</h2>
-            <div class="cv__tags">
-                <span class="cv__tag">Python</span>
-                <span class="cv__tag">Flask</span>
-                <span class="cv__tag">HTML/CSS</span>
-                <span class="cv__tag">JavaScript</span>
-                <span class="cv__tag">SQL</span>
-                <span class="cv__tag">Web Development</span>
-                <span class="cv__tag">REST APIs</span>
-                <span class="cv__tag">Responsive Design</span>
-            </div>
-        </div>
-
-        <div class="cv__section" data-aos="fade-up" data-aos-delay="200">
-            <h2 class="cv__section-title">Experience</h2>
-            <div class="cv__item" data-aos="fade-up" data-aos-delay="250">
-                <div class="cv__item-line"></div>
-                <h3 class="cv__item-title">Founder &amp; Software Developer</h3>
-                <p class="cv__item-meta">RETEC — Present</p>
-                <p class="cv__item-desc">Building modern web solutions for businesses and creators. Specializing in Python, Flask, and responsive front-end development.</p>
-            </div>
-        </div>
-
     </div>
 </section>
 {% endblock %}

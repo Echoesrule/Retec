@@ -17,7 +17,7 @@
     
     /* Light Mode */
     --light-text: #1a1a1a;
-    --light-text-secondary: #222;
+    --light-text-secondary: #181818;
     --light-text-tertiary: #333;
     --light-text-muted: #444;
     --light-text-muted-light: #555;
@@ -42,6 +42,10 @@
     /* Utility */
     --shadow-color: rgba(30,30,30,0.06);
 
+    /* Font Families */
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-heading: 'MADE Mirage', Georgia, serif;
+
     /* Additional Colors */
     --card-bg-light: #fafafa;
     --text-light: #888;
@@ -52,7 +56,7 @@
     --gray-medium: #81dba2;
     --gray-subtle: #ded9d1;
     --bg-very-dark: #151515;
-    --accent-hover: #5a3b3ba4;
+    --accent-hover: #051801a4;
     --border-light: #e8e8e8;
     --color-warning-light: #f4d28e;
     --color-warning: #c99445;

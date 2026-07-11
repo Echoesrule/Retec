@@ -42,73 +42,81 @@
     <div class="admin-grid">
         <div class="admin-card">
             <h2 class="admin-card__title">Top Pages</h2>
-            <table class="admin-table">
+            <div class="admin-table-wrap">
+            <table class="admin-table admin-table--cards">
                 <thead>
                     <tr><th>Page</th><th>Views</th></tr>
                 </thead>
                 <tbody>
                     {% for page, count in top_pages %}
                     <tr>
-                        <td>{{ page }}</td>
-                        <td>{{ count }}</td>
+                        <td class="admin-card__primary" data-label="Page">{{ page }}</td>
+                        <td class="admin-card__label" data-label="Views">{{ count }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
         <div class="admin-card">
             <h2 class="admin-card__title">Top Sections</h2>
-            <table class="admin-table">
+            <div class="admin-table-wrap">
+            <table class="admin-table admin-table--cards">
                 <thead>
                     <tr><th>Section</th><th>Interactions</th></tr>
                 </thead>
                 <tbody>
                     {% for section, count in top_sections %}
                     <tr>
-                        <td>{{ section }}</td>
-                        <td>{{ count }}</td>
+                        <td class="admin-card__primary" data-label="Section">{{ section }}</td>
+                        <td class="admin-card__label" data-label="Interactions">{{ count }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 
     <div class="admin-card">
         <h2 class="admin-card__title">Recent Page Views</h2>
-        <table class="admin-table">
+        <div class="admin-table-wrap">
+        <table class="admin-table admin-table--cards">
             <thead>
                 <tr><th>Page</th><th>IP</th><th>Time</th></tr>
             </thead>
             <tbody>
                 {% for v in recent_views %}
                 <tr>
-                    <td>{{ v.page }}</td>
-                    <td>{{ v.ip_address or '-' }}</td>
-                    <td>{{ v.timestamp|localtime|format_datetime }}</td>
+                    <td class="admin-card__primary" data-label="Page">{{ v.page }}</td>
+                    <td class="admin-card__label" data-label="IP">{{ v.ip_address or '-' }}</td>
+                    <td class="admin-card__label" data-label="Time">{{ v.timestamp|localtime|format_datetime }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
+        </div>
     </div>
 
     {% if top_locations %}
     <div class="admin-card">
         <h2 class="admin-card__title">Top Locations</h2>
-        <table class="admin-table">
+        <div class="admin-table-wrap">
+        <table class="admin-table admin-table--cards">
             <thead>
                 <tr><th>Country</th><th>City</th><th>Visitors</th></tr>
             </thead>
             <tbody>
                 {% for loc in top_locations %}
                 <tr>
-                    <td>{{ loc.country }}</td>
-                    <td>{{ loc.city or 'Unknown' }}</td>
-                    <td>{{ loc.count }}</td>
+                    <td class="admin-card__primary" data-label="Country">{{ loc.country }}</td>
+                    <td class="admin-card__label" data-label="City">{{ loc.city or 'Unknown' }}</td>
+                    <td class="admin-card__label" data-label="Visitors">{{ loc.count }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
+        </div>
     </div>
     {% endif %}
 </div>

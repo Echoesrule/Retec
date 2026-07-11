@@ -10,7 +10,13 @@
 </head>
 <body>
     <div class="admin-layout">
-        <aside class="admin-sidebar">
+        <button class="admin-sidebar-toggle" id="sidebarToggle" aria-label="Toggle navigation">
+            <span class="admin-sidebar-toggle__bar"></span>
+            <span class="admin-sidebar-toggle__bar"></span>
+            <span class="admin-sidebar-toggle__bar"></span>
+        </button>
+        <div class="admin-sidebar-overlay" id="sidebarOverlay"></div>
+        <aside class="admin-sidebar" id="adminSidebar">
             <div class="admin-sidebar__head">
                 <a href="{{ url_for('admin_dashboard') }}" class="admin-sidebar__logo">
                     <svg width="64" height="20" viewBox="0 0 64 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -80,5 +86,20 @@
             {% block content %}{% endblock %}
         </main>
     </div>
+    <script>
+    (function() {
+        var toggle = document.getElementById('sidebarToggle');
+        var sidebar = document.getElementById('adminSidebar');
+        var overlay = document.getElementById('sidebarOverlay');
+        if (!toggle || !sidebar) return;
+        function closeSidebar() { sidebar.classList.remove('is-open'); overlay.classList.remove('is-visible'); toggle.classList.remove('is-active'); document.body.style.overflow = ''; }
+        function openSidebar() { sidebar.classList.add('is-open'); overlay.classList.add('is-visible'); toggle.classList.add('is-active'); document.body.style.overflow = 'hidden'; }
+        toggle.addEventListener('click', function() { sidebar.classList.contains('is-open') ? closeSidebar() : openSidebar(); });
+        overlay.addEventListener('click', closeSidebar);
+        sidebar.querySelectorAll('.admin-sidebar__link').forEach(function(link) {
+            link.addEventListener('click', function() { if (window.innerWidth <= 768) closeSidebar(); });
+        });
+    })();
+    </script>
 </body>
 </html>

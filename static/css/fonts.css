@@ -1,0 +1,30 @@
+@font-face {
+    font-family: 'MADE Mirage';
+    src: url('../fonts/MADE Mirage Thin PERSONAL USE.otf') format('opentype');
+    font-weight: 100;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'MADE Mirage';
+    src: url('../fonts/MADE Mirage Regular PERSONAL USE.otf') format('opentype');
+    font-weight: 400;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'MADE Mirage';
+    src: url('../fonts/MADE Mirage Medium PERSONAL USE.otf') format('opentype');
+    font-weight: 500;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'MADE Mirage';
+    src: url('../fonts/MADE Mirage Bold PERSONAL USE.otf') format('opentype');
+    font-weight: 700;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'MADE Mirage';
+    src: url('../fonts/MADE Mirage Black PERSONAL USE.otf') format('opentype');
+    font-weight: 900;
+    font-display: swap;
+}

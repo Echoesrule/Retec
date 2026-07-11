@@ -5,7 +5,7 @@
 <div class="admin-page">
     <div class="admin-page__head">
         <h1 class="admin-page__title">Analytics</h1>
-        <div style="display:flex;gap:0.5rem;">
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
             <a href="{{ url_for('admin_analytics_export') }}" class="admin-btn admin-btn--sm">Export CSV</a>
             <form method="POST" action="{{ url_for('admin_analytics_clear') }}" onsubmit="return confirm('Clear all analytics data? This cannot be undone.');">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -58,7 +58,7 @@
     <div class="admin-card">
         <h2 class="admin-card__title">Top Locations</h2>
         <div style="padding:1rem;overflow-x:auto;">
-            <table class="admin-table" id="locationsTable">
+            <table class="admin-table admin-table--cards" id="locationsTable">
                 <thead>
                     <tr>
                         <th>Country</th>
@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         tbody.innerHTML = d.cities.map(function(city, i){
-            return '<tr><td>' + d.countries[i] + '</td><td>' + city + '</td><td>' + d.data[i] + '</td></tr>';
+            return '<tr><td class="admin-card__primary" data-label="Country">' + d.countries[i] + '</td><td class="admin-card__label" data-label="City">' + city + '</td><td class="admin-card__label" data-label="Visitors">' + d.data[i] + '</td></tr>';
         }).join('');
     });
 });

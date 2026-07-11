@@ -10,8 +10,8 @@
     <div class="container hero__container">
         <div class="hero__text">
             <p class="hero__label" data-aos="fade-down" data-aos-delay="100">RETEC</p>
-            <h1 class="hero__title" data-aos="fade-right" data-aos-delay="200">Retro Spirit. 
-                <span >Modern</span> Solutions.</h1>
+            <h1 class="hero__title" data-aos="fade-right" data-aos-delay="200">Biz Yako.Tech Yetu.
+            </h1>
             <p class="hero__subtitle" data-aos="fade-up" data-aos-delay="350">We design and build fast, responsive websites and Flask-powered web apps for businesses, creators, and growing ideas.</p>
             <div class="hero__actions" data-aos="fade-up" data-aos-delay="450">
                 <a href="#about" class="hero__cta hero__cta--white">SCROLL ON</a>
@@ -160,21 +160,21 @@
     <div class="container">
         <div class="section__header" data-aos="fade-up">
             <p class="section__eyebrow">Services</p>
-            <h2 class="section__title">Ways I Can Help</h2>
-            <p class="section__intro">Focused support for getting a polished digital product online and keeping it useful after launch.</p>
+            <h2 class="section__title">What We Offer</h2>
+            <p class="section__intro">I provide a range of services to help you build and maintain your online presence, from custom websites to web applications and ongoing support.</p>
         </div>
         <div class="services__grid">
             {% set service_icons = {
-                'Website Development': 'fa-globe',
-                'Portfolio Websites': 'fa-id-card',
-                'Web Applications': 'fa-window-restore',
-                'Python Solutions': 'fa-terminal',
-                'Website Maintenance': 'fa-screwdriver-wrench'
+                'Website Development': 'website.png',
+                'Portfolio Websites': 'portfolio.png',
+                'Web Applications': 'app-development.png',
+                'Python Solutions': 'python.png',
+                'Website Maintenance': 'shield.png'
             } %}
             {% for service in services %}
             <div class="service__item" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 80 }}">
                 <span class="service__icon" aria-hidden="true">
-                    <i class="fa-solid {{ service_icons.get(service, 'fa-code') }}"></i>
+                    <img src="{{ url_for('static', filename='images/' ~ service_icons.get(service, 'icon.svg')) }}" alt="{{ service }} icon" class="service__icon-img">
                 </span>
                 <span>{{ service }}</span>
             </div>
@@ -267,6 +267,13 @@
                 </div>
             </div>
             <form class="contact__form" method="POST" action="{{ url_for('contact') }}" data-aos="fade-left">
+                <div class="contact__form-header">
+                    <div class="contact__brand">
+                        <img src="{{ url_for('static', filename='images/logo-stacked.svg') }}" alt="RETEC logo" class="contact__logo-svg">
+                     
+                    </div>
+              
+                </div>
                 <input type="hidden" name="csrf_token" value="{{ form.csrf_token._value() if form else '' }}">
                 <input type="text" name="website" tabindex="-1" autocomplete="off" class="form__honeypot" aria-hidden="true">
                 <div class="form__group">
