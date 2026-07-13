@@ -27,6 +27,11 @@ if _db_url and _db_url.startswith('postgres://'):
     _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
+    'pool_timeout': 20,
+}
 app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['MAIL_FROM'] = os.environ.get('MAIL_FROM', 'contact.retec@gmail.com')
@@ -1011,7 +1016,21 @@ def blog():
 @app.route('/blog/<slug>')
 def blog_post(slug):
     post = BlogPost.query.filter_by(slug=slug, published=True).first_or_404()
-    return render_template('blog_post.html', post=post)
+    prev_post = BlogPost.query.filter(
+        BlogPost.published == True, BlogPost.created_at < post.created_at
+    ).order_by(BlogPost.created_at.desc()).first()
+    next_post = BlogPost.query.filter(
+        BlogPost.published == True, BlogPost.created_at > post.created_at
+    ).order_by(BlogPost.created_at.asc()).first()
+    related = BlogPost.query.filter(
+        BlogPost.published == True, BlogPost.id != post.id
+    ).order_by(BlogPost.created_at.desc()).limit(3).all()
+    meta_title = f"{post.title} — RETEC"
+    meta_desc = post.summary or post.title
+    meta_image = get_image_url(post.image_filename) if post.image_filename else url_for('static', filename='images/favicon.svg', _external=True)
+    return render_template('blog_post.html', post=post, prev_post=prev_post,
+        next_post=next_post, related=related,
+        meta_title=meta_title, meta_desc=meta_desc, meta_image=meta_image)
 
 # ===== TRACKING ROUTES =====
 
@@ -1742,6 +1761,34 @@ def admin_blog_delete(id):
     db.session.commit()
     flash('Blog post deleted.', 'success')
     return redirect(url_for('admin_blog'))
+
+@app.route('/admin/upload-image', methods=['POST'])
+@csrf.exempt
+@admin_required
+def admin_upload_image():
+    file = request.files.get('image')
+    if not file or not file.filename:
+        return jsonify({'error': 'No image provided'}), 400
+    url = upload_image(file)
+    if not url:
+        return jsonify({'error': 'Upload failed'}), 400
+    return jsonify({'url': get_image_url(url)})
+
+# ----- Content Studio -----
+
+@app.route('/admin/content-studio')
+@admin_required
+def admin_content_studio():
+    posts = BlogPost.query.filter_by(published=True).order_by(BlogPost.created_at.desc()).all()
+    return render_template('admin/content_studio.html', posts=posts)
+
+@app.route('/admin/content-studio/<int:id>')
+@admin_required
+def admin_content_studio_post(id):
+    post = BlogPost.query.get_or_404(id)
+    hero_url = get_image_url(post.image_filename) if post.image_filename else ''
+    return render_template('admin/content_studio_post.html', post=post, hero_url=hero_url,
+        site_url=request.host_url.rstrip('/'))
 
 # ----- Subscribers -----
 

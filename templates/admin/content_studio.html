@@ -1,0 +1,64 @@
+{% extends "admin/base.html" %}
+{% block title %}Content Studio{% endblock %}
+{% set active = "content_studio" %}
+{% block content %}
+<div class="admin-page">
+    <div class="admin-page__head">
+        <h1 class="admin-page__title"><i class="fa-solid fa-wand-magic-sparkles" style="margin-right:0.5rem;opacity:0.6"></i>Content Studio</h1>
+    </div>
+    <p class="cs-intro">Select a published article to generate social media content for all platforms.</p>
+    {% if posts %}
+    <div class="cs-grid">
+        {% for p in posts %}
+        <a href="{{ url_for('admin_content_studio_post', id=p.id) }}" class="cs-card">
+            {% if p.image_filename %}
+            <div class="cs-card__img">
+                <img src="{{ get_image_url(p.image_filename) }}" alt="{{ p.title }}" loading="lazy">
+                <div class="cs-card__platforms">
+                    <span title="LinkedIn"><i class="fa-brands fa-linkedin"></i></span>
+                    <span title="Instagram"><i class="fa-brands fa-instagram"></i></span>
+                    <span title="Facebook"><i class="fa-brands fa-facebook"></i></span>
+                    <span title="Fiverr"><i class="fa-solid fa-briefcase"></i></span>
+                </div>
+            </div>
+            {% else %}
+            <div class="cs-card__img cs-card__img--placeholder">
+                <i class="fa-solid fa-newspaper"></i>
+                <div class="cs-card__platforms">
+                    <span title="LinkedIn"><i class="fa-brands fa-linkedin"></i></span>
+                    <span title="Instagram"><i class="fa-brands fa-instagram"></i></span>
+                    <span title="Facebook"><i class="fa-brands fa-facebook"></i></span>
+                    <span title="Fiverr"><i class="fa-solid fa-briefcase"></i></span>
+                </div>
+            </div>
+            {% endif %}
+            <div class="cs-card__body">
+                <h3 class="cs-card__title">{{ p.title }}</h3>
+                {% if p.summary %}
+                <p class="cs-card__summary">{{ p.summary[:100] }}{% if p.summary|length > 100 %}...{% endif %}</p>
+                {% endif %}
+                <div class="cs-card__preview-label">Generates:</div>
+                <div class="cs-card__assets">
+                    <span class="cs-card__asset"><i class="fa-solid fa-file-lines"></i> LinkedIn Post</span>
+                    <span class="cs-card__asset"><i class="fa-solid fa-images"></i> Carousel Video</span>
+                    <span class="cs-card__asset"><i class="fa-solid fa-square"></i> IG Post</span>
+                    <span class="cs-card__asset"><i class="fa-solid fa-mobile-screen"></i> IG Story</span>
+                    <span class="cs-card__asset"><i class="fa-solid fa-share-nodes"></i> FB Preview</span>
+                    <span class="cs-card__asset"><i class="fa-solid fa-briefcase"></i> Fiverr Gig</span>
+                </div>
+                <div class="cs-card__meta">
+                    <span>{{ p.created_at.strftime('%b %d, %Y') }}</span>
+                    <span class="cs-card__badge">Generate Pack →</span>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="cs-empty">
+        <i class="fa-solid fa-newspaper"></i>
+        <p>No published articles yet. <a href="{{ url_for('admin_blog_add') }}">Create a blog post</a> first.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

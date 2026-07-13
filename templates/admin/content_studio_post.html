@@ -1,0 +1,765 @@
+{% extends "admin/base.html" %}
+{% block title %}Content Studio — {{ post.title }}{% endblock %}
+{% set active = "content_studio" %}
+{% block content %}
+<div class="admin-page">
+    <a href="{{ url_for('admin_content_studio') }}" class="cs-back"><i class="fa-solid fa-arrow-left"></i> All Articles</a>
+
+    <div class="cs-hero">
+        {% if hero_url %}
+        <img src="{{ hero_url }}" alt="{{ post.title }}" class="cs-hero__img">
+        {% endif %}
+        <div class="cs-hero__info">
+            <h1 class="cs-hero__title">{{ post.title }}</h1>
+            {% if post.summary %}
+            <p class="cs-hero__summary">{{ post.summary }}</p>
+            {% endif %}
+            <span class="cs-hero__date">{{ post.created_at.strftime('%B %d, %Y') }} &middot; {{ ((post.content|length) / 1000)|int + 1 }} min read</span>
+        </div>
+    </div>
+
+    <div class="cs-tabs" id="csTabs">
+        <button class="cs-tab cs-tab--active" data-tab="linkedin"><i class="fa-brands fa-linkedin"></i> LinkedIn</button>
+        <button class="cs-tab" data-tab="instagram"><i class="fa-brands fa-instagram"></i> Instagram</button>
+        <button class="cs-tab" data-tab="facebook"><i class="fa-brands fa-facebook"></i> Facebook</button>
+        <button class="cs-tab" data-tab="fiverr"><i class="fa-solid fa-briefcase"></i> Fiverr</button>
+        <button class="cs-tab" data-tab="all"><i class="fa-solid fa-globe"></i> All</button>
+    </div>
+
+    <input type="hidden" id="csTitle" value="{{ post.title }}">
+    <input type="hidden" id="csSummary" value="{{ post.summary or '' }}">
+    <input type="hidden" id="csContent" value="{{ post.content|striptags|e }}">
+    <input type="hidden" id="csHeroUrl" value="{{ hero_url }}">
+    <input type="hidden" id="csUrl" value="{{ site_url }}/blog/{{ post.slug }}">
+
+    <div class="cs-panels">
+
+        <!-- LINKEDIN -->
+        <div class="cs-panel cs-panel--active" id="panel-linkedin">
+            <div class="cs-section">
+                <h2 class="cs-section__title"><i class="fa-solid fa-pen-nib"></i> LinkedIn Post</h2>
+                <div class="cs-copy-block">
+                    <label class="cs-label">Caption (editable)</label>
+                    <textarea class="cs-textarea cs-textarea--tall" id="linkedinCaption"></textarea>
+                    <button class="cs-btn cs-btn--copy" onclick="csCopy('linkedinCaption')"><i class="fa-regular fa-copy"></i> Copy</button>
+                </div>
+                <div class="cs-copy-block">
+                    <label class="cs-label">Hashtags</label>
+                    <input type="text" class="cs-input" id="linkedinHashtags" readonly>
+                    <button class="cs-btn cs-btn--copy" onclick="csCopy('linkedinHashtags')"><i class="fa-regular fa-copy"></i> Copy</button>
+                </div>
+            </div>
+            <div class="cs-section">
+                <h2 class="cs-section__title"><i class="fa-solid fa-film"></i> LinkedIn Carousel Video</h2>
+                <p class="cs-section__desc">Edit each slide below. Click Preview to watch, then download as video.</p>
+                <div class="cs-slides-editor" id="linkedinSlides"></div>
+                <div class="cs-slideshow-wrap">
+                    <div class="cs-slideshow" id="linkedinSlideshow"></div>
+                    <div class="cs-slideshow-controls">
+                        <button class="cs-btn cs-btn--sm" onclick="csPlaySlideshow('linkedin')"><i class="fa-solid fa-play"></i> Preview</button>
+                        <span class="cs-slideshow-status" id="linkedinStatus"></span>
+                    </div>
+                </div>
+                <div class="cs-actions">
+                    <button class="cs-btn cs-btn--primary" onclick="csRecordSlideshow('linkedin')"><i class="fa-solid fa-video"></i> Download Video (WebM)</button>
+                    <button class="cs-btn" onclick="csDownloadAllSlides('linkedin')"><i class="fa-solid fa-images"></i> Download Slides (PNG)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- INSTAGRAM -->
+        <div class="cs-panel" id="panel-instagram">
+            <div class="cs-section">
+                <h2 class="cs-section__title"><i class="fa-solid fa-pen-nib"></i> Instagram Caption</h2>
+                <div class="cs-copy-block">
+                    <label class="cs-label">Caption (editable)</label>
+                    <textarea class="cs-textarea cs-textarea--tall" id="igCaption"></textarea>
+                    <button class="cs-btn cs-btn--copy" onclick="csCopy('igCaption')"><i class="fa-regular fa-copy"></i> Copy</button>
+                </div>
+                <div class="cs-copy-block">
+                    <label class="cs-label">Hashtags</label>
+                    <input type="text" class="cs-input" id="igHashtags" readonly>
+                    <button class="cs-btn cs-btn--copy" onclick="csCopy('igHashtags')"><i class="fa-regular fa-copy"></i> Copy</button>
+                </div>
+            </div>
+            <div class="cs-section">
+                <h2 class="cs-section__title"><i class="fa-solid fa-square"></i> Instagram Post (1080×1080)</h2>
+                <div class="cs-preview-wrap">
+                    <div class="cs-ig-post" id="igPostPreview"></div>
+                </div>
+                <div class="cs-actions">
+                    <button class="cs-btn" onclick="animateIGPost()"><i class="fa-solid fa-play"></i> Animate</button>
+                    <button class="cs-btn cs-btn--primary" onclick="csDownload('igPostPreview', 'ig-post', 1080)"><i class="fa-solid fa-download"></i> Download PNG</button>
+                </div>
+            </div>
+            <div class="cs-section">
+                <h2 class="cs-section__title"><i class="fa-solid fa-film"></i> Instagram Carousel Video</h2>
+                <p class="cs-section__desc">Edit each slide below. Click Preview to watch, then download as video.</p>
+                <div class="cs-slides-editor" id="igSlides"></div>
+                <div class="cs-slideshow-wrap">
+                    <div class="cs-slideshow" id="igSlideshow"></div>
+                    <div class="cs-slideshow-controls">
+                        <button class="cs-btn cs-btn--sm" onclick="csPlaySlideshow('ig')"><i class="fa-solid fa-play"></i> Preview</button>
+                        <span class="cs-slideshow-status" id="igStatus"></span>
+                    </div>
+                </div>
+                <div class="cs-actions">
+                    <button class="cs-btn cs-btn--primary" onclick="csRecordSlideshow('ig')"><i class="fa-solid fa-video"></i> Download Video (WebM)</button>
+                    <button class="cs-btn" onclick="csDownloadAllSlides('ig')"><i class="fa-solid fa-images"></i> Download Slides (PNG)</button>
+                </div>
+            </div>
+            <div class="cs-section">
+                <h2 class="cs-section__title"><i class="fa-solid fa-mobile-screen"></i> Instagram Story (1080×1920)</h2>
+                <div class="cs-preview-wrap cs-preview-wrap--story">
+                    <div class="cs-ig-story" id="igStoryPreview"></div>
+                </div>
+                <div class="cs-actions">
+                    <button class="cs-btn" onclick="animateIGStory()"><i class="fa-solid fa-play"></i> Animate</button>
+                    <button class="cs-btn cs-btn--primary" onclick="csDownload('igStoryPreview', 'ig-story', 1080, 1920)"><i class="fa-solid fa-download"></i> Download PNG</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- FACEBOOK -->
+        <div class="cs-panel" id="panel-facebook">
+            <div class="cs-section">
+                <h2 class="cs-section__title"><i class="fa-solid fa-pen-nib"></i> Facebook Post</h2>
+                <div class="cs-copy-block">
+                    <label class="cs-label">Caption (editable)</label>
+                    <textarea class="cs-textarea cs-textarea--tall" id="fbCaption"></textarea>
+                    <button class="cs-btn cs-btn--copy" onclick="csCopy('fbCaption')"><i class="fa-regular fa-copy"></i> Copy</button>
+                </div>
+                <div class="cs-copy-block">
+                    <label class="cs-label">CTA Button Text</label>
+                    <input type="text" class="cs-input" id="fbCTA" value="Read More">
+                    <button class="cs-btn cs-btn--copy" onclick="csCopy('fbCTA')"><i class="fa-regular fa-copy"></i> Copy</button>
+                </div>
+            </div>
+            <div class="cs-section">
+                <h2 class="cs-section__title"><i class="fa-solid fa-share-nodes"></i> Share Preview Image</h2>
+                <div class="cs-preview-wrap">
+                    <div class="cs-fb-preview" id="fbPreview"></div>
+                </div>
+                <div class="cs-actions">
+                    <button class="cs-btn" onclick="animateFBPreview()"><i class="fa-solid fa-play"></i> Animate</button>
+                    <button class="cs-btn cs-btn--primary" onclick="csDownload('fbPreview', 'fb-share', 1200, 630)"><i class="fa-solid fa-download"></i> Download PNG</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- FIVERR -->
+        <div class="cs-panel" id="panel-fiverr">
+            <div class="cs-section">
+                <h2 class="cs-section__title"><i class="fa-solid fa-pen-nib"></i> Fiverr Promo</h2>
+                <div class="cs-copy-block">
+                    <label class="cs-label">Promotional Post (editable)</label>
+                    <textarea class="cs-textarea cs-textarea--tall" id="fiverrCaption"></textarea>
+                    <button class="cs-btn cs-btn--copy" onclick="csCopy('fiverrCaption')"><i class="fa-regular fa-copy"></i> Copy</button>
+                </div>
+                <div class="cs-copy-block">
+                    <label class="cs-label">Service Description (editable)</label>
+                    <textarea class="cs-textarea" id="fiverrDesc"></textarea>
+                    <button class="cs-btn cs-btn--copy" onclick="csCopy('fiverrDesc')"><i class="fa-regular fa-copy"></i> Copy</button>
+                </div>
+            </div>
+            <div class="cs-section">
+                <h2 class="cs-section__title"><i class="fa-solid fa-image"></i> Gig Image</h2>
+                <div class="cs-preview-wrap">
+                    <div class="cs-fiverr-img" id="fiverrPreview"></div>
+                </div>
+                <div class="cs-actions">
+                    <button class="cs-btn" onclick="animateFiverr()"><i class="fa-solid fa-play"></i> Animate</button>
+                    <button class="cs-btn cs-btn--primary" onclick="csDownload('fiverrPreview', 'fiverr-gig', 1280, 769)"><i class="fa-solid fa-download"></i> Download PNG</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ALL -->
+        <div class="cs-panel" id="panel-all">
+            <div class="cs-section">
+                <h2 class="cs-section__title"><i class="fa-solid fa-wand-magic-sparkles"></i> Generated Assets</h2>
+                <div class="cs-summary-grid" id="allSummary"></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script type="module">
+import { animate, stagger, createTimeline } from 'https://cdn.jsdelivr.net/npm/animejs@4/+esm';
+window._anime = { animate, stagger, createTimeline };
+window.dispatchEvent(new Event('animejs-ready'));
+</script>
+<script>
+(function(){
+    var title = document.getElementById('csTitle').value;
+    var summary = document.getElementById('csSummary').value;
+    var rawContent = document.getElementById('csContent').value;
+    var ta = document.createElement('textarea'); ta.innerHTML = rawContent; rawContent = ta.value;
+    var heroUrl = document.getElementById('csHeroUrl').value;
+    var siteUrl = document.getElementById('csUrl').value;
+
+    function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    function truncate(s, n) { return s.length > n ? s.substring(0, n).replace(/\s+\S*$/, '...') : s; }
+
+    function extractSections(text) {
+        var parts = text.split('\n').filter(function(l) { return l.trim().length > 0; });
+        var sections = [];
+        var buf = '';
+        parts.forEach(function(p) {
+            buf += p.trim() + ' ';
+            if (buf.length > 120) { sections.push(buf.trim()); buf = ''; }
+        });
+        if (buf.trim()) sections.push(buf.trim());
+        return sections;
+    }
+
+    var paragraphs = extractSections(rawContent);
+
+    // === GUARANTEE 5+ SLIDES ===
+    function buildSlideData(prefix) {
+        var slides = [];
+        var img = heroUrl || '';
+        // Slide 1: Cover
+        slides.push({ type: 'cover', title: title, text: summary || '', img: img });
+        // Slide 2: Hook
+        if (paragraphs[0]) slides.push({ type: 'content', title: 'The Problem', text: truncate(paragraphs[0], 180), img: img });
+        // Slide 3: Why it matters
+        if (paragraphs[1]) slides.push({ type: 'content', title: 'Why It Matters', text: truncate(paragraphs[1], 180), img: img });
+        else slides.push({ type: 'content', title: 'Why It Matters', text: 'This affects every business trying to grow online.', img: img });
+        // Slide 4: Solution
+        if (paragraphs[2]) slides.push({ type: 'content', title: 'The Solution', text: truncate(paragraphs[2], 180), img: img });
+        else slides.push({ type: 'content', title: 'The Solution', text: 'A professional website changes everything.', img: img });
+        // Slide 5: Key insight
+        if (paragraphs[3]) slides.push({ type: 'content', title: 'Key Insight', text: truncate(paragraphs[3], 180), img: img });
+        else slides.push({ type: 'content', title: 'Key Insight', text: truncate(summary || title, 180), img: img });
+        // Slide 6+: more paragraphs
+        for (var i = 4; i < Math.min(paragraphs.length, 8); i++) {
+            slides.push({ type: 'content', title: 'Point ' + (i - 2), text: truncate(paragraphs[i], 180), img: img });
+        }
+        // Last slide: CTA
+        slides.push({ type: 'cta', title: 'Read the Full Article', text: siteUrl, img: img });
+        return slides;
+    }
+
+    var linkedinSlides = buildSlideData('linkedin');
+    var igSlides = buildSlideData('ig');
+
+    // === RENDER EDITABLE SLIDE EDITOR ===
+    function getSlides(prefix) { return prefix === 'linkedin' ? linkedinSlides : igSlides; }
+
+    function renderSlideEditor(containerId, slides, prefix) {
+        var el = document.getElementById(containerId);
+        var html = '';
+        slides.forEach(function(s, i) {
+            html += '<div class="cs-slide-editor" data-idx="' + i + '">' +
+                '<div class="cs-slide-editor__head"><span class="cs-slide-editor__num">' + (i+1) + '</span>' +
+                '<div class="cs-slide-editor__head-actions">' +
+                '<select class="cs-slide-editor__type" data-field="type">' +
+                '<option value="cover"' + (s.type==='cover'?' selected':'') + '>Cover</option>' +
+                '<option value="content"' + (s.type==='content'?' selected':'') + '>Content</option>' +
+                '<option value="cta"' + (s.type==='cta'?' selected':'') + '>CTA</option>' +
+                '</select>' +
+                '<button class="cs-slide-editor__remove" title="Remove slide" data-remove="' + i + '"><i class="fa-solid fa-xmark"></i></button>' +
+                '</div></div>' +
+                '<label>Title</label><input class="cs-input" data-field="title" value="' + esc(s.title) + '">' +
+                '<label>Text</label><textarea class="cs-textarea" data-field="text" rows="2">' + esc(s.text) + '</textarea>' +
+                '<label>Image</label>' +
+                '<div class="cs-slide-editor__imgrow">' +
+                '<input class="cs-input cs-slide-editor__imginput" data-field="img" value="' + esc(s.img) + '" placeholder="Paste URL or upload">' +
+                '<label class="cs-slide-editor__upload" title="Upload image"><i class="fa-solid fa-cloud-arrow-up"></i>' +
+                '<input type="file" accept="image/png,image/jpeg,image/gif,image/webp" class="cs-slide-editor__file"></label>' +
+                '</div>' +
+                (s.img ? '<div class="cs-slide-editor__thumb"><img src="' + esc(s.img) + '" alt=""></div>' : '') +
+                '</div>';
+        });
+        html += '<button class="cs-slide-editor__add" data-add="' + prefix + '"><i class="fa-solid fa-plus"></i> Add Slide</button>';
+        el.innerHTML = html;
+        el.dataset.prefix = prefix;
+
+        el.querySelectorAll('.cs-slide-editor__type, .cs-input, .cs-textarea').forEach(function(input) {
+            input.addEventListener('input', function() {
+                var editor = input.closest('.cs-slide-editor');
+                var idx = parseInt(editor.dataset.idx);
+                var field = input.dataset.field;
+                var val = input.value;
+                var arr = getSlides(prefix);
+                arr[idx][field] = val;
+                if (field === 'img') {
+                    var thumb = editor.querySelector('.cs-slide-editor__thumb');
+                    if (val && !thumb) {
+                        var t = document.createElement('div');
+                        t.className = 'cs-slide-editor__thumb';
+                        t.innerHTML = '<img src="' + esc(val) + '" alt="">';
+                        editor.appendChild(t);
+                    } else if (val && thumb) {
+                        thumb.innerHTML = '<img src="' + esc(val) + '" alt="">';
+                    } else if (!val && thumb) {
+                        thumb.remove();
+                    }
+                }
+            });
+        });
+
+        el.querySelectorAll('.cs-slide-editor__file').forEach(function(fileInput) {
+            fileInput.addEventListener('change', function() {
+                var file = this.files[0];
+                if (!file) return;
+                var fd = new FormData();
+                fd.append('image', file);
+                var uploadBtn = this.closest('.cs-slide-editor__upload');
+                uploadBtn.style.opacity = '0.5';
+                fetch('/admin/upload-image', { method: 'POST', body: fd })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        uploadBtn.style.opacity = '1';
+                        if (data.url) {
+                            var row = fileInput.closest('.cs-slide-editor__imgrow');
+                            var input = row.querySelector('.cs-slide-editor__imginput');
+                            input.value = data.url;
+                            input.dispatchEvent(new Event('input'));
+                        }
+                    })
+                    .catch(function() { uploadBtn.style.opacity = '1'; });
+                fileInput.value = '';
+            });
+        });
+
+        el.querySelectorAll('.cs-slide-editor__remove').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var arr = getSlides(prefix);
+                if (arr.length <= 1) return;
+                var idx = parseInt(this.dataset.remove);
+                arr.splice(idx, 1);
+                renderSlideEditor(containerId, arr, prefix);
+                refreshPreview(prefix);
+            });
+        });
+
+        el.querySelectorAll('.cs-slide-editor__add').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var arr = getSlides(prefix);
+                var hero = heroUrl || '';
+                arr.push({ type: 'content', title: 'New Slide', text: 'Edit this text...', img: hero });
+                renderSlideEditor(containerId, arr, prefix);
+                refreshPreview(prefix);
+            });
+        });
+    }
+
+    function refreshPreview(prefix) {
+        var slides = getSlides(prefix);
+        var containerId = prefix === 'linkedin' ? 'linkedinSlideshow' : 'igSlideshow';
+        var el = document.getElementById(containerId);
+        el.innerHTML = slideHTML(slides[0], 1, slides.length, prefix);
+    }
+
+    // === RENDER SLIDE HTML ===
+    var doodleUnderline = '<svg class="cs-vslide-doodle cs-vslide-doodle--underline" viewBox="0 0 80 12"><path d="M2 8 C20 2, 40 12, 60 4 S78 6, 78 6" /></svg>';
+    var doodleSparkle = '<svg class="cs-vslide-doodle cs-vslide-doodle--sparkle-tr" viewBox="0 0 20 20"><path d="M10 0 L12 8 L20 10 L12 12 L10 20 L8 12 L0 10 L8 8 Z"/></svg>';
+    var doodleSparkleBL = '<svg class="cs-vslide-doodle cs-vslide-doodle--sparkle-bl" viewBox="0 0 20 20"><path d="M10 0 L12 8 L20 10 L12 12 L10 20 L8 12 L0 10 L8 8 Z"/></svg>';
+    var doodleCircle = '<svg class="cs-vslide-doodle cs-vslide-doodle--circle" viewBox="0 0 60 60"><circle cx="30" cy="30" r="26"/></svg>';
+    var doodleDots = '<div class="cs-vslide-doodle cs-vslide-doodle--dots"><span></span><span></span><span></span></div>';
+
+    function slideHTML(s, idx, total, prefix) {
+        var isCover = s.type === 'cover';
+        var isCTA = s.type === 'cta';
+        var bg = s.img ? 'background-image:url(' + s.img + ');background-size:cover;background-position:center;' : 'background:#0e0e0e;';
+        var overlay = s.img ? 'background:linear-gradient(to top,rgba(0,0,0,0.92) 0%,rgba(0,0,0,0.55) 50%,rgba(0,0,0,0.65) 100%);' : '';
+
+        if (isCover) {
+            return '<div class="cs-vslide" style="' + bg + '">' +
+                '<div class="cs-vslide-ov" style="' + overlay + '">' +
+                doodleDots +
+                '<div class="cs-vslide-brand">RETEC</div>' +
+                '<h2 class="cs-vslide-title">' + esc(s.title) + '</h2>' +
+                doodleUnderline +
+                (s.text ? '<p class="cs-vslide-text">' + esc(truncate(s.text, 120)) + '</p>' : '') +
+                doodleSparkle +
+                '</div></div>';
+        }
+        if (isCTA) {
+            return '<div class="cs-vslide" style="background:radial-gradient(circle at 50% 60%,#1a1a1a 0%,#0e0e0e 70%);">' +
+                '<div class="cs-vslide-ov" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">' +
+                doodleCircle +
+                '<div class="cs-vslide-brand" style="margin-bottom:1rem;">RETEC</div>' +
+                '<h2 class="cs-vslide-title" style="font-size:1.8rem;margin-bottom:0.5rem;">' + esc(s.title) + '</h2>' +
+                '<p class="cs-vslide-text" style="color:#c99445;font-size:0.8rem;">' + esc(s.text) + '</p>' +
+                doodleSparkleBL +
+                '</div></div>';
+        }
+        // Content slide
+        return '<div class="cs-vslide" style="' + bg + '">' +
+            '<div class="cs-vslide-ov" style="' + overlay + '">' +
+            doodleDots +
+            '<div class="cs-vslide-num">' + idx + ' / ' + total + '</div>' +
+            '<h2 class="cs-vslide-title">' + esc(s.title) + '</h2>' +
+            doodleUnderline +
+            '<p class="cs-vslide-text">' + esc(truncate(s.text, 200)) + '</p>' +
+            '<div class="cs-vslide-brand" style="margin-top:auto;">RETEC</div>' +
+            doodleSparkle +
+            '</div></div>';
+    }
+
+    renderSlideEditor('linkedinSlides', linkedinSlides, 'linkedin');
+    renderSlideEditor('igSlides', igSlides, 'ig');
+
+    // === RENDER PREVIEW ===
+    function showFirstSlide(prefix) {
+        var containerId = prefix === 'linkedin' ? 'linkedinSlideshow' : 'igSlideshow';
+        var el = document.getElementById(containerId);
+        var slides = getSlides(prefix);
+        el.innerHTML = slideHTML(slides[0], 1, slides.length, prefix);
+    }
+    showFirstSlide('linkedin');
+    showFirstSlide('ig');
+
+    // === PLAY SLIDESHOW ===
+    window.csPlaySlideshow = function(prefix) {
+        var containerId = prefix === 'linkedin' ? 'linkedinSlideshow' : 'igSlideshow';
+        var el = document.getElementById(containerId);
+        var slides = getSlides(prefix);
+        var fadeMs = 600, holdMs = 2400;
+
+        var a = document.createElement('div');
+        var b = document.createElement('div');
+        a.style.cssText = 'position:absolute;inset:0;transition:none;';
+        b.style.cssText = 'position:absolute;inset:0;transition:none;';
+        el.style.position = 'relative';
+        el.innerHTML = '';
+        el.appendChild(a);
+        el.appendChild(b);
+        el.classList.add('cs-slideshow--playing');
+
+        a.innerHTML = slideHTML(slides[0], 1, slides.length, prefix);
+
+        function crossfade(from, to, duration, cb) {
+            var start = null;
+            to.style.opacity = '0';
+            to.innerHTML = from.innerHTML === a.innerHTML ? slideHTML(slides[curIdx], curIdx + 1, slides.length, prefix) : from.innerHTML;
+            function frame(ts) {
+                if (!start) start = ts;
+                var p = Math.min((ts - start) / duration, 1);
+                var ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+                from.style.opacity = String(1 - ease);
+                to.style.opacity = String(ease);
+                if (p < 1) requestAnimationFrame(frame);
+                else { from.style.opacity = '0'; to.style.opacity = '1'; cb(); }
+            }
+            requestAnimationFrame(frame);
+        }
+
+        var curIdx = 0;
+        var cur = a, nxt = b;
+        var stopped = false;
+        function advance() {
+            if (stopped) return;
+            var nextIdx = curIdx + 1;
+            if (nextIdx >= slides.length) {
+                el.classList.remove('cs-slideshow--playing');
+                return;
+            }
+            nxt.innerHTML = slideHTML(slides[nextIdx], nextIdx + 1, slides.length, prefix);
+            nxt.style.opacity = '0';
+            var from = cur, to = nxt;
+            var startTs = null;
+            function frame(ts) {
+                if (!startTs) startTs = ts;
+                var p = Math.min((ts - startTs) / fadeMs, 1);
+                var ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+                from.style.opacity = String(1 - ease);
+                to.style.opacity = String(ease);
+                if (p < 1) { requestAnimationFrame(frame); return; }
+                from.style.opacity = '0'; to.style.opacity = '1';
+                curIdx = nextIdx;
+                var tmp = cur; cur = nxt; nxt = tmp;
+                setTimeout(advance, holdMs);
+            }
+            requestAnimationFrame(frame);
+        }
+        setTimeout(advance, holdMs);
+
+        el._stopSlideshow = function() { stopped = true; el.classList.remove('cs-slideshow--playing'); };
+    };
+
+    // === RECORD VIDEO ===
+    window.csRecordSlideshow = function(prefix) {
+        var statusId = prefix === 'linkedin' ? 'linkedinStatus' : 'igStatus';
+        var statusEl = document.getElementById(statusId);
+        var slides = getSlides(prefix);
+        var w = prefix === 'linkedin' ? 1920 : 1080;
+        var h = 1080;
+        var holdMs = 2400, fadeMs = 600;
+
+        statusEl.textContent = 'Loading fonts...';
+
+        document.fonts.ready.then(function() {
+            statusEl.textContent = 'Rendering slides...';
+
+            var renderedImages = [];
+            var toRender = slides.length;
+            var rendered = 0;
+
+            slides.forEach(function(s, i) {
+                var wrap = document.createElement('div');
+                wrap.innerHTML = slideHTML(s, i + 1, slides.length, prefix);
+                wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:' + w + 'px;height:' + h + 'px;overflow:hidden;z-index:-1;font-family:"MADE Mirage",Georgia,serif;';
+                document.body.appendChild(wrap);
+                html2canvas(wrap.firstElementChild || wrap, {
+                    width: w, height: h, scale: 1, useCORS: true, allowTaint: true, backgroundColor: null
+                }).then(function(canvas) {
+                    renderedImages[i] = canvas;
+                    rendered++;
+                document.body.removeChild(wrap);
+                if (rendered === toRender) startRecording();
+            });
+        });
+
+        function startRecording() {
+            statusEl.textContent = 'Recording...';
+            var canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:480px;z-index:9999;border:3px solid #c99445;border-radius:8px;';
+            document.body.appendChild(canvas);
+            var ctx = canvas.getContext('2d');
+            var stream = canvas.captureStream(30);
+            var recorder = new MediaRecorder(stream, { mimeType: 'video/webm', videoBitsPerSecond: 5000000 });
+            var chunks = [];
+            recorder.ondataavailable = function(e) { if (e.data.size > 0) chunks.push(e.data); };
+            recorder.onstop = function() {
+                canvas.remove();
+                var blob = new Blob(chunks, { type: 'video/webm' });
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url; a.download = prefix + '-carousel.webm'; a.click();
+                URL.revokeObjectURL(url);
+                statusEl.textContent = '✓ Downloaded';
+            };
+            recorder.start();
+
+            // Build timeline: hold + fade per slide
+            var frameMs = 1000 / 30;
+            var timeline = [];
+            for (var i = 0; i < renderedImages.length; i++) {
+                var holdFrames = Math.round(holdMs / frameMs);
+                var fadeFrames = Math.round(fadeMs / frameMs);
+                for (var f = 0; f < holdFrames; f++) timeline.push({ idx: i, alpha: 1 });
+                if (i < renderedImages.length - 1) {
+                    for (var f = 0; f < fadeFrames; f++) {
+                        var p = (f + 1) / fadeFrames;
+                        var ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+                        timeline.push({ from: i, to: i + 1, alpha: ease });
+                    }
+                } else {
+                    var holdFrames = Math.round(holdMs / frameMs);
+                    for (var f = 0; f < holdFrames; f++) timeline.push({ idx: i, alpha: 1 });
+                }
+            }
+
+            var fi = 0;
+            function drawFrame() {
+                if (fi >= timeline.length) {
+                    setTimeout(function() { recorder.stop(); }, 200);
+                    return;
+                }
+                var frame = timeline[fi];
+                ctx.clearRect(0, 0, w, h);
+                if (frame.idx !== undefined) {
+                    ctx.globalAlpha = 1;
+                    ctx.drawImage(renderedImages[frame.idx], 0, 0, w, h);
+                } else {
+                    ctx.globalAlpha = 1 - frame.alpha;
+                    ctx.drawImage(renderedImages[frame.from], 0, 0, w, h);
+                    ctx.globalAlpha = frame.alpha;
+                    ctx.drawImage(renderedImages[frame.to], 0, 0, w, h);
+                }
+                ctx.globalAlpha = 1;
+                fi++;
+                requestAnimationFrame(drawFrame);
+            }
+            drawFrame();
+        }
+
+        }); // document.fonts.ready
+    };
+
+    // === DOWNLOAD INDIVIDUAL SLIDES ===
+    window.csDownloadAllSlides = function(prefix) {
+        var slides = getSlides(prefix);
+        var w = prefix === 'linkedin' ? 1920 : 1080;
+        var h = 1080;
+        document.fonts.ready.then(function() {
+            slides.forEach(function(s, i) {
+                var wrap = document.createElement('div');
+                wrap.innerHTML = slideHTML(s, i + 1, slides.length, prefix);
+                wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:' + w + 'px;height:' + h + 'px;overflow:hidden;z-index:-1;font-family:"MADE Mirage",Georgia,serif;';
+                document.body.appendChild(wrap);
+                html2canvas(wrap.firstElementChild || wrap, {
+                    width: w, height: h, scale: 2, useCORS: true, allowTaint: true, backgroundColor: null
+                }).then(function(canvas) {
+                    var link = document.createElement('a');
+                    link.download = prefix + '-slide-' + (i + 1) + '.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                    document.body.removeChild(wrap);
+                });
+            });
+        });
+    };
+
+    // === CAPTIONS ===
+    function generateHashtags(count) {
+        var tags = ['webdevelopment','websitedesign','digitalmarketing','tech','startup','smallbusiness','entrepreneur','coding','python','flask','webdesign','frontend','backend','fullstack','software','branding','onlinepresence','digitalgrowth','businessgrowth','retec','modernweb','responsive','uiux','creative','professional','buildyourbrand','webdev'];
+        tags.sort(function() { return Math.random() - 0.5; });
+        return tags.slice(0, count).map(function(t) { return '#'+t; }).join(' ');
+    }
+    var firstPara = paragraphs[0] || summary || title;
+
+    document.getElementById('linkedinCaption').value = '🚀 ' + title + '\n\n' + truncate(firstPara, 280) + '\n\n' + (summary ? summary + '\n\n' : '') + 'Read more 👇\n\n' + siteUrl;
+    document.getElementById('linkedinHashtags').value = generateHashtags(8);
+    document.getElementById('igCaption').value = '✨ ' + title + '\n\n' + truncate(firstPara, 200) + '\n.\n.\n';
+    document.getElementById('igHashtags').value = generateHashtags(15);
+    document.getElementById('fbCaption').value = '📝 ' + title + '\n\n' + truncate(firstPara, 300) + '\n\n' + siteUrl;
+    document.getElementById('fiverrCaption').value = 'Need a professional website for your business?\n\n' + truncate(firstPara, 200) + '\n\n✅ Custom Design\n✅ Fast Loading\n✅ Mobile Responsive\n✅ SEO Optimized\n\n👉 Contact RETEC today!';
+    document.getElementById('fiverrDesc').value = 'I will design and develop a professional, modern website for your business. ' + truncate(summary || title, 150) + ' Get in touch.';
+
+    // === STATIC PREVIEWS ===
+    function renderIGPost() {
+        document.getElementById('igPostPreview').innerHTML = '<div class="cs-ig-inner">' +
+            (heroUrl ? '<div class="cs-ig-hero ani-hero"><img src="' + heroUrl + '"></div>' : '') +
+            '<div class="cs-ig-overlay"><div class="cs-ig-brand ani-brand">RETEC</div><h2 class="cs-ig-title ani-title">' + esc(title) + '</h2>' +
+            (summary ? '<p class="cs-ig-sub ani-sub">' + esc(truncate(summary, 100)) + '</p>' : '') +
+            '<div class="cs-ig-cta ani-cta">Read More →</div></div></div>';
+    }
+    function renderIGStory() {
+        document.getElementById('igStoryPreview').innerHTML = '<div class="cs-igst-inner">' +
+            (heroUrl ? '<div class="cs-igst-hero ani-hero"><img src="' + heroUrl + '"></div>' : '<div class="cs-igst-hero cs-igst-hero--blank ani-hero"></div>') +
+            '<div class="cs-igst-overlay"><div class="cs-igst-brand ani-brand">RETEC</div><h2 class="cs-igst-title ani-title">' + esc(title) + '</h2>' +
+            (summary ? '<p class="cs-igst-sub ani-sub">' + esc(truncate(summary, 120)) + '</p>' : '') +
+            '<div class="cs-igst-cta ani-cta">Swipe Up ↑</div></div></div>';
+    }
+    function renderFBPreview() {
+        document.getElementById('fbPreview').innerHTML = '<div class="cs-fb-inner">' +
+            (heroUrl ? '<div class="cs-fb-img ani-hero"><img src="' + heroUrl + '"></div>' : '') +
+            '<div class="cs-fb-body"><div class="cs-fb-site ani-brand">' + esc(siteUrl.replace(/https?:\/\//, '')) + '</div>' +
+            '<div class="cs-fb-title ani-title">' + esc(title) + '</div><div class="cs-fb-desc ani-sub">' + esc(truncate(summary || firstPara, 110)) + '</div></div></div>';
+    }
+    function renderFiverrPreview() {
+        document.getElementById('fiverrPreview').innerHTML = '<div class="cs-fiv-inner"><div class="cs-fiv-badge ani-badge">RETEC</div>' +
+            '<h2 class="cs-fiv-title ani-title">' + esc(title) + '</h2>' +
+            (heroUrl ? '<div class="cs-fiv-img ani-hero"><img src="' + heroUrl + '"></div>' : '') +
+            '<div class="cs-fiv-features ani-feats"><span class="ani-feat">✅ Custom Design</span><span class="ani-feat">✅ Mobile Ready</span><span class="ani-feat">✅ SEO Optimized</span><span class="ani-feat">✅ Fast & Clean</span></div>' +
+            '<div class="cs-fiv-cta ani-cta">Order Now on Fiverr →</div></div>';
+    }
+    function renderAllSummary() {
+        document.getElementById('allSummary').innerHTML =
+            '<div class="cs-summary-item"><h3><i class="fa-brands fa-linkedin"></i> LinkedIn Post</h3><p>' + esc(truncate(document.getElementById('linkedinCaption').value, 120)) + '</p></div>' +
+            '<div class="cs-summary-item"><h3><i class="fa-brands fa-linkedin"></i> LinkedIn Video</h3><p>' + linkedinSlides.length + ' slides</p></div>' +
+            '<div class="cs-summary-item"><h3><i class="fa-brands fa-instagram"></i> IG Post</h3><p>1080×1080</p></div>' +
+            '<div class="cs-summary-item"><h3><i class="fa-brands fa-instagram"></i> IG Video</h3><p>' + igSlides.length + ' slides</p></div>' +
+            '<div class="cs-summary-item"><h3><i class="fa-brands fa-instagram"></i> IG Story</h3><p>1080×1920</p></div>' +
+            '<div class="cs-summary-item"><h3><i class="fa-brands fa-facebook"></i> Facebook</h3><p>' + esc(truncate(document.getElementById('fbCaption').value, 120)) + '</p></div>' +
+            '<div class="cs-summary-item"><h3><i class="fa-solid fa-briefcase"></i> Fiverr</h3><p>Promo image + copy</p></div>';
+    }
+
+    renderIGPost(); renderIGStory(); renderFBPreview(); renderFiverrPreview(); renderAllSummary();
+
+    // === ANIME.JS v4 ANIMATIONS ===
+    function resetAnimClasses(container) {
+        container.querySelectorAll('.ani-hero,.ani-brand,.ani-title,.ani-sub,.ani-cta,.ani-badge,.ani-feat,.ani-feats').forEach(function(el) {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+        });
+        var hero = container.querySelector('.ani-hero');
+        if (hero) { hero.style.transform = 'scale(1.1)'; hero.style.opacity = '0'; }
+        var feats = container.querySelector('.ani-feats');
+        if (feats) feats.style.transform = 'none';
+    }
+
+    function animateIGPost() {
+        var a = window._anime; if (!a) return;
+        var el = document.getElementById('igPostPreview');
+        resetAnimClasses(el);
+        a.createTimeline({ defaults: { easing: 'easeOutCubic' } })
+          .add(el.querySelector('.ani-hero'), { opacity: [0, 1], scale: [1.15, 1], duration: 900, easing: 'easeOutQuad' })
+          .add(el.querySelector('.ani-brand'), { opacity: [0, 1], y: [15, 0], duration: 400 }, '-=500')
+          .add(el.querySelector('.ani-title'), { opacity: [0, 1], y: [20, 0], duration: 500 }, '-=300')
+          .add(el.querySelector('.ani-sub'), { opacity: [0, 1], y: [15, 0], duration: 400 }, '-=250')
+          .add(el.querySelector('.ani-cta'), { opacity: [0, 1], x: [-15, 0], duration: 400 }, '-=200');
+    }
+
+    function animateIGStory() {
+        var a = window._anime; if (!a) return;
+        var el = document.getElementById('igStoryPreview');
+        resetAnimClasses(el);
+        a.createTimeline({ defaults: { easing: 'easeOutCubic' } })
+          .add(el.querySelector('.ani-hero'), { opacity: [0, 1], scale: [1.15, 1], duration: 900, easing: 'easeOutQuad' })
+          .add(el.querySelector('.ani-brand'), { opacity: [0, 1], y: [15, 0], duration: 400 }, '-=500')
+          .add(el.querySelector('.ani-title'), { opacity: [0, 1], y: [25, 0], duration: 500 }, '-=300')
+          .add(el.querySelector('.ani-sub'), { opacity: [0, 1], y: [15, 0], duration: 400 }, '-=250')
+          .add(el.querySelector('.ani-cta'), { opacity: [0, 1], y: [10, 0], duration: 400, easing: 'easeOutBack' }, '-=200');
+    }
+
+    function animateFBPreview() {
+        var a = window._anime; if (!a) return;
+        var el = document.getElementById('fbPreview');
+        resetAnimClasses(el);
+        a.createTimeline({ defaults: { easing: 'easeOutCubic' } })
+          .add(el.querySelector('.ani-hero'), { opacity: [0, 1], scale: [1.08, 1], duration: 800, easing: 'easeOutQuad' })
+          .add(el.querySelector('.ani-brand'), { opacity: [0, 1], duration: 300 }, '-=400')
+          .add(el.querySelector('.ani-title'), { opacity: [0, 1], y: [12, 0], duration: 400 }, '-=250')
+          .add(el.querySelector('.ani-sub'), { opacity: [0, 1], y: [10, 0], duration: 400 }, '-=200');
+    }
+
+    function animateFiverr() {
+        var a = window._anime; if (!a) return;
+        var el = document.getElementById('fiverrPreview');
+        resetAnimClasses(el);
+        a.createTimeline({ defaults: { easing: 'easeOutCubic' } })
+          .add(el.querySelector('.ani-badge'), { opacity: [0, 1], scale: [0.5, 1], duration: 500, easing: 'easeOutBack' })
+          .add(el.querySelector('.ani-title'), { opacity: [0, 1], y: [20, 0], duration: 500 }, '-=250')
+          .add(el.querySelector('.ani-hero'), { opacity: [0, 1], scale: [1.1, 1], duration: 700, easing: 'easeOutQuad' }, '-=300')
+          .add(el.querySelectorAll('.ani-feat'), { opacity: [0, 1], x: [-20, 0], duration: 400, delay: a.stagger(120) }, '-=350')
+          .add(el.querySelector('.ani-cta'), { opacity: [0, 1], scale: [0.9, 1], duration: 400, easing: 'easeOutBack' }, '-=150');
+    }
+
+    window.animateIGPost = animateIGPost;
+    window.animateIGStory = animateIGStory;
+    window.animateFBPreview = animateFBPreview;
+    window.animateFiverr = animateFiverr;
+
+    window.addEventListener('animejs-ready', function() {
+        setTimeout(function() { animateIGPost(); }, 300);
+    });
+
+    // Tabs
+    document.getElementById('csTabs').addEventListener('click', function(e) {
+        var btn = e.target.closest('.cs-tab'); if (!btn) return;
+        document.querySelectorAll('.cs-tab').forEach(function(t) { t.classList.remove('cs-tab--active'); });
+        document.querySelectorAll('.cs-panel').forEach(function(p) { p.classList.remove('cs-panel--active'); });
+        btn.classList.add('cs-tab--active');
+        document.getElementById('panel-' + btn.dataset.tab).classList.add('cs-panel--active');
+    });
+
+    // Copy
+    window.csCopy = function(id) {
+        var el = document.getElementById(id);
+        navigator.clipboard.writeText(el.value || el.textContent).then(function() {
+            var btn = el.parentElement.querySelector('.cs-btn--copy');
+            if (btn) { var o = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!'; setTimeout(function(){ btn.innerHTML=o; }, 2000); }
+        });
+    };
+
+    // Download single PNG
+    window.csDownload = function(elementId, filename, tw, th) {
+        var el = document.getElementById(elementId);
+        html2canvas(el, { scale: 4, useCORS: true, allowTaint: true, backgroundColor: null }).then(function(c) {
+            var ec = document.createElement('canvas'); ec.width = tw || 1080; ec.height = th || 1080;
+            ec.getContext('2d').drawImage(c, 0, 0, ec.width, ec.height);
+            var a = document.createElement('a'); a.download = filename + '.png'; a.href = ec.toDataURL('image/png'); a.click();
+        });
+    };
+})();
+</script>
+{% endblock %}

@@ -17,7 +17,37 @@
             </div>
             <div class="admin-form__group">
                 <label for="content">Content *</label>
-                <textarea id="content" name="content" rows="12" required>{{ post.content if post else '' }}</textarea>
+                <div class="editor-wrap">
+                    <div class="editor-toolbar" id="editorToolbar">
+                        <button type="button" data-tag="b" title="Bold"><i class="fa-solid fa-bold"></i></button>
+                        <button type="button" data-tag="i" title="Italic"><i class="fa-solid fa-italic"></i></button>
+                        <button type="button" data-tag="u" title="Underline"><i class="fa-solid fa-underline"></i></button>
+                        <span class="editor-toolbar__sep"></span>
+                        <button type="button" data-block="h2" title="Heading 2">H2</button>
+                        <button type="button" data-block="h3" title="Heading 3">H3</button>
+                        <button type="button" data-block="p" title="Paragraph">P</button>
+                        <span class="editor-toolbar__sep"></span>
+                        <button type="button" data-block="blockquote" title="Quote"><i class="fa-solid fa-quote-left"></i></button>
+                        <button type="button" data-block="ul" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
+                        <button type="button" data-block="ol" title="Numbered List"><i class="fa-solid fa-list-ol"></i></button>
+                        <span class="editor-toolbar__sep"></span>
+                        <button type="button" data-action="link" title="Insert Link"><i class="fa-solid fa-link"></i></button>
+                        <button type="button" data-action="image" title="Insert Image"><i class="fa-solid fa-image"></i></button>
+                        <input type="file" id="inlineImageUpload" accept="image/png,image/jpeg,image/gif,image/webp" style="display:none">
+                        <button type="button" data-action="code" title="Inline Code"><i class="fa-solid fa-code"></i></button>
+                        <button type="button" data-action="hr" title="Horizontal Rule"><i class="fa-solid fa-minus"></i></button>
+                        <span class="editor-toolbar__sep"></span>
+                        <button type="button" data-component="ed-row" title="Image + Text Section"><i class="fa-solid fa-columns"></i></button>
+                        <button type="button" data-component="ed-row-reverse" title="Text + Image Section"><i class="fa-solid fa-table-columns"></i></button>
+                        <button type="button" data-component="pull-quote" title="Pull Quote"><i class="fa-solid fa-quote-right"></i></button>
+                        <button type="button" data-component="stats" title="Statistics Row"><i class="fa-solid fa-chart-simple"></i></button>
+                        <button type="button" data-component="highlight" title="Highlight Box"><i class="fa-solid fa-highlighter"></i></button>
+                        <button type="button" data-component="takeaways" title="Key Takeaways"><i class="fa-solid fa-list-check"></i></button>
+                        <button type="button" data-component="callout" title="Callout"><i class="fa-solid fa-circle-info"></i></button>
+                        <button type="button" data-component="divider" title="Section Divider"><i class="fa-solid fa-ellipsis"></i></button>
+                    </div>
+                    <textarea id="content" name="content" rows="14" required>{{ post.content if post else '' }}</textarea>
+                </div>
             </div>
             <div class="admin-form__group">
                 <label for="image">Featured Image</label>
@@ -42,4 +72,142 @@
         </form>
     </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function() {
+    var ta = document.getElementById('content');
+    var toolbar = document.getElementById('editorToolbar');
+    if (!ta || !toolbar) return;
+
+    function wrap(before, after) {
+        var s = ta.selectionStart, e = ta.selectionEnd;
+        var sel = ta.value.substring(s, e) || 'text';
+        ta.value = ta.value.substring(0, s) + before + sel + after + ta.value.substring(e);
+        ta.focus();
+        ta.selectionStart = s + before.length;
+        ta.selectionEnd = s + before.length + sel.length;
+    }
+
+    function insertBlock(tag) {
+        var s = ta.selectionStart;
+        var lineStart = ta.value.lastIndexOf('\n', s - 1) + 1;
+        var prefix = ta.value.substring(lineStart, s);
+        var needsNewline = prefix.trim().length > 0;
+        var block = needsNewline ? '\n<' + tag + '></' + tag + '>\n' : '<' + tag + '></' + tag + '>\n';
+        ta.setRangeText(block, s, ta.selectionEnd, 'end');
+        ta.focus();
+        ta.selectionStart = s + block.length - tag.length - 3;
+        ta.selectionEnd = s + block.length - tag.length - 3;
+    }
+
+    toolbar.addEventListener('click', function(e) {
+        var btn = e.target.closest('button');
+        if (!btn) return;
+        var tag = btn.getAttribute('data-tag');
+        var block = btn.getAttribute('data-block');
+        var action = btn.getAttribute('data-action');
+        if (tag) { wrap('<' + tag + '>', '</' + tag + '>'); return; }
+        if (block) { insertBlock(block); return; }
+        if (action === 'link') {
+            var url = prompt('Enter URL:', 'https://');
+            if (url) wrap('<a href="' + url + '">', '</a>');
+        } else if (action === 'image') {
+            document.getElementById('inlineImageUpload').click();
+        } else if (action === 'code') { wrap('<code>', '</code>'); }
+        else if (action === 'hr') { wrap('\n<hr>\n', ''); }
+    });
+
+    var uploadInput = document.getElementById('inlineImageUpload');
+    if (uploadInput) {
+        uploadInput.addEventListener('change', function() {
+            var file = this.files[0];
+            if (!file) return;
+            var fd = new FormData();
+            fd.append('image', file);
+            var btn = toolbar.querySelector('[data-action="image"]');
+            if (btn) btn.style.opacity = '0.5';
+            fetch('/admin/upload-image', { method: 'POST', body: fd })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (btn) btn.style.opacity = '1';
+                    if (data.url) {
+                        var alt = prompt('Alt text:', file.name.replace(/\.[^.]+$/, ''));
+                        wrap('<img src="' + data.url + '" alt="' + (alt || '') + '">', '');
+                    } else {
+                        alert('Upload failed: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(function(err) {
+                    if (btn) btn.style.opacity = '1';
+                    alert('Upload failed: ' + err.message);
+                });
+            uploadInput.value = '';
+        });
+    }
+
+    var components = {
+        'ed-row': '\n<div class="ed-row">\n    <div class="ed-row__media">\n        <img src="IMAGE_URL" alt="Alt text">\n    </div>\n    <div class="ed-row__text">\n        <h2>Section Title</h2>\n        <p>Paragraph text explaining this section...</p>\n    </div>\n</div>\n',
+        'ed-row-reverse': '\n<div class="ed-row ed-row--reverse">\n    <div class="ed-row__media">\n        <img src="IMAGE_URL" alt="Alt text">\n    </div>\n    <div class="ed-row__text">\n        <h2>Section Title</h2>\n        <p>Paragraph text explaining this section...</p>\n    </div>\n</div>\n',
+        'pull-quote': '\n<div class="pull-quote">\n    <p>Your compelling quote or highlighted statement goes here.</p>\n</div>\n',
+        'stats': '\n<div class="stats-row">\n    <div class="stat-card">\n        <div class="stat-card__number">76%</div>\n        <div class="stat-card__label">Description of this stat</div>\n    </div>\n    <div class="stat-card">\n        <div class="stat-card__number">88%</div>\n        <div class="stat-card__label">Description of this stat</div>\n    </div>\n    <div class="stat-card">\n        <div class="stat-card__number">53%</div>\n        <div class="stat-card__label">Description of this stat</div>\n    </div>\n</div>\n',
+        'highlight': '\n<div class="highlight-box">\n    <p><strong>Key insight:</strong> Your highlighted text goes here.</p>\n</div>\n',
+        'takeaways': '\n<div class="key-takeaways">\n    <h3>Key Takeaways</h3>\n    <ul>\n        <li>First takeaway point</li>\n        <li>Second takeaway point</li>\n        <li>Third takeaway point</li>\n    </ul>\n</div>\n',
+        'callout': '\n<div class="callout">\n    <span class="callout-icon">💡</span>\n    <div>\n        <p><strong>Important note:</strong> Your callout text goes here.</p>\n    </div>\n</div>\n',
+        'divider': '\n<div class="ed-divider"><i class="fa-solid fa-star"></i></div>\n'
+    };
+
+    toolbar.addEventListener('click', function(e) {
+        var btn = e.target.closest('button[data-component]');
+        if (!btn) return;
+        var key = btn.getAttribute('data-component');
+        if (!components[key]) return;
+        if (key === 'ed-row' || key === 'ed-row-reverse') {
+            var f = document.createElement('input');
+            f.type = 'file';
+            f.accept = 'image/png,image/jpeg,image/gif,image/webp';
+            f.onchange = function() {
+                var file = f.files[0];
+                if (!file) return;
+                var fd = new FormData();
+                fd.append('image', file);
+                btn.style.opacity = '0.5';
+                fetch('/admin/upload-image', { method: 'POST', body: fd })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        btn.style.opacity = '1';
+                        var url = data.url || 'IMAGE_URL';
+                        var snippet = components[key].replace('IMAGE_URL', url);
+                        var s = ta.selectionStart;
+                        ta.setRangeText(snippet, s, ta.selectionEnd, 'end');
+                        ta.focus();
+                    })
+                    .catch(function() {
+                        btn.style.opacity = '1';
+                        var s = ta.selectionStart;
+                        ta.setRangeText(components[key], s, ta.selectionEnd, 'end');
+                        ta.focus();
+                    });
+            };
+            f.click();
+        } else {
+            var s = ta.selectionStart;
+            ta.setRangeText(components[key], s, ta.selectionEnd, 'end');
+            ta.focus();
+        }
+    });
+
+    ta.addEventListener('keydown', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+            if (e.key === 'b') { e.preventDefault(); wrap('<b>', '</b>'); }
+            else if (e.key === 'i') { e.preventDefault(); wrap('<i>', '</i>'); }
+            else if (e.key === 'k') { e.preventDefault(); var url = prompt('Enter URL:', 'https://'); if (url) wrap('<a href="' + url + '">', '</a>'); }
+        }
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            ta.setRangeText('    ', ta.selectionStart, ta.selectionEnd, 'end');
+        }
+    });
+})();
+</script>
 {% endblock %}

@@ -29,6 +29,26 @@
                     <td class="admin-card__label" data-label="Date">{{ p.created_at.strftime('%Y-%m-%d') }}</td>
                     <td class="admin-actions admin-card__actions">
                         <a href="{{ url_for('admin_blog_edit', id=p.id) }}" class="admin-btn admin-btn--sm">Edit</a>
+                        <div class="admin-share" data-url="{{ request.host_url }}blog/{{ p.slug }}" data-title="{{ p.title }}">
+                            <button type="button" class="admin-btn admin-btn--sm admin-btn--share" onclick="this.parentElement.classList.toggle('admin-share--open')">Share</button>
+                            <div class="admin-share__dropdown">
+                                <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ (request.host_url ~ 'blog/' ~ p.slug)|urlencode }}" target="_blank" rel="noopener" class="admin-share__link">
+                                    <i class="fa-brands fa-linkedin"></i> LinkedIn
+                                </a>
+                                <a href="https://www.facebook.com/sharer/sharer.php?u={{ (request.host_url ~ 'blog/' ~ p.slug)|urlencode }}" target="_blank" rel="noopener" class="admin-share__link">
+                                    <i class="fa-brands fa-facebook"></i> Facebook
+                                </a>
+                                <a href="https://api.whatsapp.com/send?text={{ (p.title ~ ' ' ~ request.host_url ~ 'blog/' ~ p.slug)|urlencode }}" target="_blank" rel="noopener" class="admin-share__link">
+                                    <i class="fa-brands fa-whatsapp"></i> WhatsApp
+                                </a>
+                                <button type="button" class="admin-share__link" onclick="navigator.clipboard.writeText('{{ request.host_url }}blog/{{ p.slug }}');this.innerHTML='<i class=\'fa-solid fa-check\'></i> Copied!';setTimeout(()=>this.innerHTML='<i class=\'fa-solid fa-link\'></i> Copy Link',1500)">
+                                    <i class="fa-solid fa-link"></i> Copy Link
+                                </button>
+                                <button type="button" class="admin-share__link admin-share__link--copytext" data-title="{{ p.title }}" data-summary="{{ p.summary }}" data-url="{{ request.host_url }}blog/{{ p.slug }}">
+                                    <i class="fa-regular fa-clone"></i> Copy as Text
+                                </button>
+                            </div>
+                        </div>
                         <form method="POST" action="{{ url_for('admin_blog_delete', id=p.id) }}" style="display:inline" onsubmit="return confirm('Delete {{ p.title }}?')">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="admin-btn admin-btn--sm admin-btn--danger">Delete</button>
@@ -43,4 +63,21 @@
         </div>
     </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.querySelectorAll('.admin-share__link--copytext').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var title = this.dataset.title || '';
+        var summary = this.dataset.summary || '';
+        var url = this.dataset.url || '';
+        var text = title + '\n\n' + summary + '\n\nRead more: ' + url;
+        var el = this;
+        navigator.clipboard.writeText(text).then(function() {
+            el.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+            setTimeout(function() { el.innerHTML = '<i class="fa-regular fa-clone"></i> Copy as Text'; }, 2000);
+        });
+    });
+});
+</script>
 {% endblock %}

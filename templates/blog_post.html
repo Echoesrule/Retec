@@ -1,27 +1,138 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="section section--light blog-post">
-    <div class="container blog-post__container">
-        <a href="{{ url_for('blog') }}" class="blog-post__back">
-            <i class="fa-solid fa-arrow-left"></i> Back to Blog
-        </a>
-        <article>
-            <header class="blog-post__header">
-                <time class="blog__date">{{ post.created_at.strftime('%B %d, %Y') }}</time>
-                <h1 class="blog-post__title">{{ post.title }}</h1>
+
+<div class="reading-progress" id="readingProgress"><div class="reading-progress__bar" id="readingProgressBar"></div></div>
+
+<article class="editorial" id="editorialArticle">
+
+    <header class="editorial__hero">
+        {% if post.image_filename %}
+        <div class="editorial__hero-img">
+            <img src="{{ get_image_url(post.image_filename) }}" alt="{{ post.title }}" loading="eager">
+        </div>
+        {% endif %}
+        <div class="editorial__hero-text">
+            <div class="editorial__hero-inner">
+                <a href="{{ url_for('blog') }}" class="editorial__back">
+                    <i class="fa-solid fa-arrow-left"></i> Back to Blog
+                </a>
+                <div class="editorial__meta">
+                    <span class="editorial__tag">ARTICLE</span>
+                    <span class="editorial__dot">&middot;</span>
+                    <span>{{ ((post.content|length) / 1000)|int + 1 }} min read</span>
+                </div>
+                <h1 class="editorial__title">{{ post.title }}</h1>
                 {% if post.summary %}
-                <p class="blog-post__summary">{{ post.summary }}</p>
+                <p class="editorial__subtitle">{{ post.summary }}</p>
                 {% endif %}
-            </header>
-            {% if post.image_filename %}
-            <div class="blog-post__image">
-                <img src="{{ get_image_url(post.image_filename) }}" alt="{{ post.title }}" loading="lazy">
+                <div class="editorial__byline">
+                    <div class="editorial__author-avatar">
+                    <svg viewBox="0 0 16 22" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="0" y1="6" x2="14" y2="6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="7" y1="6" x2="7" y2="20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M 7 8 A 5 5 0 0 1 7 17" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="16" y2="20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                    <div class="editorial__author-info">
+                        <span class="editorial__author-name">RETEC</span>
+                        <span class="editorial__date">{{ post.created_at.strftime('%B %d, %Y') }} &middot; {{ ((post.content|length) / 1000)|int + 1 }} min read</span>
+                    </div>
+                </div>
             </div>
-            {% endif %}
-            <div class="blog-post__content">
-                {{ post.content | safe }}
+        </div>
+    </header>
+
+    <div class="editorial__body">
+        <div class="editorial__content" id="editorialContent">
+            {{ post.content | safe }}
+        </div>
+
+        <div class="editorial__end">
+            <div class="editorial__share">
+                <span class="editorial__share-label">Share this article</span>
+                <div class="editorial__share-btns">
+                    <a href="https://twitter.com/intent/tweet?text={{ post.title|urlencode }}&url={{ request.url|urlencode }}" target="_blank" rel="noopener" class="editorial__share-btn" aria-label="Share on X">
+                        <i class="fa-brands fa-x-twitter"></i>
+                    </a>
+                    <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ request.url|urlencode }}" target="_blank" rel="noopener" class="editorial__share-btn" aria-label="Share on LinkedIn">
+                        <i class="fa-brands fa-linkedin-in"></i>
+                    </a>
+                    <a href="https://wa.me/?text={{ (post.title ~ ' ' ~ request.url)|urlencode }}" target="_blank" rel="noopener" class="editorial__share-btn" aria-label="Share on WhatsApp">
+                        <i class="fa-brands fa-whatsapp"></i>
+                    </a>
+                    <button class="editorial__share-btn editorial__share-btn--copy" onclick="navigator.clipboard.writeText(window.location.href).then(()=>{this.classList.add('copied');setTimeout(()=>this.classList.remove('copied'),2000)})" aria-label="Copy link">
+                        <i class="fa-solid fa-link"></i>
+                    </button>
+                </div>
             </div>
-        </article>
+
+            <div class="editorial__author-card">
+                <div class="editorial__author-card-avatar">
+                    <svg viewBox="0 0 16 22" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="0" y1="6" x2="14" y2="6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="7" y1="6" x2="7" y2="20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M 7 8 A 5 5 0 0 1 7 17" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="16" y2="20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="editorial__author-card-info">
+                    <span class="editorial__author-card-label">Written by</span>
+                    <span class="editorial__author-card-name">RETEC</span>
+                    <p class="editorial__author-card-bio">Retro Spirit. Modern Solutions. Building digital experiences with care and craft.</p>
+                </div>
+            </div>
+        </div>
     </div>
-</section>
+
+    <nav class="editorial__nav">
+        {% if prev_post %}
+        <a href="{{ url_for('blog_post', slug=prev_post.slug) }}" class="editorial__nav-link editorial__nav-link--prev">
+            <span class="editorial__nav-direction"><i class="fa-solid fa-arrow-left"></i> Previous</span>
+            <span class="editorial__nav-title">{{ prev_post.title }}</span>
+        </a>
+        {% else %}
+        <span></span>
+        {% endif %}
+        {% if next_post %}
+        <a href="{{ url_for('blog_post', slug=next_post.slug) }}" class="editorial__nav-link editorial__nav-link--next">
+            <span class="editorial__nav-direction">Next <i class="fa-solid fa-arrow-right"></i></span>
+            <span class="editorial__nav-title">{{ next_post.title }}</span>
+        </a>
+        {% endif %}
+    </nav>
+
+    {% if related %}
+    <div class="editorial__related">
+        <h2 class="editorial__related-title">Continue Reading</h2>
+        <div class="editorial__related-grid">
+            {% for r in related %}
+            <a href="{{ url_for('blog_post', slug=r.slug) }}" class="editorial__related-card">
+                {% if r.image_filename %}
+                <div class="editorial__related-img">
+                    <img src="{{ get_image_url(r.image_filename) }}" alt="{{ r.title }}" loading="lazy">
+                </div>
+                {% endif %}
+                <div class="editorial__related-body">
+                    <time class="editorial__related-date">{{ r.created_at.strftime('%b %d, %Y') }}</time>
+                    <h3 class="editorial__related-card-title">{{ r.title }}</h3>
+                    {% if r.summary %}
+                    <p class="editorial__related-summary">{{ r.summary }}</p>
+                    {% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+</article>
+
+<script>
+(function(){
+    var article = document.getElementById('editorialArticle');
+    var bar = document.getElementById('readingProgressBar');
+    if (!article || !bar) return;
+    function updateProgress() {
+        var rect = article.getBoundingClientRect();
+        var total = article.scrollHeight - window.innerHeight;
+        var scrolled = -rect.top;
+        var pct = Math.min(Math.max(scrolled / total * 100, 0), 100);
+        bar.style.width = pct + '%';
+    }
+    window.addEventListener('scroll', updateProgress, {passive:true});
+    updateProgress();
+})();
+</script>
+
 {% endblock %}
