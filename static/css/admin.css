@@ -761,6 +761,11 @@ img { max-width: 100%; display: block; }
     .cs-tabs { flex-wrap: nowrap; overflow-x: auto; }
     .cs-summary-grid { grid-template-columns: 1fr; }
     .cs-preview-wrap { overflow-x: auto; }
+    .cs-vslide-body { padding: 1.5rem 1.75rem; }
+    .cs-vslide-title { font-size: 1.6rem; }
+    .cs-vslide-body--center .cs-vslide-title { font-size: 2rem; }
+    .cs-vslide-doodle--underline { left: 1.5rem; width: 60px; }
+    .cs-vslide-doodle--circle { width: 40px; height: 40px; }
 }
 
 @media (max-width: 480px) {
@@ -777,6 +782,9 @@ img { max-width: 100%; display: block; }
     .cs-section { padding: 1rem; }
     .cs-actions { flex-direction: column; }
     .cs-actions .cs-btn { width: 100%; justify-content: center; }
+    .cs-vslide-body { padding: 1.25rem 1.5rem; }
+    .cs-vslide-title { font-size: 1.3rem; }
+    .cs-vslide-body--center .cs-vslide-title { font-size: 1.6rem; }
 }
 
 .toggle-switch {
@@ -880,7 +888,7 @@ img { max-width: 100%; display: block; }
 .cs-ig-hero img { width: 100%; height: 100%; object-fit: cover; }
 .cs-ig-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.3) 100%); display: flex; flex-direction: column; justify-content: flex-end; padding: 1.5rem; }
 .cs-ig-brand { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em; color: rgba(255,255,255,0.6); text-transform: uppercase; margin-bottom: 0.5rem; }
-.cs-ig-title { font-size: 1.1rem; font-weight: 700; color: #fff; line-height: 1.15; margin-bottom: 0.35rem; font-family: 'MADE Mirage', Georgia, serif; }
+.cs-ig-title { font-size: 1.1rem; font-weight: 700; color: #fff; line-height: 1.15; margin-bottom: 0.35rem; font-family: var(--font-heading); }
 .cs-ig-sub { font-size: 0.65rem; color: rgba(255,255,255,0.7); line-height: 1.4; margin-bottom: 0.5rem; }
 .cs-ig-cta { font-size: 0.6rem; font-weight: 700; color: #c99445; text-transform: uppercase; letter-spacing: 0.1em; }
 
@@ -892,7 +900,7 @@ img { max-width: 100%; display: block; }
 .cs-igst-hero--blank { background: linear-gradient(135deg, #1d5d51, #0e0e0e); }
 .cs-igst-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.2) 100%); display: flex; flex-direction: column; justify-content: flex-end; padding: 1.25rem; }
 .cs-igst-brand { font-size: 0.55rem; font-weight: 700; letter-spacing: 0.15em; color: rgba(255,255,255,0.6); text-transform: uppercase; margin-bottom: 0.5rem; }
-.cs-igst-title { font-size: 0.95rem; font-weight: 700; color: #fff; line-height: 1.15; margin-bottom: 0.35rem; font-family: 'MADE Mirage', Georgia, serif; }
+.cs-igst-title { font-size: 0.95rem; font-weight: 700; color: #fff; line-height: 1.15; margin-bottom: 0.35rem; font-family: var(--font-heading); }
 .cs-igst-sub { font-size: 0.6rem; color: rgba(255,255,255,0.7); line-height: 1.4; margin-bottom: 0.75rem; }
 .cs-igst-cta { font-size: 0.55rem; font-weight: 700; color: #c99445; text-transform: uppercase; letter-spacing: 0.1em; text-align: center; }
 
@@ -919,8 +927,46 @@ img { max-width: 100%; display: block; }
 .cs-slide-editor__add { display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%; padding: 0.7rem; border: 2px dashed var(--admin-border); border-radius: 8px; background: none; color: #888; font-size: 0.82rem; font-family: inherit; cursor: pointer; transition: all 0.2s; margin-top: 0.5rem; }
 .cs-slide-editor__add:hover { border-color: #0e0e0e; color: #0e0e0e; background: #fafafa; }
 
-/* Video Slide HTML classes */
-.cs-vslide-ov { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 2rem; }
+/* ===== SPLIT LAYOUT SLIDES ===== */
+.cs-vslide--split {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  background: #0e0e0e;
+  color: #fff;
+}
+.cs-vslide-img {
+  flex: 0 0 48%;
+  overflow: hidden;
+  position: relative;
+  background: #111;
+}
+.cs-vslide-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.cs-vslide-img--blank {
+  flex: 0 0 48%;
+  background: linear-gradient(135deg, #1d5d51 0%, #0e0e0e 100%);
+}
+.cs-vslide-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2rem 2.5rem;
+  position: relative;
+  overflow: hidden;
+}
+.cs-vslide-body--center {
+  align-items: center;
+  text-align: center;
+}
+.cs-vslide--cta {
+  justify-content: center;
+}
 
 /* ===== FACEBOOK SHARE PREVIEW ===== */
 .cs-fb-preview { width: 320px; border-radius: 8px; overflow: hidden; border: 1px solid #e0e0e0; background: #fff; }
@@ -936,22 +982,17 @@ img { max-width: 100%; display: block; }
 .cs-fiverr-img { width: 320px; border-radius: 8px; overflow: hidden; }
 .cs-fiv-inner { padding: 1.5rem; background: linear-gradient(135deg, #0e0e0e 0%, #1a1a1a 100%); color: #fff; text-align: center; }
 .cs-fiv-badge { font-size: 0.55rem; font-weight: 700; letter-spacing: 0.2em; color: #c99445; text-transform: uppercase; margin-bottom: 0.75rem; }
-.cs-fiv-title { font-size: 1rem; font-weight: 700; line-height: 1.2; margin-bottom: 0.75rem; font-family: 'MADE Mirage', Georgia, serif; }
-.cs-fiv-img { width: 100%; aspect-ratio: 16/9; overflow: hidden; border-radius: 6px; margin-bottom: 0.75rem; }
-.cs-fiv-img img { width: 100%; height: 100%; object-fit: cover; }
-.cs-fiv-features { display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; margin-bottom: 0.75rem; }
-.cs-fiv-features span { font-size: 0.62rem; color: #ccc; }
-.cs-fiv-cta { font-size: 0.6rem; font-weight: 700; color: #c99445; text-transform: uppercase; letter-spacing: 0.1em; text-align: center; }
-
-/* Animation initial states */
-.ani-hero, .ani-brand, .ani-title, .ani-sub, .ani-cta, .ani-badge, .ani-feat { opacity: 0; transform: translateY(20px); }
-.ani-hero { transform: scale(1.1); opacity: 0; }
-.ani-feats { transform: none; opacity: 1; }
+.cs-fiv-title { font-size: 1rem; font-weight: 700; line-height: 1.2; margin-bottom: 0.75rem; font-family: var(--font-heading); }
 .cs-fiv-img { margin: 0 auto 0.75rem; max-height: 100px; overflow: hidden; border-radius: 6px; }
 .cs-fiv-img img { width: 100%; height: 100%; object-fit: cover; }
 .cs-fiv-features { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem; margin-bottom: 1rem; }
 .cs-fiv-features span { font-size: 0.55rem; padding: 0.2rem 0.5rem; background: rgba(255,255,255,0.1); border-radius: 4px; color: rgba(255,255,255,0.8); }
 .cs-fiv-cta { font-size: 0.6rem; font-weight: 700; color: #c99445; text-transform: uppercase; letter-spacing: 0.08em; }
+
+/* Animation initial states */
+.ani-hero, .ani-brand, .ani-title, .ani-sub, .ani-cta, .ani-badge, .ani-feat { opacity: 0; transform: translateY(20px); }
+.ani-hero { transform: scale(1.1); opacity: 0; }
+.ani-feats { transform: none; opacity: 1; }
 
 /* ===== ALL SUMMARY ===== */
 .cs-summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
@@ -994,30 +1035,24 @@ img { max-width: 100%; display: block; }
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-4px); }
 }
-.cs-vslide { width: 100%; height: 100%; position: relative; display: flex; flex-direction: column; justify-content: center; padding: 2rem; font-family: 'Inter', sans-serif; overflow: hidden; }
-.cs-vslide--li.cs-vslide--light, .cs-vslide--ig.cs-vslide--light { background: #f7f3ed; color: #1a1a1a; }
-.cs-vslide--li.cs-vslide--light h2, .cs-vslide--ig.cs-vslide--light h2 { color: #0e0e0e; font-size: 1.4rem; margin-bottom: 0.5rem; line-height: 1.2; }
-.cs-vslide--li.cs-vslide--light p, .cs-vslide--ig.cs-vslide--light p { font-family: 'Inter', sans-serif; font-size: 0.75rem; color: #62605b; line-height: 1.6; }
-.cs-vslide .cs-vslide-num { font-family: 'Inter', sans-serif; font-size: 0.55rem; color: #aaa; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.75rem; animation: vsFadeUp 0.5s ease both 0.1s; }
-.cs-vslide-cover { position: absolute; inset: 0; }
-.cs-vslide-cover img { width: 100%; height: 100%; object-fit: cover; }
-.cs-vslide-cover-ov { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0.15)); display: flex; flex-direction: column; justify-content: flex-end; padding: 2rem; }
-.cs-vslide-cover-ov h2 { font-size: 1.6rem; color: #fff; line-height: 1.15; margin-bottom: 0.5rem; font-family: 'MADE Mirage', Georgia, serif; }
-.cs-vslide-brand { font-family: 'Inter', sans-serif; font-size: 0.6rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.15em; animation: vsFadeUp 0.5s ease both 0s; }
-.cs-vslide-title { font-family: 'MADE Mirage', Georgia, serif; animation: vsType 0.7s steps(20) both 0.1s, vsFadeUp 0.5s ease both 0.1s; }
-.cs-vslide-text { font-family: 'Inter', sans-serif; animation: vsFadeUp 0.5s ease both 0.35s; }
+.cs-vslide { width: 100%; height: 100%; position: relative; display: flex; flex-direction: column; font-family: 'Inter', sans-serif; overflow: hidden; font-size: 16px; }
+.cs-vslide .cs-vslide-num { font-size: 0.65rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 0.5rem; animation: vsFadeUp 0.5s ease both 0.1s; }
+.cs-vslide-title { font-family: var(--font-heading); font-size: 2.2rem; line-height: 1.15; margin-bottom: 0.6rem; color: #fff; animation: vsType 0.7s steps(20) both 0.1s, vsFadeUp 0.5s ease both 0.1s; }
+.cs-vslide-body--center .cs-vslide-title { font-size: 2.8rem; }
+.cs-vslide-brand { font-family: 'Inter', sans-serif; font-size: 0.75rem; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.15em; animation: vsFadeUp 0.5s ease both 0s; }
+.cs-vslide-text { font-family: 'Inter', sans-serif; font-size: 1.05rem; line-height: 1.55; color: rgba(255,255,255,0.88); animation: vsFadeUp 0.5s ease both 0.35s; }
 
 /* Doodles */
 .cs-vslide-doodle { position: absolute; pointer-events: none; }
-.cs-vslide-doodle--underline { bottom: 38%; left: 2rem; width: 80px; height: 12px; animation: vsFadeUp 0.4s ease both 0.6s; }
+.cs-vslide-doodle--underline { bottom: 42%; left: 2rem; width: 80px; height: 12px; animation: vsFadeUp 0.4s ease both 0.6s; }
 .cs-vslide-doodle--underline path { stroke: #c99445; stroke-width: 2; fill: none; stroke-dasharray: 200; animation: vsDrawLine 0.8s ease both 0.7s; }
-.cs-vslide-doodle--sparkle-tr { top: 1.2rem; right: 1.5rem; width: 20px; height: 20px; animation: vsPulse 2s ease-in-out infinite 1s; }
+.cs-vslide-doodle--sparkle-tr { top: 0.8rem; right: 1rem; width: 18px; height: 18px; animation: vsPulse 2s ease-in-out infinite 1s; }
 .cs-vslide-doodle--sparkle-tr path { fill: rgba(201,148,69,0.5); }
-.cs-vslide-doodle--sparkle-bl { bottom: 1.2rem; left: 1.5rem; width: 14px; height: 14px; animation: vsFloat 3s ease-in-out infinite 0.5s; }
+.cs-vslide-doodle--sparkle-bl { bottom: 0.8rem; left: 1rem; width: 14px; height: 14px; animation: vsFloat 3s ease-in-out infinite 0.5s; }
 .cs-vslide-doodle--sparkle-bl path { fill: rgba(255,255,255,0.2); }
-.cs-vslide-doodle--circle { top: 50%; right: 8%; width: 60px; height: 60px; transform: translateY(-50%); opacity: 0.15; animation: vsSpin 12s linear infinite; }
+.cs-vslide-doodle--circle { top: 50%; right: 6%; width: 50px; height: 50px; transform: translateY(-50%); opacity: 0.12; animation: vsSpin 12s linear infinite; }
 .cs-vslide-doodle--circle circle { stroke: rgba(255,255,255,0.4); stroke-width: 1; fill: none; stroke-dasharray: 6 4; }
-.cs-vslide-doodle--dots { top: 1rem; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; }
-.cs-vslide-doodle--dots span { width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.25); animation: vsPulse 2s ease-in-out infinite; }
+.cs-vslide-doodle--dots { top: 0.6rem; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; }
+.cs-vslide-doodle--dots span { width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.2); animation: vsPulse 2s ease-in-out infinite; }
 .cs-vslide-doodle--dots span:nth-child(2) { animation-delay: 0.3s; }
 .cs-vslide-doodle--dots span:nth-child(3) { animation-delay: 0.6s; }

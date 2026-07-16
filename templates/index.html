@@ -2,21 +2,21 @@
 {% block content %}
 
 <!-- ===== HERO ===== -->
-<section class="hero {% if hero_bg_type == 'image' %}hero--image{% endif %}" id="hero" data-aos="fade-in" data-aos-duration="800" {% if hero_bg_type == 'image' %}style="background-image:url('{{ hero_image_url }}')"{% endif %}>
+<section class="hero {% if hero_bg_type == 'image' %}hero--image{% endif %}" id="hero" {% if hero_bg_type == 'image' %}style="background-image:url('{{ hero_image_url }}')"{% endif %}>
     {% if hero_bg_type == 'video' %}
     <video id="heroVideo" class="hero__bg" src="{{ hero_video_url }}" autoplay muted loop playsinline poster="{{ hero_poster_url }}"></video>
     {% endif %}
     <div class="hero__overlay"></div>
     <div class="container hero__container">
         <div class="hero__text">
-            <p class="hero__label" data-aos="fade-down" data-aos-delay="100">RETEC</p>
-            <h1 class="hero__title" data-aos="fade-right" data-aos-delay="200">Biz Yako.Tech Yetu.
+            <p class="hero__label">RETEC</p>
+            <h1 class="hero__title">Biz Yako.Tech Yetu.
             </h1>
-            <p class="hero__subtitle" data-aos="fade-up" data-aos-delay="350">We design and build fast, responsive websites and Flask-powered web apps for businesses, creators, and growing ideas.</p>
-            <div class="hero__actions" data-aos="fade-up" data-aos-delay="450">
+            <p class="hero__subtitle">We design and build fast, responsive websites and Flask-powered web apps for businesses, creators, and growing ideas.</p>
+            <div class="hero__actions">
                 <a href="#about" class="hero__cta hero__cta--white">SCROLL ON</a>
             </div>
-            <div class="hero__socials" data-aos="fade-up" data-aos-delay="550">
+            <div class="hero__socials">
                 <a href="https://github.com/echoesrule" target="_blank" rel="noopener noreferrer" class="hero__social-link" aria-label="GitHub"><i class="fa-brands fa-github"></i></a>
                 <a href="mailto:contact.retec@gmail.com" class="hero__social-link" aria-label="Email"><i class="fa-solid fa-envelope"></i></a>
                 <a href="in/emmanuel-kiprono-14a800389" target="_blank" rel="noopener noreferrer" class="hero__social-link" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
@@ -330,20 +330,83 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var video = document.getElementById('heroVideo');
-    if (!video) return;
-    var started = false;
-    video.addEventListener('playing', function() { started = true; });
-    var playPromise = video.play();
-    if (playPromise !== undefined) {
-        playPromise.then(function() { started = true; }).catch(function() {
-            var tryPlay = function() {
-                var p = video.play();
-                if (p !== undefined) p.then(function() { started = true; }).catch(function(){});
-            };
-            document.addEventListener('touchstart', tryPlay, { once: true });
-            document.addEventListener('scroll', tryPlay, { once: true });
-        });
+    if (video) {
+        var started = false;
+        video.addEventListener('playing', function() { started = true; });
+        var playPromise = video.play();
+        if (playPromise !== undefined) {
+            playPromise.then(function() { started = true; }).catch(function() {
+                var tryPlay = function() {
+                    var p = video.play();
+                    if (p !== undefined) p.then(function() { started = true; }).catch(function(){});
+                };
+                document.addEventListener('touchstart', tryPlay, { once: true });
+                document.addEventListener('scroll', tryPlay, { once: true });
+            });
+        }
     }
+
+    // Hero anime.js animations
+    var animate = window.anime.animate;
+    var stagger = window.anime.stagger;
+
+    // Set initial states
+    var heroElements = ['.hero__label', '.hero__title', '.hero__subtitle', '.hero__actions', '.hero__socials'];
+    heroElements.forEach(function(sel) {
+        var el = document.querySelector(sel);
+        if (el) { el.style.opacity = '0'; el.style.transform = 'translateY(30px)'; }
+    });
+
+    // Animate hero elements with stagger
+    animate('.hero__label', {
+        opacity: [0, 1],
+        translateY: [30, 0],
+        duration: 800,
+        delay: 200,
+        ease: 'outExpo'
+    });
+
+    animate('.hero__title', {
+        opacity: [0, 1],
+        translateY: [30, 0],
+        duration: 900,
+        delay: 400,
+        ease: 'outExpo'
+    });
+
+    animate('.hero__subtitle', {
+        opacity: [0, 1],
+        translateY: [30, 0],
+        duration: 800,
+        delay: 600,
+        ease: 'outExpo'
+    });
+
+    animate('.hero__actions', {
+        opacity: [0, 1],
+        translateY: [30, 0],
+        duration: 700,
+        delay: 800,
+        ease: 'outExpo'
+    });
+
+    animate('.hero__socials', {
+        opacity: [0, 1],
+        translateY: [30, 0],
+        duration: 700,
+        delay: 1000,
+        ease: 'outExpo'
+    });
+
+    // Subtle floating animation on social icons
+    animate('.hero__social-link', {
+        translateY: [-4, 4],
+        duration: 2000,
+        loop: true,
+        alternate: true,
+        ease: 'inOutSine',
+        delay: 1500
+    });
 });
 </script>
 {% endblock %}

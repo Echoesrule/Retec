@@ -365,12 +365,12 @@ window.dispatchEvent(new Event('animejs-ready'));
     function slideHTML(s, idx, total, prefix) {
         var isCover = s.type === 'cover';
         var isCTA = s.type === 'cta';
-        var bg = s.img ? 'background-image:url(' + s.img + ');background-size:cover;background-position:center;' : 'background:#0e0e0e;';
-        var overlay = s.img ? 'background:linear-gradient(to top,rgba(0,0,0,0.92) 0%,rgba(0,0,0,0.55) 50%,rgba(0,0,0,0.65) 100%);' : '';
+        var imgBlock = s.img ? '<div class="cs-vslide-img"><img src="' + esc(s.img) + '" alt=""></div>' : '<div class="cs-vslide-img cs-vslide-img--blank"></div>';
 
         if (isCover) {
-            return '<div class="cs-vslide" style="' + bg + '">' +
-                '<div class="cs-vslide-ov" style="' + overlay + '">' +
+            return '<div class="cs-vslide cs-vslide--split">' +
+                imgBlock +
+                '<div class="cs-vslide-body">' +
                 doodleDots +
                 '<div class="cs-vslide-brand">RETEC</div>' +
                 '<h2 class="cs-vslide-title">' + esc(s.title) + '</h2>' +
@@ -380,18 +380,19 @@ window.dispatchEvent(new Event('animejs-ready'));
                 '</div></div>';
         }
         if (isCTA) {
-            return '<div class="cs-vslide" style="background:radial-gradient(circle at 50% 60%,#1a1a1a 0%,#0e0e0e 70%);">' +
-                '<div class="cs-vslide-ov" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">' +
+            return '<div class="cs-vslide cs-vslide--split cs-vslide--cta">' +
+                '<div class="cs-vslide-body cs-vslide-body--center">' +
                 doodleCircle +
                 '<div class="cs-vslide-brand" style="margin-bottom:1rem;">RETEC</div>' +
-                '<h2 class="cs-vslide-title" style="font-size:1.8rem;margin-bottom:0.5rem;">' + esc(s.title) + '</h2>' +
-                '<p class="cs-vslide-text" style="color:#c99445;font-size:0.8rem;">' + esc(s.text) + '</p>' +
+                '<h2 class="cs-vslide-title">' + esc(s.title) + '</h2>' +
+                '<p class="cs-vslide-text" style="color:#c99445;">' + esc(s.text) + '</p>' +
                 doodleSparkleBL +
                 '</div></div>';
         }
         // Content slide
-        return '<div class="cs-vslide" style="' + bg + '">' +
-            '<div class="cs-vslide-ov" style="' + overlay + '">' +
+        return '<div class="cs-vslide cs-vslide--split">' +
+            imgBlock +
+            '<div class="cs-vslide-body">' +
             doodleDots +
             '<div class="cs-vslide-num">' + idx + ' / ' + total + '</div>' +
             '<h2 class="cs-vslide-title">' + esc(s.title) + '</h2>' +
