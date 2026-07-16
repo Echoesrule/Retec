@@ -25,6 +25,8 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 _db_url = os.environ.get('DATABASE_URL', 'sqlite:///portfolio.db')
 if _db_url and _db_url.startswith('postgres://'):
     _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+if _db_url and ('render.com' in _db_url or 'supabase.co' in _db_url) and 'sslmode=' not in _db_url:
+    _db_url += '&sslmode=require' if '?' in _db_url else '?sslmode=require'
 app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
@@ -1813,7 +1815,11 @@ def admin_subscribers_export():
         headers={'Content-Disposition': 'attachment;filename=subscribers.csv'})
 
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+    except Exception as e:
+        print('[STARTUP] Database connection failed:', e)
+        print('[STARTUP] App will run without database. Check if Render DB is sleeping.')
     try:
         import sqlalchemy as sa
         inspector = sa.inspect(db.engine)
@@ -1839,11 +1845,14 @@ with app.app_context():
     except Exception as e:
         print('Startup note (migration):', e)
         db.session.rollback()
-    if not User.query.first():
-        hashed = bcrypt.generate_password_hash('admin123').decode('utf-8')
-        db.session.add(User(username='admin', password_hash=hashed))
-        db.session.commit()
-        print('Default admin user created: admin / admin123')
+    try:
+        if not User.query.first():
+            hashed = bcrypt.generate_password_hash('admin123').decode('utf-8')
+            db.session.add(User(username='admin', password_hash=hashed))
+            db.session.commit()
+            print('Default admin user created: admin / admin123')
+    except Exception:
+        pass
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

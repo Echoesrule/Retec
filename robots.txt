@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /track/
+Disallow: /subscribe
+Disallow: /unsubscribe
+Disallow: /verify-email
+
+Sitemap: https://retec.onrender.com/sitemap.xml

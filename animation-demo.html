@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animation Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            min-height: 100vh;
+            background: #0a0a0a;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 60px;
+            overflow: hidden;
+        }
+        h1 {
+            font-size: 2.5rem;
+            letter-spacing: -0.02em;
+            opacity: 0;
+        }
+        .shapes {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+        }
+        .box {
+            width: 60px;
+            height: 60px;
+            background: #fff;
+            border-radius: 8px;
+            opacity: 0;
+        }
+        .circle {
+            width: 60px;
+            height: 60px;
+            background: #fff;
+            border-radius: 50%;
+            opacity: 0;
+        }
+        .diamond {
+            width: 50px;
+            height: 50px;
+            background: #fff;
+            opacity: 0;
+            transform: rotate(45deg);
+        }
+        .text-container {
+            display: flex;
+            gap: 5px;
+            font-size: 3rem;
+            font-weight: 700;
+        }
+        .text-container span {
+            opacity: 0;
+            display: inline-block;
+        }
+        .timeline-section {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+        .timeline-box {
+            width: 40px;
+            height: 40px;
+            background: #fff;
+            border-radius: 6px;
+            opacity: 0;
+        }
+        .btn {
+            padding: 12px 28px;
+            background: transparent;
+            border: 2px solid #fff;
+            color: #fff;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 6px;
+            opacity: 0;
+            transition: background 0.3s, color 0.3s;
+        }
+        .btn:hover {
+            background: #fff;
+            color: #0a0a0a;
+        }
+        .particles {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+        }
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #fff;
+            border-radius: 50%;
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="title">ANIME.JS DEMO</h1>
+
+    <div class="shapes">
+        <div class="box"></div>
+        <div class="circle"></div>
+        <div class="diamond"></div>
+        <div class="box"></div>
+        <div class="circle"></div>
+    </div>
+
+    <div class="text-container">
+        <span>M</span><span>O</span><span>V</span><span>E</span>
+        <span>&nbsp;</span>
+        <span>M</span><span>E</span>
+    </div>
+
+    <div class="timeline-section">
+        <div class="timeline-box"></div>
+        <div class="timeline-box"></div>
+        <div class="timeline-box"></div>
+        <div class="timeline-box"></div>
+        <div class="timeline-box"></div>
+    </div>
+
+    <button class="btn">REPLAY</button>
+
+    <div class="particles" id="particles"></div>
+
+    <script src="node_modules/animejs/dist/bundles/anime.umd.min.js"></script>
+    <script>
+        const { animate, stagger, createTimeline, utils } = window.anime;
+
+        function runAnimation() {
+            // Title fade in
+            animate('.title', {
+                opacity: [0, 1],
+                translateY: [-30, 0],
+                duration: 800,
+                ease: 'outExpo'
+            });
+
+            // Shapes entrance with stagger
+            animate('.shapes > *', {
+                opacity: [0, 1],
+                scale: [0, 1],
+                rotate: ['0deg', '360deg'],
+                duration: 1000,
+                delay: stagger(120, { start: 300 }),
+                ease: 'outBack'
+            });
+
+            // Floating animation on shapes
+            animate('.shapes > *', {
+                translateY: [-10, 10],
+                duration: 1500,
+                delay: stagger(150, { start: 1500 }),
+                loop: true,
+                alternate: true,
+                ease: 'inOutSine'
+            });
+
+            // Text reveal
+            animate('.text-container span', {
+                opacity: [0, 1],
+                translateY: [40, 0],
+                rotateX: [90, 0],
+                duration: 600,
+                delay: stagger(80, { start: 600 }),
+                ease: 'outQuad'
+            });
+
+            // Timeline boxes sequence
+            const tl = createTimeline({ defaults: { ease: 'outExpo' } });
+
+            tl.add('.timeline-box', {
+                opacity: [0, 1],
+                scale: [0, 1.3, 1],
+                duration: 500,
+            }, stagger(100))
+              .add('.timeline-box', {
+                  translateX: [0, 20, -20, 0],
+                  duration: 800,
+              }, '-=200');
+
+            // Button appear
+            animate('.btn', {
+                opacity: [0, 1],
+                translateY: [20, 0],
+                duration: 600,
+                delay: 1800,
+                ease: 'outQuad'
+            });
+
+            // Particle burst
+            createParticles();
+        }
+
+        function createParticles() {
+            const container = document.getElementById('particles');
+            container.innerHTML = '';
+            for (let i = 0; i < 30; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = '50%';
+                p.style.top = '50%';
+                container.appendChild(p);
+            }
+
+            animate('.particle', {
+                translateX: () => anime.utils.random(-300, 300),
+                translateY: () => anime.utils.random(-300, 300),
+                scale: [0, anime.utils.random(0.5, 2), 0],
+                opacity: [0, 1, 0],
+                duration: anime.utils.random(1000, 2000),
+                delay: anime.utils.random(1800, 2500),
+                ease: 'outExpo'
+            });
+        }
+
+        document.querySelector('.btn').addEventListener('click', () => {
+            document.querySelectorAll('.box, .circle, .diamond, .title, .text-container span, .timeline-box, .btn, .particle').forEach(el => {
+                el.style.opacity = '0';
+            });
+            runAnimation();
+        });
+
+        runAnimation();
+    </script>
+</body>
+</html>

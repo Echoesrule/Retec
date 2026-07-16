@@ -14,3 +14,4 @@ nul
 .venv/
 venv/
 .env.example
+node modules/
