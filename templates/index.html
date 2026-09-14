@@ -10,11 +10,12 @@
     <div class="container hero__container">
         <div class="hero__text">
             <p class="hero__label">RETEC</p>
-            <h1 class="hero__title">Biz Yako.Tech Yetu.
+            <h1 class="hero__title">Biz Yako. Tech Yetu.
             </h1>
-            <p class="hero__subtitle">We design and build fast, responsive websites and Flask-powered web apps for businesses, creators, and growing ideas.</p>
+            <p class="hero__subtitle">Digital solutions built for businesses that want to grow.</p>
             <div class="hero__actions">
-                <a href="#about" class="hero__cta hero__cta--white">SCROLL ON</a>
+                <a href="#contact" class="hero__cta hero__cta--white">Start a Project</a>
+                <a href="#work" class="hero__cta hero__cta--white">View Our Work</a>
             </div>
             <div class="hero__socials">
                 <a href="https://github.com/echoesrule" target="_blank" rel="noopener noreferrer" class="hero__social-link" aria-label="GitHub"><i class="fa-brands fa-github"></i></a>
@@ -30,9 +31,16 @@
     <div class="container">
         <div class="about__content" data-aos="fade-up">
             <p class="section__eyebrow">About</p>
-            <h2 class="about__title">Hi, I'm Retro.</h2>
+            <h2 class="about__title">What is RETEC?</h2>
             <p class="about__text">
-                Founder of RETEC, a software developer focused on building modern websites, web applications, and digital experiences for businesses and creators.
+                RETEC is an independent software and digital solutions studio building practical technology for businesses, creators, and organizations.
+            </p>
+            <p class="about__text">
+                From professional websites to custom web applications and business tools, we turn ideas and real-world problems into reliable digital products.
+            </p>
+            <h3 class="about__title" style="font-size:1.1rem;margin-top:1.5rem;">Meet the Founder</h3>
+            <p class="about__text">
+                RETEC was founded by Retro, a software developer focused on Python, Flask, modern web development, and building practical technology for real-world needs.
             </p>
         </div>
     </div>
@@ -44,33 +52,33 @@
         <div class="columns__grid">
             <div class="columns__item" data-aos="fade-up" data-aos-delay="0">
                 <div class="columns__icon">
-                    <img src=static/images/build.png alt="What I Build">
+                    <img src=static/images/build.png alt="Solutions We Build">
                 </div>
-                <h3 class="columns__heading">What I Build</h3>
+                <h3 class="columns__heading">Solutions We Build</h3>
                 <ul class="columns__list">
                     <li><span class="columns__list-icon">
                         <img src=static/images/portfolio.png alt="Business Websites" class="columns__list-icon-img">
                     </span>Business Websites</li>
                     <li><span class="columns__list-icon">
-                        <img src=static/images/user-avatar.png alt="Portfolio Websites" class="columns__list-icon-img">
-                    </span>Portfolio Websites</li>
-                    <li><span class="columns__list-icon">
                         <img src=static/images/app-development.png alt="Web Applications" class="columns__list-icon-img">
                     </span>Web Applications</li>
+                    <li><span class="columns__list-icon">
+                        <img src=static/images/user-avatar.png alt="Digital Systems" class="columns__list-icon-img">
+                    </span>Digital Systems</li>
                 </ul>
             </div>
             <div class="columns__item" data-aos="fade-up" data-aos-delay="100">
                 <div class="columns__icon">
-                    <img src=static/images/work-in-progress.png alt="How I Work">
+                    <img src=static/images/work-in-progress.png alt="Why Work With Us">
                 </div>
-                <h3 class="columns__heading">How I Work</h3>
+                <h3 class="columns__heading">Why Work With Us</h3>
                 <ul class="columns__list">
                     <li><span class="columns__list-icon">
-                        <img src=static/images/clean.png alt="Clean Code" class="columns__list-icon-img">
-                    </span>Clean Code</li>
+                        <img src=static/images/clean.png alt="Clean Development" class="columns__list-icon-img">
+                    </span>Clean Development</li>
                     <li><span class="columns__list-icon">
-                        <img src=static/images/responsive.png alt="Responsive Design" class="columns__list-icon-img">
-                    </span>Responsive Design</li>
+                        <img src=static/images/responsive.png alt="Responsive by Design" class="columns__list-icon-img">
+                    </span>Responsive by Design</li>
                     <li><span class="columns__list-icon">
                         <img src=static/images/shield.png alt="Reliable Delivery" class="columns__list-icon-img">
                     </span>Reliable Delivery</li>
@@ -78,9 +86,9 @@
             </div>
             <div class="columns__item" data-aos="fade-up" data-aos-delay="200">
                 <div class="columns__icon">
-                    <img src=static/images/focus.png alt="Current Focus">
+                    <img src=static/images/focus.png alt="Our Technology">
                 </div>
-                <h3 class="columns__heading">Current Focus</h3>
+                <h3 class="columns__heading">Our Technology</h3>
                 <ul class="columns__list">
                     <li><span class="columns__list-icon">
                         <img src=static/images/python.png alt="Python" class="columns__list-icon-img">
@@ -97,13 +105,13 @@
     </div>
 </section>
 
-<!-- ===== PROJECTS ===== -->
+<!-- ===== WORK ===== -->
 <section class="section work section--light" id="work">
     <div class="container">
         <div class="section__header" data-aos="fade-up">
-            <p class="section__eyebrow">Portfolio</p>
-            <h2 class="section__title">Selected Projects</h2>
-            <p class="section__intro">A quick look at web work, app experiments, and code-backed builds from the RETEC bench.</p>
+            <p class="section__eyebrow">Our Work</p>
+            <h2 class="section__title">Selected Work</h2>
+            <p class="section__intro">A selection of digital products, web applications, and technical projects built through RETEC.</p>
         </div>
         {% set categories = projects|selectattr('category')|map(attribute='category')|select|unique|list %}
         {% if categories %}
@@ -152,6 +160,11 @@
             </article>
             {% endfor %}
         </div>
+        <div class="work__cta" data-aos="fade-up">
+            <p class="work__cta-text">Looking for something you don't see here? We build custom digital solutions for businesses.</p>
+            <a href="#services" class="section__cta section__cta--outline">Explore Services <i class="fa-solid fa-arrow-right"></i></a>
+            <a href="#contact" class="section__cta">Start a Project <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
     </div>
 </section>
 
@@ -160,25 +173,26 @@
     <div class="container">
         <div class="section__header" data-aos="fade-up">
             <p class="section__eyebrow">Services</p>
-            <h2 class="section__title">What We Offer</h2>
-            <p class="section__intro">I provide a range of services to help you build and maintain your online presence, from custom websites to web applications and ongoing support.</p>
+            <h2 class="section__title">What We Do</h2>
+            <p class="section__intro">We build practical digital solutions for businesses at different stages of growth — from establishing an online presence to developing custom systems and applications. Typical website projects start around KSh 15,000–25,000; custom software and applications are quoted based on your requirements.</p>
         </div>
         <div class="services__grid">
-            {% set service_icons = {
-                'Website Development': 'website.png',
-                'Portfolio Websites': 'portfolio.png',
-                'Web Applications': 'app-development.png',
-                'Python Solutions': 'python.png',
-                'Website Maintenance': 'shield.png'
-            } %}
             {% for service in services %}
             <div class="service__item" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 80 }}">
                 <span class="service__icon" aria-hidden="true">
-                    <img src="{{ url_for('static', filename='images/' ~ service_icons.get(service, 'icon.svg')) }}" alt="{{ service }} icon" class="service__icon-img">
+                    <img src="{{ url_for('static', filename='images/' ~ service.icon) }}" alt="{{ service.name }} icon" class="service__icon-img">
                 </span>
-                <span>{{ service }}</span>
+                <div class="service__body">
+                    <h3 class="service__name">{{ service.name }}</h3>
+                    <p class="service__desc">{{ service.desc }}</p>
+                    <div class="service__price">{{ service.price }}</div>
+                </div>
             </div>
             {% endfor %}
+        </div>
+        <div class="services__cta" data-aos="fade-up">
+            <p class="services__cta-text">Not sure which service fits your business? Tell us what you need and we'll recommend the most practical option.</p>
+            <a href="#contact" class="section__cta">Start a Project <i class="fa-solid fa-arrow-right"></i></a>
         </div>
     </div>
 </section>
@@ -210,11 +224,15 @@
 </section>
 {% endif %}
 
-<!-- ===== BLOG PREVIEW ===== -->
+<!-- ===== INSIGHTS PREVIEW ===== -->
 {% if blog_posts %}
 <section class="section blog-preview section--light" id="blog">
     <div class="container">
-        <h2 class="section__title" data-aos="fade-up">Latest Thoughts</h2>
+        <div class="section__header" data-aos="fade-up">
+            <p class="section__eyebrow">Insights</p>
+            <h2 class="section__title">Insights</h2>
+            <p class="section__intro">Practical ideas on websites, technology, and building a stronger digital presence.</p>
+        </div>
         <div class="blog__grid">
             {% for post in blog_posts %}
             <article class="blog__card" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 }}">
@@ -237,11 +255,34 @@
             {% endfor %}
         </div>
         <div class="blog-preview__more">
-            <a href="{{ url_for('blog') }}" class="hero__cta">View All Posts <i class="fa-solid fa-arrow-right"></i></a>
+            <a href="{{ url_for('blog') }}" class="hero__cta">View All Insights <i class="fa-solid fa-arrow-right"></i></a>
         </div>
     </div>
 </section>
 {% endif %}
+
+<!-- ===== PROCESS ===== -->
+<section class="section process section--light" id="process">
+    <div class="container">
+        <div class="section__header" data-aos="fade-up">
+            <p class="section__eyebrow">Process</p>
+            <h2 class="section__title">How We Work</h2>
+            <p class="section__intro">A clear process so you know exactly what happens after you start a project with RETEC.</p>
+        </div>
+        <div class="process__grid">
+            {% for step in process %}
+            <div class="process__item" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 80 }}">
+                <span class="process__number">{{ '%02d'|format(loop.index) }}</span>
+                <h3 class="process__title">{{ step.title }}</h3>
+                <p class="process__desc">{{ step.desc }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="process__cta" data-aos="fade-up">
+            <a href="#contact" class="section__cta">Start a Project <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+    </div>
+</section>
 
 <!-- ===== CONTACT ===== -->
 <section class="section contact section--light" id="contact">
@@ -249,12 +290,17 @@
         <div class="contact__inner">
             <div class="contact__info" data-aos="fade-right">
                 <p class="section__eyebrow">Contact</p>
-                <h2 class="contact__heading">Let's Build Something Together</h2>
-                <p class="contact__text">Tell me what you are building, where it needs to go, and what would make it feel successful. I will reply with a practical next step.</p>
+                <h2 class="contact__heading">Have a Project in Mind?</h2>
+                <p class="contact__text">Tell us what you're trying to build, what problem you're solving, and what success looks like. We'll help you figure out the most practical next step.</p>
+                <p class="contact__text contact__text--pricing">Basic websites typically start from around KSh 15,000–25,000. Web applications and custom software are quoted based on requirements.</p>
                 <div class="contact__links">
                     <a href="mailto:contact.retec@gmail.com" class="contact__link">
                         <i class="fa-solid fa-envelope"></i>
                       contact.retec@gmail.com
+                    </a>
+                    <a href="https://wa.me/+254114581500" target="_blank" rel="noopener" class="contact__link">
+                        <i class="fa-brands fa-whatsapp"></i>
+                        Chat on WhatsApp
                     </a>
                     <a href="https://github.com/echoesrule" target="_blank" rel="noopener" class="contact__link">
                         <i class="fa-brands fa-github"></i>
@@ -282,21 +328,39 @@
                     {% if form and form.name.errors %}<span class="form__error">{{ form.name.errors[0] }}</span>{% endif %}
                 </div>
                 <div class="form__group">
+                    <label for="business" class="form__label">Business / Organization</label>
+                    <input type="text" id="business" name="business" class="form__input" placeholder="Business or organization name (optional)" value="{{ form.business.data if form and form.business.data else '' }}">
+                    {% if form and form.business.errors %}<span class="form__error">{{ form.business.errors[0] }}</span>{% endif %}
+                </div>
+                <div class="form__group">
                     <label for="email" class="form__label">Email</label>
                     <input type="email" id="email" name="email" class="form__input" placeholder="you@example.com" value="{{ form.email.data if form and form.email.data else '' }}" required>
                     {% if form and form.email.errors %}<span class="form__error">{{ form.email.errors[0] }}</span>{% endif %}
                 </div>
                 <div class="form__group">
-                    <label for="subject" class="form__label">Subject</label>
-                    <input type="text" id="subject" name="subject" class="form__input" placeholder="What is this about?" value="{{ form.subject.data if form and form.subject.data else '' }}" required>
-                    {% if form and form.subject.errors %}<span class="form__error">{{ form.subject.errors[0] }}</span>{% endif %}
+                    <label for="project_type" class="form__label">Project Type</label>
+                    <select id="project_type" name="project_type" class="form__input">
+                        {% for value, label in project_types %}
+                        <option value="{{ value }}" {% if form and form.project_type.data == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if form and form.project_type.errors %}<span class="form__error">{{ form.project_type.errors[0] }}</span>{% endif %}
                 </div>
                 <div class="form__group">
-                    <label for="message" class="form__label">Message</label>
-                    <textarea id="message" name="message" class="form__textarea" required rows="5" placeholder="What would you like to build?">{{ form.message.data if form and form.message.data else '' }}</textarea>
+                    <label for="budget" class="form__label">Budget</label>
+                    <select id="budget" name="budget" class="form__input">
+                        {% for value, label in budget_options %}
+                        <option value="{{ value }}" {% if form and form.budget.data == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if form and form.budget.errors %}<span class="form__error">{{ form.budget.errors[0] }}</span>{% endif %}
+                </div>
+                <div class="form__group">
+                    <label for="message" class="form__label">Project Details</label>
+                    <textarea id="message" name="message" class="form__textarea" required rows="5" placeholder="Tell us what you're trying to build, what problem you want to solve, and any important requirements.">{{ form.message.data if form and form.message.data else '' }}</textarea>
                     {% if form and form.message.errors %}<span class="form__error">{{ form.message.errors[0] }}</span>{% endif %}
                 </div>
-                <button type="submit" class="form__submit">Send Message <i class="fa-solid fa-paper-plane"></i></button>
+                <button type="submit" class="form__submit">Send Project Inquiry <i class="fa-solid fa-paper-plane"></i></button>
             </form>
         </div>
     </div>

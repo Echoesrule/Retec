@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_from_directory, abort, Response
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, Response
 from datetime import datetime, timezone
 import os, requests, csv, io, re, time, secrets
 from flask_sqlalchemy import SQLAlchemy
@@ -10,11 +10,10 @@ from functools import wraps
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from dotenv import load_dotenv
-from forms import ContactForm
+from forms import ContactForm, PROJECT_TYPES, BUDGET_OPTIONS
 
 import cloudinary
 import cloudinary.uploader
-import cloudinary.api
 
 load_dotenv()
 
@@ -560,7 +559,7 @@ def get_github_stats():
     except Exception:
         return None
 
-def send_email(name, email, subject, message, ip_address=''):
+def send_email(name, email, business, project_type, budget, message, ip_address=''):
     api_key = app.config['BREVO_API_KEY']
     if not api_key or not app.config['MAIL_FROM'] or not app.config['MAIL_TO']:
         app.logger.warning('Contact email skipped: BREVO_API_KEY or sender/recipient not configured.')
@@ -568,13 +567,15 @@ def send_email(name, email, subject, message, ip_address=''):
     try:
         timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')
         body = (
-            f"New portfolio contact message\n\n"
+            f"New RETEC project inquiry\n\n"
             f"Name: {name}\n"
+            f"Business / Organization: {business or 'N/A'}\n"
             f"Email: {email}\n"
-            f"Subject: {subject}\n"
+            f"Project Type: {project_type or 'Not specified'}\n"
+            f"Budget: {budget or 'Not specified'}\n"
             f"IP: {ip_address}\n"
             f"Time: {timestamp}\n\n"
-            f"Message:\n{message}"
+            f"Project Details:\n{message}"
         )
         resp = requests.post(
             'https://api.brevo.com/v3/smtp/email',
@@ -583,7 +584,7 @@ def send_email(name, email, subject, message, ip_address=''):
                 'sender': {'email': app.config['MAIL_FROM']},
                 'to': [{'email': app.config['MAIL_TO']}],
                 'replyTo': {'email': email},
-                'subject': f"Portfolio Contact: {subject[:80]}",
+                'subject': f"Project Inquiry: {(project_type or 'General')[:80]}",
                 'textContent': body,
             },
             timeout=15,
@@ -846,11 +847,50 @@ def slugify(text):
     return text
 
 services = [
-    'Website Development',
-    'Portfolio Websites',
-    'Web Applications',
-    'Python Solutions',
-    'Website Maintenance'
+    {
+        'name': 'Website Development',
+        'icon': 'website.png',
+        'desc': 'Modern, responsive websites designed around your brand, audience, and business goals.',
+        'price': 'From KSh 15,000'
+    },
+    {
+        'name': 'Web Applications',
+        'icon': 'app-development.png',
+        'desc': 'Custom applications for bookings, dashboards, customer portals, management systems, and other business workflows.',
+        'price': 'Custom quote'
+    },
+    {
+        'name': 'Custom Software',
+        'icon': 'python.png',
+        'desc': 'Python-powered software built around specific business requirements and processes.',
+        'price': 'Custom quote'
+    },
+    {
+        'name': 'API & Backend Development',
+        'icon': 'python.png',
+        'desc': 'Reliable backend systems and APIs that connect applications, services, and data.',
+        'price': 'Custom quote'
+    },
+    {
+        'name': 'Website Maintenance',
+        'icon': 'shield.png',
+        'desc': 'Ongoing updates, fixes, improvements, and technical support for existing websites.',
+        'price': 'Quoted per project'
+    },
+    {
+        'name': 'Digital Consulting',
+        'icon': 'focus.png',
+        'desc': 'Practical guidance on choosing and planning technology before investing in development.',
+        'price': 'Quoted per project'
+    },
+]
+
+process = [
+    {'title': 'Discover', 'desc': 'We understand your business, goals, audience, requirements, and the problem you are trying to solve.'},
+    {'title': 'Plan', 'desc': 'We define the project scope, functionality, technology, and delivery approach.'},
+    {'title': 'Build', 'desc': 'We design and develop the solution while keeping the project practical, maintainable, and focused on its goals.'},
+    {'title': 'Launch', 'desc': 'We test, deploy, and prepare the product for real users.'},
+    {'title': 'Support', 'desc': 'We can continue improving, maintaining, and supporting the solution after launch.'},
 ]
 
 # ===== CONTEXT PROCESSORS =====
@@ -871,8 +911,8 @@ def inject_globals():
         'fun_facts': fun_facts,
         'fun_fact': fun_facts[0].text if fun_facts else None,
         'github_stats': github_stats,
-        'meta_title': 'RETEC — Retro Spirit. Modern Solutions.',
-        'meta_desc': 'RETEC is a software developer building modern websites, web applications, and digital experiences.',
+        'meta_title': 'RETEC — Digital Solutions for Modern Businesses',
+        'meta_desc': 'RETEC builds modern websites, web applications, custom software, and digital solutions for businesses, creators, and organizations.',
         'meta_url': meta_url,
         'meta_image': meta_image,
         'get_image_url': get_image_url,
@@ -933,7 +973,10 @@ def get_homepage_data():
         'projects': get_projects(),
         'testimonials': Testimonial.query.filter_by(active=True).order_by(Testimonial.sort_order).all(),
         'blog_posts': BlogPost.query.filter_by(published=True).order_by(BlogPost.created_at.desc()).limit(3).all(),
-        'services': services
+        'services': services,
+        'process': process,
+        'project_types': PROJECT_TYPES,
+        'budget_options': BUDGET_OPTIONS
     }
 
 @app.route('/')
@@ -948,10 +991,10 @@ def contact():
     honeypot = request.form.get('website', '')
     if form.validate_on_submit() and not honeypot:
         ip = get_client_ip() or '0.0.0.0'
-        if send_email(form.name.data, form.email.data, form.subject.data, form.message.data, ip):
-            flash('Thank you for your message. I will get back to you soon.', 'success')
+        if send_email(form.name.data, form.email.data, form.business.data, form.project_type.data, form.budget.data, form.message.data, ip):
+            flash('Thank you for your project inquiry. We will get back to you soon.', 'success')
         else:
-            flash('Your message could not be sent right now. Please email me directly.', 'error')
+            flash('Your inquiry could not be sent right now. Please email us directly.', 'error')
         save_subscriber(form.email.data, form.name.data, source='contact')
         return redirect(url_for('home') + '#contact')
     context = get_homepage_data()

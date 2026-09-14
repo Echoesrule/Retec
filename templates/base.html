@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="{{ meta_desc }}">
-    <meta name="keywords" content="RETEC, web development, portfolio, software developer, Python, Flask">
+    <meta name="keywords" content="RETEC, web development, web applications, custom software, digital solutions, Kenya, Python, Flask">
     <title>{{ meta_title }}</title>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
@@ -18,6 +18,20 @@
     <meta name="twitter:title" content="{{ meta_title }}">
     <meta name="twitter:description" content="{{ meta_desc }}">
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "ProfessionalService",
+        "name": "RETEC",
+        "description": "RETEC builds modern websites, web applications, custom software, and digital solutions for businesses, creators, and organizations.",
+        "slogan": "Biz Yako. Tech Yetu.",
+        "email": "contact.retec@gmail.com",
+        "areaServed": "KE",
+        "founder": {"@type": "Person", "name": "Retro"},
+        "knowsAbout": ["Web Development", "Web Applications", "Custom Software", "API Development", "Python", "Flask"],
+        "sameAs": ["https://github.com/echoesrule", "https://www.linkedin.com/in/emmanuel-kiprono-14a800389"]
+    }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -57,17 +71,21 @@
                             <svg class="nav__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm8.94 3.5l-1.2-.2a7.9 7.9 0 0 0-.6-1.4l.7-1.1-1.5-1.5-1.1.7a7.9 7.9 0 0 0-1.4-.6l-.2-1.2h-2l-.2 1.2c-.5.1-1 .3-1.4.6l-1.1-.7-1.5 1.5.7 1.1c-.3.4-.5.9-.6 1.4L3.26 11.5v2l1.2.2c.1.5.3 1 .6 1.4l-.7 1.1 1.5 1.5 1.1-.7c.4.3.9.5 1.4.6l.2 1.2h2l.2-1.2c.5-.1 1-.3 1.4-.6l1.1.7 1.5-1.5-.7-1.1c.3-.4.5-.9.6-1.4l1.2-.2v-2z"/></svg>
                             <span class="nav__label">Services</span>
                         </a></li>
-                        <li><a href="/blog" class="nav__link {% if active == 'blog' %}nav__link--active{% endif %}" aria-label="Blog">
+                        <li><a href="/#about" class="nav__link" aria-label="About">
+                            <svg class="nav__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-5 0-9 2.5-9 5v2h18v-2c0-2.5-4-5-9-5z"/></svg>
+                            <span class="nav__label">About</span>
+                        </a></li>
+                        <li><a href="/blog" class="nav__link {% if active == 'blog' %}nav__link--active{% endif %}" aria-label="Insights">
                             <svg class="nav__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v2H4V4zm2 5h12v10H6V9zm2 2v6h8v-6H8z"/></svg>
-                            <span class="nav__label">Blog</span>
+                            <span class="nav__label">Insights</span>
                         </a></li>
                       
                         <li>
-                            <a href="/#contact" class="nav__btn nav__chat" aria-label="Wanna Talk?">
+                            <a href="/#contact" class="nav__btn nav__chat" aria-label="Start a Project">
                                 <span class="nav__chat__avatar">
                                     <img src="https://i.pinimg.com/736x/7b/91/87/7b91871d2d00cc68de059df6a34c836b.jpg" alt="Avatar">
                                 </span>
-                                <span class="nav__chat__bubble">Wanna Talk?</span>
+                                <span class="nav__chat__bubble">Start a Project</span>
                             </a>
                         </li>
                     </ul>
@@ -126,10 +144,18 @@
                             <text x="18" y="19" font-family="'Inter','Helvetica Neue',Arial,sans-serif" font-size="13" font-weight="700" letter-spacing="2.5" fill="currentColor">RETEC</text>
                         </svg>
                     </a>
-                    <p class="footer__tagline">Retro Spirit. Modern Solutions.</p>
+                    <p class="footer__tagline">Biz Yako. Tech Yetu.</p>
+                    <p class="footer__tagline" style="font-size:0.75rem;opacity:0.7;margin-top:0.25rem;">Digital solutions for businesses, creators, and organizations.</p>
                 </div>
                 <div class="footer__links">
+                    <a href="/#contact">Start a Project</a>
+                    <a href="/">Home</a>
+                    <a href="/#work">Work</a>
+                    <a href="/#services">Services</a>
+                    <a href="/#about">About</a>
+                    <a href="/blog">Insights</a>
                     <a href="mailto:contact.retec@gmail.com">Email</a>
+                    <a href="https://wa.me/+254114581500" target="_blank" rel="noopener">WhatsApp</a>
                     <a href="https://github.com/echoesrule" target="_blank" rel="noopener">GitHub</a>
                     <a href="https://www.linkedin.com/in/emmanuel-kiprono-14a800389 " target="_blank" rel="noopener">LinkedIn</a>
                 </div>

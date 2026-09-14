@@ -3796,3 +3796,206 @@ h1, h2, h3, h4, h5, h6,
     font-family: var(--font-heading) !important;
     font-weight: 600;
 }
+
+/* ===== PHASE 2: SERVICES, PROCESS & CONVERSION ===== */
+
+/* Section CTA buttons (read well on light sections) */
+.section__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 48px;
+    padding: 0 1.5rem;
+    border: 1px solid var(--ink);
+    border-radius: 6px;
+    background: var(--ink);
+    color: var(--white);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: var(--shadow);
+    transition: all 0.25s ease;
+}
+
+.section__cta:hover {
+    transform: translateY(-2px);
+    background: var(--accent-dark);
+    color: var(--white);
+}
+
+.section__cta--outline {
+    background: transparent;
+    color: var(--ink);
+    box-shadow: none;
+}
+
+.section__cta--outline:hover {
+    background: var(--ink);
+    color: var(--white);
+}
+
+/* Service cards with description + price */
+.services__grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    max-width: none;
+    gap: 1.25rem;
+}
+
+.service__item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.5rem;
+    min-height: 0;
+    text-align: left;
+    font-weight: 400;
+}
+
+.service__icon {
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+}
+
+.service__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+.service__name {
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 0;
+    line-height: 1.25;
+}
+
+.service__desc {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--muted);
+    margin: 0;
+}
+
+.service__price {
+    display: inline-block;
+    width: fit-content;
+    margin-top: 0.4rem;
+    padding: 0.28rem 0.7rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(47, 125, 109, 0.08);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+/* CTA bars under Work, Services and Process sections */
+.work__cta,
+.services__cta,
+.process__cta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.1rem;
+    margin-top: 2.75rem;
+    text-align: center;
+}
+
+.work__cta-text,
+.services__cta-text {
+    max-width: 560px;
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.95rem;
+    line-height: 1.7;
+}
+
+/* Process: How We Work */
+.process__grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1.25rem;
+}
+
+.process__item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1.5rem 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--paper-strong);
+    box-shadow: var(--shadow);
+    text-align: left;
+}
+
+.process__number {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 1.7rem;
+    line-height: 1;
+    color: rgba(47, 125, 109, 0.85);
+    margin-bottom: 0.85rem;
+    font-weight: 400;
+}
+
+.process__title {
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 0 0 0.5rem;
+    line-height: 1.25;
+}
+
+.process__desc {
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--muted);
+    margin: 0;
+}
+
+/* Pricing note in contact section */
+.contact__text--pricing {
+    margin-top: 1rem;
+    color: var(--muted);
+    font-size: 0.92rem;
+}
+
+/* Native renders selects consistently with form inputs */
+select.form__input {
+    appearance: auto;
+    cursor: pointer;
+    height: auto;
+}
+
+@media (max-width: 992px) {
+    .process__grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 560px) {
+    .process__grid {
+        grid-template-columns: 1fr;
+    }
+
+    .work__cta,
+    .services__cta,
+    .process__cta {
+        align-items: stretch;
+    }
+
+    .work__cta .section__cta,
+    .services__cta .section__cta,
+    .process__cta .section__cta {
+        justify-content: center;
+        text-align: center;
+    }
+}

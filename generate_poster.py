@@ -37,7 +37,7 @@ draw.rectangle([80, nav_y + 66, W - 80, nav_y + 68], fill=BLACK)
 
 # === BRAND ===
 draw.text((W//2, 270), "RETEC", fill=BLACK, font=f_brand, anchor="mm")
-draw.text((W//2, 350), "Retro Spirit. Modern Solutions.", fill=GRAY, font=f_heading, anchor="mm")
+draw.text((W//2, 350), "Biz Yako. Tech Yetu.", fill=GRAY, font=f_heading, anchor="mm")
 
 # === WEBSITE ===
 draw.text((W//2, 450), "retec.dev", fill=BLACK, font=f_url, anchor="mm")
