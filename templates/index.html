@@ -9,19 +9,10 @@
     <div class="hero__overlay"></div>
     <div class="container hero__container">
         <div class="hero__text">
-            <p class="hero__label">RETEC</p>
-            <h1 class="hero__title">Biz Yako. Tech Yetu.
-            </h1>
-            <p class="hero__subtitle">Digital solutions built for businesses that want to grow.</p>
-            <div class="hero__actions">
-                <a href="#contact" class="hero__cta hero__cta--white">Start a Project</a>
-                <a href="#work" class="hero__cta hero__cta--white">View Our Work</a>
-            </div>
-            <div class="hero__socials">
-                <a href="https://github.com/echoesrule" target="_blank" rel="noopener noreferrer" class="hero__social-link" aria-label="GitHub"><i class="fa-brands fa-github"></i></a>
-                <a href="mailto:contact.retec@gmail.com" class="hero__social-link" aria-label="Email"><i class="fa-solid fa-envelope"></i></a>
-                <a href="in/emmanuel-kiprono-14a800389" target="_blank" rel="noopener noreferrer" class="hero__social-link" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
-            </div>
+            <p class="hero__eyebrow">we are</p>
+            <h1 class="hero__title">RETEC</h1>
+            <p class="hero__subtitle">design <span aria-hidden="true">|</span> development <span aria-hidden="true">|</span> digital solutions</p>
+            <p class="hero__year">2026</p>
         </div>
     </div>
 </section>
@@ -38,67 +29,73 @@
             <p class="about__text">
                 From professional websites to custom web applications and business tools, we turn ideas and real-world problems into reliable digital products.
             </p>
-            <h3 class="about__title" style="font-size:1.1rem;margin-top:1.5rem;">Meet the Founder</h3>
-            <p class="about__text">
-                RETEC was founded by Retro, a software developer focused on Python, Flask, modern web development, and building practical technology for real-world needs.
-            </p>
+        </div>
+
+        <div class="founder-feature" data-aos="fade-up">
+            <div class="founder-feature__topline">
+                <span>software engineer</span>
+                <span>RETEC / 2026</span>
+            </div>
+            <div class="founder-feature__heading">
+                <p class="founder-feature__kicker">Meet the Founder</p>
+                <h2>Meet<br>the Founder</h2>
+            </div>
+            <div class="founder-feature__portrait">
+                <img src="{{ url_for('static', filename='images/founder.png') }}" alt="Retro, founder of RETEC" loading="eager" decoding="async">
+            </div>
+            <div class="founder-feature__footer">
+                <div>
+                    <span class="founder-feature__name">Retro</span>
+                    <span class="founder-feature__role">Founder / Software Developer</span>
+                </div>
+                <p>Focused on Python, Flask, modern web development, and practical technology for real-world needs.</p>
+            </div>
         </div>
     </div>
 </section>
 
-<!-- ===== THREE-COLUMN ===== -->
+<!-- ===== CAPABILITIES ===== -->
 <section class="section columns section--light">
     <div class="container">
         <div class="columns__grid">
             <div class="columns__item" data-aos="fade-up" data-aos-delay="0">
                 <div class="columns__icon">
-                    <img src=static/images/build.png alt="Solutions We Build">
+                    <img src="{{ url_for('static', filename='images/lightbulb.png') }}" alt="Idea">
                 </div>
-                <h3 class="columns__heading">Solutions We Build</h3>
+                <h3 class="columns__heading">Idea</h3>
                 <ul class="columns__list">
-                    <li><span class="columns__list-icon">
-                        <img src=static/images/portfolio.png alt="Business Websites" class="columns__list-icon-img">
-                    </span>Business Websites</li>
-                    <li><span class="columns__list-icon">
-                        <img src=static/images/app-development.png alt="Web Applications" class="columns__list-icon-img">
-                    </span>Web Applications</li>
-                    <li><span class="columns__list-icon">
-                        <img src=static/images/user-avatar.png alt="Digital Systems" class="columns__list-icon-img">
-                    </span>Digital Systems</li>
+                    <li>Discover the opportunity</li>
+                    <li>Clarify the real problem</li>
                 </ul>
             </div>
             <div class="columns__item" data-aos="fade-up" data-aos-delay="100">
                 <div class="columns__icon">
-                    <img src=static/images/work-in-progress.png alt="Why Work With Us">
+                    <img src="{{ url_for('static', filename='images/focus.png') }}" alt="Design">
                 </div>
-                <h3 class="columns__heading">Why Work With Us</h3>
+                <h3 class="columns__heading">Design</h3>
                 <ul class="columns__list">
-                    <li><span class="columns__list-icon">
-                        <img src=static/images/clean.png alt="Clean Development" class="columns__list-icon-img">
-                    </span>Clean Development</li>
-                    <li><span class="columns__list-icon">
-                        <img src=static/images/responsive.png alt="Responsive by Design" class="columns__list-icon-img">
-                    </span>Responsive by Design</li>
-                    <li><span class="columns__list-icon">
-                        <img src=static/images/shield.png alt="Reliable Delivery" class="columns__list-icon-img">
-                    </span>Reliable Delivery</li>
+                    <li>Shape the experience</li>
+                    <li>Make every detail useful</li>
                 </ul>
             </div>
             <div class="columns__item" data-aos="fade-up" data-aos-delay="200">
                 <div class="columns__icon">
-                    <img src=static/images/focus.png alt="Our Technology">
+                    <img src="{{ url_for('static', filename='images/app-development.png') }}" alt="Development">
                 </div>
-                <h3 class="columns__heading">Our Technology</h3>
+                <h3 class="columns__heading">Development</h3>
                 <ul class="columns__list">
-                    <li><span class="columns__list-icon">
-                        <img src=static/images/python.png alt="Python" class="columns__list-icon-img">
-                    </span>Python</li>
-                    <li><span class="columns__list-icon">
-                        <img src="https://cdn.freebiesupply.com/logos/large/2x/flask-logo-png-transparent.png "alt="Flask" class="columns__list-icon-img">
-                    </span>Flask</li>
-                    <li><span class="columns__list-icon">
-                        <img src=static/images/website.png alt="Modern Web Development" class="columns__list-icon-img">
-                    </span>Modern Web Development</li>
+                    <li>Build with care</li>
+                    <li>Keep the foundation reliable</li>
+                </ul>
+            </div>
+            <div class="columns__item" data-aos="fade-up" data-aos-delay="300">
+                <div class="columns__icon">
+                    <img src="{{ url_for('static', filename='images/shield.png') }}" alt="Success">
+                </div>
+                <h3 class="columns__heading">Success</h3>
+                <ul class="columns__list">
+                    <li>Launch with confidence</li>
+                    <li>Grow from something solid</li>
                 </ul>
             </div>
         </div>
@@ -108,10 +105,15 @@
 <!-- ===== WORK ===== -->
 <section class="section work section--light" id="work">
     <div class="container">
-        <div class="section__header" data-aos="fade-up">
-            <p class="section__eyebrow">Our Work</p>
-            <h2 class="section__title">Selected Work</h2>
-            <p class="section__intro">A selection of digital products, web applications, and technical projects built through RETEC.</p>
+        <div class="services__intro" data-aos="fade-up">
+            <div class="services__intro-heading">
+                <p class="section__eyebrow">Our Work</p>
+                <h2 class="section__title">Selected<br><span><img src="{{ url_for('static', filename='images/app-development.png') }}" alt="" aria-hidden="true">Work</span></h2>
+            </div>
+            <div class="services__intro-copy">
+                <p>A selection of digital products, web applications, and technical projects built through RETEC.</p>
+                <a href="#contact" class="section__cta">Start a Project <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
         </div>
         {% set categories = projects|selectattr('category')|map(attribute='category')|select|unique|list %}
         {% if categories %}
@@ -171,14 +173,21 @@
 <!-- ===== SERVICES ===== -->
 <section class="section services section--light" id="services">
     <div class="container">
-        <div class="section__header" data-aos="fade-up">
-            <p class="section__eyebrow">Services</p>
-            <h2 class="section__title">What We Do</h2>
-            <p class="section__intro">We build practical digital solutions for businesses at different stages of growth — from establishing an online presence to developing custom systems and applications. Typical website projects start around KSh 15,000–25,000; custom software and applications are quoted based on your requirements.</p>
+        <div class="services__intro" data-aos="fade-up">
+            <div class="services__intro-heading">
+                <p class="section__eyebrow">How We Can Help You</p>
+                <h2 class="section__title">Services<br><span><img src="{{ url_for('static', filename='images/website.png') }}" alt="" aria-hidden="true">We Offer</span></h2>
+            </div>
+            <div class="services__intro-copy">
+                <p>Practical digital solutions that improve how your business works, communicates, and grows.</p>
+                <p>From a focused website to a custom application, we build useful systems with a clear purpose and a solid foundation.</p>
+                <a href="#contact" class="section__cta">Let's Talk <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
         </div>
         <div class="services__grid">
             {% for service in services %}
             <div class="service__item" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 80 }}">
+                <span class="service__number">{{ '%02d'|format(loop.index) }}</span>
                 <span class="service__icon" aria-hidden="true">
                     <img src="{{ url_for('static', filename='images/' ~ service.icon) }}" alt="{{ service.name }} icon" class="service__icon-img">
                 </span>
@@ -192,7 +201,7 @@
         </div>
         <div class="services__cta" data-aos="fade-up">
             <p class="services__cta-text">Not sure which service fits your business? Tell us what you need and we'll recommend the most practical option.</p>
-            <a href="#contact" class="section__cta">Start a Project <i class="fa-solid fa-arrow-right"></i></a>
+            <a href="#contact" class="section__cta section__cta--outline">Start a Project <i class="fa-solid fa-arrow-right"></i></a>
         </div>
     </div>
 </section>
@@ -228,10 +237,15 @@
 {% if blog_posts %}
 <section class="section blog-preview section--light" id="blog">
     <div class="container">
-        <div class="section__header" data-aos="fade-up">
-            <p class="section__eyebrow">Insights</p>
-            <h2 class="section__title">Insights</h2>
-            <p class="section__intro">Practical ideas on websites, technology, and building a stronger digital presence.</p>
+        <div class="services__intro" data-aos="fade-up">
+            <div class="services__intro-heading">
+                <p class="section__eyebrow">Insights</p>
+                <h2 class="section__title">Ideas Worth<br><span><img src="{{ url_for('static', filename='images/lightbulb.png') }}" alt="" aria-hidden="true">Sharing</span></h2>
+            </div>
+            <div class="services__intro-copy">
+                <p>Practical ideas on websites, technology, and building a stronger digital presence.</p>
+                <a href="{{ url_for('blog') }}" class="section__cta">View All Insights <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
         </div>
         <div class="blog__grid">
             {% for post in blog_posts %}
@@ -254,9 +268,6 @@
             </article>
             {% endfor %}
         </div>
-        <div class="blog-preview__more">
-            <a href="{{ url_for('blog') }}" class="hero__cta">View All Insights <i class="fa-solid fa-arrow-right"></i></a>
-        </div>
     </div>
 </section>
 {% endif %}
@@ -264,10 +275,15 @@
 <!-- ===== PROCESS ===== -->
 <section class="section process section--light" id="process">
     <div class="container">
-        <div class="section__header" data-aos="fade-up">
-            <p class="section__eyebrow">Process</p>
-            <h2 class="section__title">How We Work</h2>
-            <p class="section__intro">A clear process so you know exactly what happens after you start a project with RETEC.</p>
+        <div class="services__intro" data-aos="fade-up">
+            <div class="services__intro-heading">
+                <p class="section__eyebrow">Our Process</p>
+                <h2 class="section__title">How<br><span><img src="{{ url_for('static', filename='images/focus.png') }}" alt="" aria-hidden="true">We Work</span></h2>
+            </div>
+            <div class="services__intro-copy">
+                <p>A clear process so you know exactly what happens after you start a project with RETEC.</p>
+                <a href="#contact" class="section__cta">Start a Project <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
         </div>
         <div class="process__grid">
             {% for step in process %}
@@ -288,38 +304,16 @@
 <section class="section contact section--light" id="contact">
     <div class="container">
         <div class="contact__inner">
-            <div class="contact__info" data-aos="fade-right">
-                <p class="section__eyebrow">Contact</p>
-                <h2 class="contact__heading">Have a Project in Mind?</h2>
-                <p class="contact__text">Tell us what you're trying to build, what problem you're solving, and what success looks like. We'll help you figure out the most practical next step.</p>
-                <p class="contact__text contact__text--pricing">Basic websites typically start from around KSh 15,000–25,000. Web applications and custom software are quoted based on requirements.</p>
-                <div class="contact__links">
-                    <a href="mailto:contact.retec@gmail.com" class="contact__link">
-                        <i class="fa-solid fa-envelope"></i>
-                      contact.retec@gmail.com
-                    </a>
-                    <a href="https://wa.me/+254114581500" target="_blank" rel="noopener" class="contact__link">
-                        <i class="fa-brands fa-whatsapp"></i>
-                        Chat on WhatsApp
-                    </a>
-                    <a href="https://github.com/echoesrule" target="_blank" rel="noopener" class="contact__link">
-                        <i class="fa-brands fa-github"></i>
-                        GitHub
-                    </a>
-                    <a href="https://www.linkedin.com/in/emmanuel-kiprono-14a800389" target="_blank" rel="noopener" class="contact__link">
-                        <i class="fa-brands fa-linkedin-in"></i>
-                        LinkedIn
-                    </a>
+            <div class="services__intro contact__intro" data-aos="fade-up">
+                <div class="services__intro-heading">
+                    <p class="section__eyebrow">Contact</p>
+                    <h2 class="section__title">Have a Project<br><span><img src="{{ url_for('static', filename='images/website.png') }}" alt="" aria-hidden="true">in Mind?</span></h2>
+                </div>
+                <div class="services__intro-copy">
+                    <p>Tell us what you're trying to build, what problem you're solving, and what success looks like. We'll help you figure out the most practical next step.</p>
                 </div>
             </div>
-            <form class="contact__form" method="POST" action="{{ url_for('contact') }}" data-aos="fade-left">
-                <div class="contact__form-header">
-                    <div class="contact__brand">
-                        <img src="{{ url_for('static', filename='images/logo-stacked.svg') }}" alt="RETEC logo" class="contact__logo-svg">
-                     
-                    </div>
-              
-                </div>
+            <form class="contact__form" method="POST" action="{{ url_for('contact') }}" data-aos="fade-up">
                 <input type="hidden" name="csrf_token" value="{{ form.csrf_token._value() if form else '' }}">
                 <input type="text" name="website" tabindex="-1" autocomplete="off" class="form__honeypot" aria-hidden="true">
                 <div class="form__group">
@@ -362,6 +356,27 @@
                 </div>
                 <button type="submit" class="form__submit">Send Project Inquiry <i class="fa-solid fa-paper-plane"></i></button>
             </form>
+            <div class="contact__details" data-aos="fade-up">
+                <p class="contact__text contact__text--pricing">Basic websites typically start from around KSh 15,000–25,000. Web applications and custom software are quoted based on requirements.</p>
+                <div class="contact__links">
+                    <a href="mailto:contact.retec@gmail.com" class="contact__link">
+                        <i class="fa-solid fa-envelope"></i>
+                        contact.retec@gmail.com
+                    </a>
+                    <a href="https://wa.me/+254114581500" target="_blank" rel="noopener" class="contact__link">
+                        <i class="fa-brands fa-whatsapp"></i>
+                        Chat on WhatsApp
+                    </a>
+                    <a href="https://github.com/echoesrule" target="_blank" rel="noopener" class="contact__link">
+                        <i class="fa-brands fa-github"></i>
+                        GitHub
+                    </a>
+                    <a href="https://www.linkedin.com/in/emmanuel-kiprono-14a800389" target="_blank" rel="noopener" class="contact__link">
+                        <i class="fa-brands fa-linkedin-in"></i>
+                        LinkedIn
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -370,9 +385,15 @@
 <section class="section subscribe section--light" id="subscribe">
     <div class="container">
         <div class="subscribe__inner" data-aos="fade-up">
-            <p class="section__eyebrow">Newsletter</p>
-            <h2 class="subscribe__heading">Stay Updated</h2>
-            <p class="subscribe__text">Get monthly updates on new projects, tools, and tips — no spam, unsubscribe anytime.</p>
+            <div class="services__intro">
+                <div class="services__intro-heading">
+                    <p class="section__eyebrow">Newsletter</p>
+                    <h2 class="section__title">Stay<br><span><img src="{{ url_for('static', filename='images/lightbulb.png') }}" alt="" aria-hidden="true">Updated</span></h2>
+                </div>
+                <div class="services__intro-copy">
+                    <p>Get monthly updates on new projects, tools, and tips — no spam, unsubscribe anytime.</p>
+                </div>
+            </div>
             <form class="subscribe__form" method="POST" action="{{ url_for('subscribe') }}">
                 <input type="text" name="website" tabindex="-1" autocomplete="off" class="form__honeypot" aria-hidden="true">
                 <div class="subscribe__fields">

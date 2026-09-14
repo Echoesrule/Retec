@@ -32,16 +32,13 @@
         "sameAs": ["https://github.com/echoesrule", "https://www.linkedin.com/in/emmanuel-kiprono-14a800389"]
     }
     </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/variables.css') }}?v={{ css_version }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts.css') }}?v={{ css_version }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ css_version }}">
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 </head>
-<body>
+<body class="{% if active == 'home' %}home-page{% else %}inner-page{% endif %}">
 
     <header class="header" id="header">
         <div class="container">
@@ -54,7 +51,7 @@
                             <path d="M 7 8 A 5 5 0 0 1 7 17" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                             <line x1="12" y1="15" x2="16" y2="20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                         </g>
-                        <text x="24" y="22" font-family="'Inter','Helvetica Neue',Arial,sans-serif" font-size="16" font-weight="700" letter-spacing="3" fill="currentColor">RETEC</text>
+                        <text x="24" y="22" font-family="'MADE Mirage', Georgia, serif" font-size="16" font-weight="700" letter-spacing="3" fill="currentColor">RETEC</text>
                     </svg>
                 </a>
                 <div class="nav__menu" id="nav-menu">
@@ -129,40 +126,73 @@
         {% block content %}{% endblock %}
     </main>
 
-    <footer class="footer footer--light">
+    <footer class="footer footer--dark">
         <div class="container">
-            <div class="footer__inner">
-                <div class="footer__brand">
-                    <a href="/" class="footer__logo">
-                        <svg width="80" height="24" viewBox="0 0 80 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <g transform="translate(0, 1)">
-                                <line x1="0" y1="5" x2="11" y2="5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <line x1="5.5" y1="5" x2="5.5" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <path d="M 5.5 7 A 4 4 0 0 1 5.5 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <line x1="9" y1="13" x2="13" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </g>
-                            <text x="18" y="19" font-family="'Inter','Helvetica Neue',Arial,sans-serif" font-size="13" font-weight="700" letter-spacing="2.5" fill="currentColor">RETEC</text>
-                        </svg>
-                    </a>
-                    <p class="footer__tagline">Biz Yako. Tech Yetu.</p>
-                    <p class="footer__tagline" style="font-size:0.75rem;opacity:0.7;margin-top:0.25rem;">Digital solutions for businesses, creators, and organizations.</p>
+            <div class="footer__grid">
+                <div class="footer__group">
+                    <h4>Products</h4>
+                    <ul>
+                        <li><a href="/#services">Apps</a></li>
+                        <li><a href="/#services">Workflows</a></li>
+                        <li><a href="/#services">Database</a></li>
+                        <li><a href="/#services">Mobile</a></li>
+                    </ul>
                 </div>
-                <div class="footer__links">
-                    <a href="/#contact">Start a Project</a>
-                    <a href="/">Home</a>
-                    <a href="/#work">Work</a>
-                    <a href="/#services">Services</a>
-                    <a href="/#about">About</a>
-                    <a href="/blog">Insights</a>
-                    <a href="mailto:contact.retec@gmail.com">Email</a>
-                    <a href="https://wa.me/+254114581500" target="_blank" rel="noopener">WhatsApp</a>
-                    <a href="https://github.com/echoesrule" target="_blank" rel="noopener">GitHub</a>
-                    <a href="https://www.linkedin.com/in/emmanuel-kiprono-14a800389 " target="_blank" rel="noopener">LinkedIn</a>
+                <div class="footer__group">
+                    <h4>Solutions</h4>
+                    <ul>
+                        <li><a href="/#services">AI apps</a></li>
+                        <li><a href="/#services">External apps</a></li>
+                        <li><a href="/#services">Integrations</a></li>
+                        <li><a href="/#services">Self-hosting</a></li>
+                    </ul>
+                </div>
+                <div class="footer__group">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="/blog">Blog</a></li>
+                        <li><a href="/blog">Reports</a></li>
+                    </ul>
+                </div>
+                <div class="footer__group">
+                    <h4>Developers</h4>
+                    <ul>
+                        <li><a href="/cv">Documentation</a></li>
+                        <li><a href="/cv">Changelog</a></li>
+                        <li><a href="/cv">Status</a></li>
+                        <li><a href="/cv">Developer Network</a></li>
+                    </ul>
+                </div>
+                <div class="footer__group">
+                    <h4>Company</h4>
+                    <ul>
+                        <li><a href="/#about">About</a></li>
+                        <li><a href="/#about">Careers</a></li>
+                        <li><a href="/#about">Partners</a></li>
+                    </ul>
+                </div>
+                <div class="footer__aside">
+                    <a href="/#contact" class="footer__btn footer__btn--primary">Start for free</a>
+                    <a href="/#contact" class="footer__btn footer__btn--secondary">Book a demo</a>
+                    <ul class="footer__meta-links">
+                        <li><a href="/#contact">Terms of use</a></li>
+                        <li><a href="/#contact">Privacy policy</a></li>
+                        <li><a href="/#contact">Security</a></li>
+                    </ul>
+                    <div class="footer__copyright"><span class="footer__dot">●</span> RETEC 2024</div>
                 </div>
             </div>
-            <div class="footer__bottom">
-                <p>&copy; {{ year }} RETEC. All rights reserved.</p>
-                <p class="footer__admin-link"><a href="/admin">Admin</a></p>
+
+            <div class="footer__brand-mark" aria-label="RETEC brand mark">
+                <svg class="footer__logo-svg" viewBox="0 0 560 140" role="img" aria-label="RETEC logo" xmlns="http://www.w3.org/2000/svg">
+                    <g transform="translate(6, 18)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="0" y1="18" x2="42" y2="18" stroke-width="4"/>
+                        <line x1="21" y1="18" x2="21" y2="62" stroke-width="4"/>
+                        <path d="M21 24 A14 14 0 0 1 21 52" stroke-width="4"/>
+                        <path d="M32 48 L42 60" stroke-width="4"/>
+                    </g>
+                    <text x="280" y="86" text-anchor="middle" fill="currentColor" font-family="'MADE Mirage', 'Georgia', serif" font-size="82" font-weight="300" letter-spacing="8">RETEC</text>
+                </svg>
             </div>
         </div>
     </footer>

@@ -43,8 +43,8 @@
     --shadow-color: rgba(30,30,30,0.06);
 
     /* Font Families */
-    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --font-heading: 'MADE Mirage', Georgia, serif;
+    --font-body: 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    --font-heading: 'MADE Mirage';
 
     /* Additional Colors */
     --card-bg-light: #fafafa;

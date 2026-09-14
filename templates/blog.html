@@ -2,7 +2,13 @@
 {% block content %}
 <section class="section section--light blog-page">
     <div class="container">
-        <h1 class="section__title">Insights</h1>
+        <div class="inner-page__intro">
+            <div>
+                <p class="section__eyebrow">Insights</p>
+                <h1 class="section__title">Ideas Worth<br>Sharing</h1>
+            </div>
+            <p class="inner-page__intro-copy">Practical ideas on websites, technology, and building a stronger digital presence.</p>
+        </div>
         {% if posts %}
         <div class="blog__grid">
             {% for post in posts %}
