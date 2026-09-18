@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, Response
 from datetime import datetime, timezone
-import os, requests, csv, io, re, time, secrets
+import os, requests, csv, io, re, time, secrets, json
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_wtf.csrf import CSRFProtect
@@ -502,6 +502,10 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
+def _get_setting(key, default=None):
+    s = SiteSetting.query.filter_by(key=key).first()
+    return s.value if s else default
+
 def get_github_projects():
     try:
         r = requests.get('https://api.github.com/users/echoesrule/repos?sort=updated&per_page=20', timeout=5)
@@ -849,19 +853,19 @@ def slugify(text):
 services = [
     {
         'name': 'Website Development',
-        'icon': 'website.png',
+        'icon': 'webdev.png',
         'desc': 'Modern, responsive websites designed around your brand, audience, and business goals.',
         'price': 'From KSh 15,000'
     },
     {
         'name': 'Web Applications',
-        'icon': 'app-development.png',
+        'icon': 'webapp.png',
         'desc': 'Custom applications for bookings, dashboards, customer portals, management systems, and other business workflows.',
         'price': 'Custom quote'
     },
     {
         'name': 'Custom Software',
-        'icon': 'python.png',
+        'icon': 'build.png',
         'desc': 'Python-powered software built around specific business requirements and processes.',
         'price': 'Custom quote'
     },
@@ -911,7 +915,7 @@ def inject_globals():
         'fun_facts': fun_facts,
         'fun_fact': fun_facts[0].text if fun_facts else None,
         'github_stats': github_stats,
-        'meta_title': 'RETEC — Digital Solutions for Modern Businesses',
+        'meta_title': 'Retec Biz Yako.Tech Yetu',
         'meta_desc': 'RETEC builds modern websites, web applications, custom software, and digital solutions for businesses, creators, and organizations.',
         'meta_url': meta_url,
         'meta_image': meta_image,
@@ -920,7 +924,9 @@ def inject_globals():
         'hero_video_url': get_image_url(SiteSetting.query.filter_by(key='hero_video').first().value) if SiteSetting.query.filter_by(key='hero_video').first() else url_for('static', filename='hero-bg.mp4'),
         'hero_image_url': get_image_url(SiteSetting.query.filter_by(key='hero_image').first().value) if SiteSetting.query.filter_by(key='hero_image').first() else url_for('static', filename='images/hero-bg.svg'),
         'hero_poster_url': get_image_url(SiteSetting.query.filter_by(key='hero_poster').first().value) if SiteSetting.query.filter_by(key='hero_poster').first() else url_for('static', filename='images/hero-bg.svg'),
-        'hero_quote_interval': SiteSetting.query.filter_by(key='hero_quote_interval').first().value if SiteSetting.query.filter_by(key='hero_quote_interval').first() else '6000'
+        'hero_quote_interval': SiteSetting.query.filter_by(key='hero_quote_interval').first().value if SiteSetting.query.filter_by(key='hero_quote_interval').first() else '6000',
+        'cube_positioner_enabled': _get_setting('cube_positioner_enabled') == '1' and 'admin_id' in session,
+        'cube_positions': json.loads(_get_setting('cube_positions') or 'null') or None
     }
 
 # ===== AFTER REQUEST =====
@@ -1152,12 +1158,26 @@ def admin_logout():
 @admin_required
 def admin_hero_settings():
     if request.method == 'POST':
+        if 'clear_cube_positions' in request.form:
+            setting = SiteSetting.query.filter_by(key='cube_positions').first()
+            if setting:
+                setting.value = ''
+                db.session.commit()
+            flash('Saved cube positions cleared.', 'success')
+            return redirect(url_for('admin_hero_settings'))
         bg_type = request.form.get('hero_bg_type', 'video')
         setting = SiteSetting.query.filter_by(key='hero_bg_type').first()
         if setting:
             setting.value = bg_type
         else:
             db.session.add(SiteSetting(key='hero_bg_type', value=bg_type))
+        db.session.commit()
+        cube_enabled = '1' if request.form.get('cube_positioner_enabled') else '0'
+        setting = SiteSetting.query.filter_by(key='cube_positioner_enabled').first()
+        if setting:
+            setting.value = cube_enabled
+        else:
+            db.session.add(SiteSetting(key='cube_positioner_enabled', value=cube_enabled))
         db.session.commit()
         quote_interval = request.form.get('hero_quote_interval', '6000')
         setting = SiteSetting.query.filter_by(key='hero_quote_interval').first()
@@ -1204,12 +1224,20 @@ def admin_hero_settings():
     hero_image = SiteSetting.query.filter_by(key='hero_image').first()
     hero_poster = SiteSetting.query.filter_by(key='hero_poster').first()
     hero_quote_interval = SiteSetting.query.filter_by(key='hero_quote_interval').first()
+    cube_positioner_enabled = SiteSetting.query.filter_by(key='cube_positioner_enabled').first()
+    cube_positions_setting = SiteSetting.query.filter_by(key='cube_positions').first()
+    try:
+        cube_positions = json.loads(cube_positions_setting.value) if cube_positions_setting and cube_positions_setting.value else None
+    except (TypeError, ValueError):
+        cube_positions = None
     return render_template('admin/hero_settings.html',
         hero_bg_type=hero_bg_type.value if hero_bg_type else 'video',
         hero_video=hero_video.value if hero_video else '',
         hero_image=hero_image.value if hero_image else '',
         hero_poster=hero_poster.value if hero_poster else '',
-        hero_quote_interval=hero_quote_interval.value if hero_quote_interval else '6000')
+        hero_quote_interval=hero_quote_interval.value if hero_quote_interval else '6000',
+        cube_positioner_enabled=(cube_positioner_enabled.value == '1') if cube_positioner_enabled else False,
+        cube_positions=cube_positions)
 
 @app.route('/admin/change-password', methods=['GET', 'POST'])
 @admin_required
@@ -1483,6 +1511,54 @@ def toggle_project_visibility(id):
     project.visible = not project.visible
     db.session.commit()
     return jsonify({'visible': project.visible})
+
+# ----- Cube positioner -----
+
+def _sanitize_cube_positions(positions):
+    cleaned = []
+    for p in positions:
+        if not isinstance(p, dict):
+            continue
+        try:
+            x = min(100.0, max(0.0, float(p.get('x', 0))))
+            y = min(100.0, max(0.0, float(p.get('y', 0))))
+        except (TypeError, ValueError):
+            continue
+        entry = {'x': round(x, 1), 'y': round(y, 1)}
+        try:
+            if p.get('w') is not None:
+                entry['w'] = max(40, min(600, int(p['w'])))
+            if p.get('o') is not None:
+                entry['o'] = min(1.0, max(0.0, float(p['o'])))
+        except (TypeError, ValueError):
+            pass
+        cleaned.append(entry)
+    return cleaned
+
+@app.route('/admin/api/cube-positions', methods=['POST'])
+@admin_required
+@limiter.exempt
+def admin_save_cube_positions():
+    data = request.get_json(silent=True) or {}
+    if data.get('clear'):
+        setting = SiteSetting.query.filter_by(key='cube_positions').first()
+        if setting:
+            setting.value = ''
+            db.session.commit()
+        return jsonify({'ok': True, 'cleared': True})
+    positions = data.get('positions')
+    if not isinstance(positions, list):
+        return jsonify({'ok': False, 'error': 'positions must be a list'}), 400
+    cleaned = _sanitize_cube_positions(positions)
+    if not cleaned:
+        return jsonify({'ok': False, 'error': 'no valid positions'}), 400
+    setting = SiteSetting.query.filter_by(key='cube_positions').first()
+    if setting:
+        setting.value = json.dumps(cleaned)
+    else:
+        db.session.add(SiteSetting(key='cube_positions', value=json.dumps(cleaned)))
+    db.session.commit()
+    return jsonify({'ok': True, 'count': len(cleaned)})
 
 # ----- Analytics + CSV Export -----
 

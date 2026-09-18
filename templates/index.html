@@ -9,9 +9,9 @@
     <div class="hero__overlay"></div>
     <div class="container hero__container">
         <div class="hero__text">
-            <p class="hero__eyebrow">we are</p>
+            <p class="hero__eyebrow">We Are</p>
             <h1 class="hero__title">RETEC</h1>
-            <p class="hero__subtitle">design <span aria-hidden="true">|</span> development <span aria-hidden="true">|</span> digital solutions</p>
+            <p class="hero__subtitle">Design <span aria-hidden="true">|</span> Development <span aria-hidden="true">|</span> Digital solutions</p>
             <p class="hero__year">2026</p>
         </div>
     </div>
@@ -22,13 +22,23 @@
     <div class="container">
         <div class="about__content" data-aos="fade-up">
             <p class="section__eyebrow">About</p>
-            <h2 class="about__title">What is RETEC?</h2>
-            <p class="about__text">
-                RETEC is an independent software and digital solutions studio building practical technology for businesses, creators, and organizations.
-            </p>
-            <p class="about__text">
-                From professional websites to custom web applications and business tools, we turn ideas and real-world problems into reliable digital products.
-            </p>
+            <div class="about__intro">
+                <h2 class="about__title">What is<br><em>RETEC?</em></h2>
+                <div class="about__copy">
+                    <p class="about__lead">A small studio for useful, well-made technology.</p>
+                    <p class="about__text">
+                        RETEC is an independent software and digital solutions studio building practical technology for businesses, creators, and organizations.
+                    </p>
+                    <p class="about__text">
+                        From professional websites to custom web applications and business tools, we turn ideas and real-world problems into reliable digital products.
+                    </p>
+                </div>
+            </div>
+            <div class="about__details" aria-label="RETEC studio details">
+                <span>01 / Independent</span>
+                <span>02 / Practical</span>
+                <span>03 / Built with care</span>
+            </div>
         </div>
 
         <div class="founder-feature" data-aos="fade-up">
@@ -60,7 +70,7 @@
         <div class="columns__grid">
             <div class="columns__item" data-aos="fade-up" data-aos-delay="0">
                 <div class="columns__icon">
-                    <img src="{{ url_for('static', filename='images/lightbulb.png') }}" alt="Idea">
+                    <img src="{{ url_for('static', filename='images/brain-circuit.png') }}" alt="">
                 </div>
                 <h3 class="columns__heading">Idea</h3>
                 <ul class="columns__list">
@@ -70,7 +80,7 @@
             </div>
             <div class="columns__item" data-aos="fade-up" data-aos-delay="100">
                 <div class="columns__icon">
-                    <img src="{{ url_for('static', filename='images/focus.png') }}" alt="Design">
+                    <img src="{{ url_for('static', filename='images/transparency.png') }}" alt="">
                 </div>
                 <h3 class="columns__heading">Design</h3>
                 <ul class="columns__list">
@@ -80,7 +90,7 @@
             </div>
             <div class="columns__item" data-aos="fade-up" data-aos-delay="200">
                 <div class="columns__icon">
-                    <img src="{{ url_for('static', filename='images/app-development.png') }}" alt="Development">
+                    <img src="{{ url_for('static', filename='images/binary.png') }}" alt="">
                 </div>
                 <h3 class="columns__heading">Development</h3>
                 <ul class="columns__list">
@@ -90,7 +100,7 @@
             </div>
             <div class="columns__item" data-aos="fade-up" data-aos-delay="300">
                 <div class="columns__icon">
-                    <img src="{{ url_for('static', filename='images/shield.png') }}" alt="Success">
+                    <img src="{{ url_for('static', filename='images/registration-paper.png') }}" alt="">
                 </div>
                 <h3 class="columns__heading">Success</h3>
                 <ul class="columns__list">
@@ -146,7 +156,7 @@
                         <span class="work__tag">{{ tag }}</span>
                         {% endfor %}
                     </div>
-                    <div style="display:flex;gap:1rem;">
+                    <div class="work__actions">
                         {% if project.demo_url %}
                         <a href="{{ project.demo_url }}" target="_blank" rel="noopener noreferrer" class="work__link">
                             <i class="fa-solid fa-arrow-up-right-from-square"></i>
@@ -164,11 +174,18 @@
         </div>
         <div class="work__cta" data-aos="fade-up">
             <p class="work__cta-text">Looking for something you don't see here? We build custom digital solutions for businesses.</p>
-            <a href="#services" class="section__cta section__cta--outline">Explore Services <i class="fa-solid fa-arrow-right"></i></a>
-            <a href="#contact" class="section__cta">Start a Project <i class="fa-solid fa-arrow-right"></i></a>
+            <div class="work__cta-actions">
+                <a href="#services" class="section__cta section__cta--outline">Explore Services <i class="fa-solid fa-arrow-right"></i></a>
+                <a href="#contact" class="section__cta">Start a Project <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
         </div>
     </div>
 </section>
+
+<!-- ===== CABLE BAND: Services → Insights ===== -->
+<div class="cable-band">
+    <!-- Cube sketches (2-4) are injected here by the CUBE_CONFIG script below -->
+    <div class="cable-band__cubes" aria-hidden="true"></div>
 
 <!-- ===== SERVICES ===== -->
 <section class="section services section--light" id="services">
@@ -176,7 +193,7 @@
         <div class="services__intro" data-aos="fade-up">
             <div class="services__intro-heading">
                 <p class="section__eyebrow">How We Can Help You</p>
-                <h2 class="section__title">Services<br><span><img src="{{ url_for('static', filename='images/website.png') }}" alt="" aria-hidden="true">We Offer</span></h2>
+                <h2 class="section__title">Services<br><span><img src="{{ url_for('static', filename='images/user-headset.png') }}" alt="" aria-hidden="true">We Offer</span></h2>
             </div>
             <div class="services__intro-copy">
                 <p>Practical digital solutions that improve how your business works, communicates, and grows.</p>
@@ -188,9 +205,6 @@
             {% for service in services %}
             <div class="service__item" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 80 }}">
                 <span class="service__number">{{ '%02d'|format(loop.index) }}</span>
-                <span class="service__icon" aria-hidden="true">
-                    <img src="{{ url_for('static', filename='images/' ~ service.icon) }}" alt="{{ service.name }} icon" class="service__icon-img">
-                </span>
                 <div class="service__body">
                     <h3 class="service__name">{{ service.name }}</h3>
                     <p class="service__desc">{{ service.desc }}</p>
@@ -240,7 +254,7 @@
         <div class="services__intro" data-aos="fade-up">
             <div class="services__intro-heading">
                 <p class="section__eyebrow">Insights</p>
-                <h2 class="section__title">Ideas Worth<br><span><img src="{{ url_for('static', filename='images/lightbulb.png') }}" alt="" aria-hidden="true">Sharing</span></h2>
+                <h2 class="section__title">Ideas Worth<br><span><img src="{{ url_for('static', filename='images/mind-share.png') }}" alt="" aria-hidden="true">Sharing</span></h2>
             </div>
             <div class="services__intro-copy">
                 <p>Practical ideas on websites, technology, and building a stronger digital presence.</p>
@@ -271,6 +285,8 @@
     </div>
 </section>
 {% endif %}
+</div>
+<!-- ===== /CABLE BAND ===== -->
 
 <!-- ===== PROCESS ===== -->
 <section class="section process section--light" id="process">
@@ -278,7 +294,7 @@
         <div class="services__intro" data-aos="fade-up">
             <div class="services__intro-heading">
                 <p class="section__eyebrow">Our Process</p>
-                <h2 class="section__title">How<br><span><img src="{{ url_for('static', filename='images/focus.png') }}" alt="" aria-hidden="true">We Work</span></h2>
+                <h2 class="section__title">How<br><span><img src="{{ url_for('static', filename='images/briefcase-dollar.png') }}" alt="" aria-hidden="true">We Work</span></h2>
             </div>
             <div class="services__intro-copy">
                 <p>A clear process so you know exactly what happens after you start a project with RETEC.</p>
@@ -307,38 +323,43 @@
             <div class="services__intro contact__intro" data-aos="fade-up">
                 <div class="services__intro-heading">
                     <p class="section__eyebrow">Contact</p>
-                    <h2 class="section__title">Have a Project<br><span><img src="{{ url_for('static', filename='images/website.png') }}" alt="" aria-hidden="true">in Mind?</span></h2>
+                    <h2 class="section__title">Have a Project<br><span><img src="{{ url_for('static', filename='images/paper-plane.png') }}" alt="" aria-hidden="true">in Mind?</span></h2>
                 </div>
                 <div class="services__intro-copy">
                     <p>Tell us what you're trying to build, what problem you're solving, and what success looks like. We'll help you figure out the most practical next step.</p>
                 </div>
             </div>
-            <form class="contact__form" method="POST" action="{{ url_for('contact') }}" data-aos="fade-up">
+            <div class="contact__main" data-aos="fade-up">
+            <form class="contact__form" method="POST" action="{{ url_for('contact') }}">
                 <input type="hidden" name="csrf_token" value="{{ form.csrf_token._value() if form else '' }}">
                 <input type="text" name="website" tabindex="-1" autocomplete="off" class="form__honeypot" aria-hidden="true">
-                <div class="form__group">
-                    <label for="name" class="form__label">Name</label>
-                    <input type="text" id="name" name="name" class="form__input" placeholder="Your name" value="{{ form.name.data if form and form.name.data else '' }}" required>
-                    {% if form and form.name.errors %}<span class="form__error">{{ form.name.errors[0] }}</span>{% endif %}
+                <div class="form__row">
+                    <div class="form__group">
+                        <label for="name" class="form__label">Name</label>
+                        <input type="text" id="name" name="name" class="form__input" placeholder="Your name" value="{{ form.name.data if form and form.name.data else '' }}" required>
+                        {% if form and form.name.errors %}<span class="form__error">{{ form.name.errors[0] }}</span>{% endif %}
+                    </div>
+                    <div class="form__group">
+                        <label for="email" class="form__label">Email</label>
+                        <input type="email" id="email" name="email" class="form__input" placeholder="you@example.com" value="{{ form.email.data if form and form.email.data else '' }}" required>
+                        {% if form and form.email.errors %}<span class="form__error">{{ form.email.errors[0] }}</span>{% endif %}
+                    </div>
                 </div>
-                <div class="form__group">
-                    <label for="business" class="form__label">Business / Organization</label>
-                    <input type="text" id="business" name="business" class="form__input" placeholder="Business or organization name (optional)" value="{{ form.business.data if form and form.business.data else '' }}">
-                    {% if form and form.business.errors %}<span class="form__error">{{ form.business.errors[0] }}</span>{% endif %}
-                </div>
-                <div class="form__group">
-                    <label for="email" class="form__label">Email</label>
-                    <input type="email" id="email" name="email" class="form__input" placeholder="you@example.com" value="{{ form.email.data if form and form.email.data else '' }}" required>
-                    {% if form and form.email.errors %}<span class="form__error">{{ form.email.errors[0] }}</span>{% endif %}
-                </div>
-                <div class="form__group">
-                    <label for="project_type" class="form__label">Project Type</label>
-                    <select id="project_type" name="project_type" class="form__input">
-                        {% for value, label in project_types %}
-                        <option value="{{ value }}" {% if form and form.project_type.data == value %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                    {% if form and form.project_type.errors %}<span class="form__error">{{ form.project_type.errors[0] }}</span>{% endif %}
+                <div class="form__row">
+                    <div class="form__group">
+                        <label for="business" class="form__label">Business / Organization</label>
+                        <input type="text" id="business" name="business" class="form__input" placeholder="Optional" value="{{ form.business.data if form and form.business.data else '' }}">
+                        {% if form and form.business.errors %}<span class="form__error">{{ form.business.errors[0] }}</span>{% endif %}
+                    </div>
+                    <div class="form__group">
+                        <label for="project_type" class="form__label">Project Type</label>
+                        <select id="project_type" name="project_type" class="form__input">
+                            {% for value, label in project_types %}
+                            <option value="{{ value }}" {% if form and form.project_type.data == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if form and form.project_type.errors %}<span class="form__error">{{ form.project_type.errors[0] }}</span>{% endif %}
+                    </div>
                 </div>
                 <div class="form__group">
                     <label for="budget" class="form__label">Budget</label>
@@ -351,11 +372,15 @@
                 </div>
                 <div class="form__group">
                     <label for="message" class="form__label">Project Details</label>
-                    <textarea id="message" name="message" class="form__textarea" required rows="5" placeholder="Tell us what you're trying to build, what problem you want to solve, and any important requirements.">{{ form.message.data if form and form.message.data else '' }}</textarea>
+                    <textarea id="message" name="message" class="form__textarea" required rows="4" placeholder="What are you trying to build, and what should success look like?">{{ form.message.data if form and form.message.data else '' }}</textarea>
                     {% if form and form.message.errors %}<span class="form__error">{{ form.message.errors[0] }}</span>{% endif %}
                 </div>
-                <button type="submit" class="form__submit">Send Project Inquiry <i class="fa-solid fa-paper-plane"></i></button>
+                <button type="submit" class="form__submit">Send Inquiry <i class="fa-solid fa-arrow-right"></i></button>
             </form>
+                <div class="contact__image">
+                    <img src="{{ url_for('static', filename='images/phone.jpg') }}" alt="Replace this placeholder with your own image" loading="lazy">
+                </div>
+            </div>
             <div class="contact__details" data-aos="fade-up">
                 <p class="contact__text contact__text--pricing">Basic websites typically start from around KSh 15,000–25,000. Web applications and custom software are quoted based on requirements.</p>
                 <div class="contact__links">
@@ -388,7 +413,7 @@
             <div class="services__intro">
                 <div class="services__intro-heading">
                     <p class="section__eyebrow">Newsletter</p>
-                    <h2 class="section__title">Stay<br><span><img src="{{ url_for('static', filename='images/lightbulb.png') }}" alt="" aria-hidden="true">Updated</span></h2>
+                    <h2 class="section__title">Stay<br><span><img src="{{ url_for('static', filename='images/auto-update.png') }}" alt="" aria-hidden="true">Updated</span></h2>
                 </div>
                 <div class="services__intro-copy">
                     <p>Get monthly updates on new projects, tools, and tips — no spam, unsubscribe anytime.</p>
@@ -396,9 +421,10 @@
             </div>
             <form class="subscribe__form" method="POST" action="{{ url_for('subscribe') }}">
                 <input type="text" name="website" tabindex="-1" autocomplete="off" class="form__honeypot" aria-hidden="true">
+                <label for="subscribe-email" class="subscribe__label">Email</label>
                 <div class="subscribe__fields">
                     <input type="email" id="subscribe-email" name="email" class="subscribe__input" placeholder="you@example.com" required aria-label="Email address">
-                    <button type="submit" id="subscribe-btn" class="subscribe__btn" disabled>Subscribe</button>
+                    <button type="submit" id="subscribe-btn" class="subscribe__btn" disabled>Subscribe <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
                 </div>
                 <p id="subscribe-status" class="subscribe__status"></p>
             </form>
@@ -494,4 +520,446 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<!-- ============================================================
+     CUBE CONFIG — cube sketches in the cable band.
+     - count: 2–4 cubes.
+     - positions: uncomment to LOCK exact spots. Each entry is
+       { x: <percent of band width>, y: <percent of band height>,
+         w: <width px, optional>, o: <opacity 0–1, optional> },
+       measured from the top-left, centered on the cube. Generated
+       randomly (capped at 1 decimal) when left as null.
+     - While the dev positioner panel is present, tweaks are also
+       saved to localStorage (key below) and restored on reload.
+       Precedence: CUBE_CONFIG.positions > localStorage > random.
+     ============================================================ -->
+<script>
+(function() {
+    var CUBE_CONFIG = {
+        count: {{ cube_count | default(3) }},
+        // Server-saved positions (SiteSetting `cube_positions`). null until the
+        // admin tunes + saves; the positioner panel writes here automatically.
+        positions: {{ cube_positions | tojson }}
+        // positions: [ { x: 8, y: 22 }, { x: 68, y: 45 }, { x: 36, y: 78 } ],
+    };
+
+    var cubeSrc = "{{ url_for('static', filename='images/cube.png') }}";
+    var band = document.querySelector('.cable-band');
+    if (!band) return;
+
+    var count = Math.max(2, Math.min(4, CUBE_CONFIG.count || 3));
+
+    var STORE_KEY = 'retec_cube_positions_v1';
+    var SAVE_URL = "{{ url_for('admin_save_cube_positions') }}";
+    var CSRF_TOKEN = "{{ csrf_token() }}";
+
+    // Debounced AJAX save to the server. Only ever wired up when the dev
+    // panel is present (admin + positioner enabled), so it never runs for
+    // visitors. localStorage stays as a same-browser fallback.
+    var saveTimer = null;
+    var savePending = false;
+    var savedStatusEl = null;
+
+    function saveToServer(clear) {
+        var body = { positions: exportPositions() };
+        if (clear) body.clear = true;
+        var payload;
+        try { payload = JSON.stringify(body); } catch (e) { return; }
+        if (typeof fetch !== 'function') return;
+        fetch(SAVE_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            },
+            body: payload
+        }).then(function(res) {
+            return res.json().catch(function() { return {}; });
+        }).then(function(data) {
+            var st = document.getElementById('cube-dev-status');
+            if (st) st.textContent = data && data.ok
+                ? 'Saved — ' + (data.count != null ? data.count + ' cubes synced to the site' : '')
+                : ((data && data.error) ? 'Server: ' + data.error : 'Server: not saved');
+        }).catch(function() {
+            var st = document.getElementById('cube-dev-status');
+            if (st) st.textContent = 'Offline — kept on this browser';
+        });
+    }
+
+    function scheduleServerSave() {
+        if (saveTimer) window.clearTimeout(saveTimer);
+        if (savePending) { saveTimer = window.setTimeout(scheduleServerSave, 500); return; }
+        savePending = true;
+        saveTimer = window.setTimeout(function() {
+            savePending = false;
+            saveTimer = null;
+            saveToServer(false);
+        }, 500);
+    }
+
+    function randomPos() {
+        return {
+            x: Math.round((4 + Math.random() * 88) * 10) / 10,
+            y: Math.round((4 + Math.random() * 88) * 10) / 10
+        };
+    }
+
+    function normalizePos(p) {
+        return {
+            x: +p.x || 0,
+            y: +p.y || 0,
+            w: (p.w != null && p.w !== '') ? +p.w : null,
+            o: (p.o != null && p.o !== '') ? Math.min(1, Math.max(0, +p.o)) : null
+        };
+    }
+
+    // Position source priority: baked CUBE_CONFIG -> saved (localStorage) -> random.
+    var positions = (CUBE_CONFIG.positions && CUBE_CONFIG.positions.length === count)
+        ? CUBE_CONFIG.positions.map(normalizePos)
+        : null;
+    if (!positions) {
+        var saved = null;
+        try {
+            saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+        } catch (e) { saved = null; }
+        if (saved && Array.isArray(saved) && saved.length === count) {
+            positions = saved.map(normalizePos);
+        }
+    }
+    if (!positions) {
+        positions = [];
+        for (var i = 0; i < count; i++) positions.push(randomPos());
+    }
+
+    // Called after any tweak; writes the current layout to localStorage
+    // (only while the temp dev panel exists in the page).
+    var notifyPersist = function() {};
+
+    function persistDev() {
+        var dev = document.getElementById('cube-dev-ui');
+        if (!dev) return;
+        var exportPos = positions.map(function(p) {
+            var e = { x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10 };
+            if (p.w != null) e.w = p.w;
+            if (p.o != null) e.o = p.o;
+            return e;
+        });
+        try {
+            localStorage.setItem(STORE_KEY, JSON.stringify(exportPos));
+        } catch (e) {}
+        var st = document.getElementById('cube-dev-status');
+        if (st) st.textContent = 'Saved on this browser';
+    }
+
+    var container = band.querySelector('.cable-band__cubes');
+    var cubes = [];
+    for (var j = 0; j < count; j++) {
+        var img = document.createElement('img');
+        img.className = 'cable-band__cube';
+        img.src = cubeSrc;
+        img.alt = '';
+        img.setAttribute('aria-hidden', 'true');
+        img.setAttribute('decoding', 'async');
+        img.setAttribute('loading', 'lazy');
+        img.style.left = positions[j].x + '%';
+        img.style.top = positions[j].y + '%';
+        img.style.transform = 'translate(-50%, -50%)';
+        if (positions[j].w != null) img.style.width = positions[j].w + 'px';
+        if (positions[j].o != null) img.style.opacity = positions[j].o;
+        img.dataset.cubeIndex = j;
+        container.appendChild(img);
+        cubes.push(img);
+    }
+
+    function applySize(idx, w) {
+        w = Math.max(40, Math.min(600, Math.round(w)));
+        positions[idx].w = w;
+        cubes[idx].style.width = w + 'px';
+    }
+
+    function applyOpacity(idx, o) {
+        o = Math.max(0, Math.min(1, +o));
+        positions[idx].o = Math.round(o * 100) / 100;
+        cubes[idx].style.opacity = positions[idx].o;
+    }
+
+    function setPosition(idx, x, y) {
+        positions[idx].x = Math.round(x * 10) / 10;
+        positions[idx].y = Math.round(y * 10) / 10;
+        var el = cubes[idx];
+        el.style.left = positions[idx].x + '%';
+        el.style.top = positions[idx].y + '%';
+    }
+
+    /* ============================================================
+       TEMP: CUBE POSITIONER UI (DEVELOPMENT ONLY)
+       Delete this whole block (below the marker) when you are happy
+       with the positions. The cubes themselves stay; only the UI and
+       its inline styles go away. Use "Copy config" to lock positions
+       into CUBE_CONFIG above.
+       ============================================================ */
+    function initDevUI() {
+        var uiBody = document.getElementById('cube-dev-ui');
+        if (!uiBody) return;
+        var active = 0;
+        var xRange = document.getElementById('cube-dev-x');
+        var yRange = document.getElementById('cube-dev-y');
+        var xNum = document.getElementById('cube-dev-xnum');
+        var yNum = document.getElementById('cube-dev-ynum');
+        var wRange = document.getElementById('cube-dev-w');
+        var wNum = document.getElementById('cube-dev-wnum');
+        var oRange = document.getElementById('cube-dev-o');
+        var oNum = document.getElementById('cube-dev-onum');
+        var sel = document.getElementById('cube-dev-select');
+        var out = document.getElementById('cube-dev-output');
+
+        notifyPersist = persistDev;
+
+        function currentStyle(idx, prop) {
+            return parseFloat(window.getComputedStyle(cubes[idx])[prop]);
+        }
+
+        function refresh() {
+            Array.prototype.forEach.call(sel.children, function(b, i) {
+                b.classList.toggle('cube-dev__sel-active', i === active);
+            });
+            xRange.value = positions[active].x;
+            yRange.value = positions[active].y;
+            xNum.value = positions[active].x;
+            yNum.value = positions[active].y;
+            var wv = positions[active].w != null ? positions[active].w : Math.round(currentStyle(active, 'width'));
+            var ov = positions[active].o != null ? positions[active].o : currentStyle(active, 'opacity');
+            wRange.value = wv;
+            wNum.value = wv;
+            oRange.value = ov;
+            oNum.value = ov;
+        }
+
+        sel.addEventListener('click', function(e) {
+            var btn = e.target.closest('button[data-i]');
+            if (!btn) return;
+            active = +btn.dataset.i;
+            refresh();
+        });
+
+        function bind(range, num, applyFn) {
+            range.addEventListener('input', function() {
+                num.value = +range.value;
+                applyFn(active, +range.value);
+                notifyPersist();
+            });
+            num.addEventListener('input', function() {
+                range.value = +num.value;
+                applyFn(active, +num.value);
+                notifyPersist();
+            });
+        }
+        bind(xRange, xNum, function(i, v) { setPosition(i, v, positions[i].y); });
+        bind(yRange, yNum, function(i, v) { setPosition(i, positions[i].x, v); });
+        bind(wRange, wNum, applySize);
+        bind(oRange, oNum, applyOpacity);
+
+        document.getElementById('cube-dev-random').addEventListener('click', function() {
+            for (var i = 0; i < count; i++) setPosition(i, randomPos().x, randomPos().y);
+            refresh();
+            notifyPersist();
+        });
+
+        document.getElementById('cube-dev-reset').addEventListener('click', function() {
+            try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+            for (var i = 0; i < count; i++) {
+                positions[i].w = null;
+                positions[i].o = null;
+                cubes[i].style.removeProperty('width');
+                cubes[i].style.removeProperty('opacity');
+                setPosition(i, randomPos().x, randomPos().y);
+            }
+            var st = document.getElementById('cube-dev-status');
+            if (st) st.textContent = 'Cleared \u2014 randomises on next reload';
+            refresh();
+        });
+
+        document.getElementById('cube-dev-copy').addEventListener('click', function() {
+            var exportPos = positions.map(function(p) {
+                var e = {
+                    x: Math.round(p.x * 10) / 10,
+                    y: Math.round(p.y * 10) / 10
+                };
+                if (p.w != null) e.w = p.w;
+                if (p.o != null) e.o = p.o;
+                return e;
+            });
+            var txt = 'positions: ' + JSON.stringify(exportPos, null, 2) + ',';
+            out.value = txt;
+            out.select();
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(txt).catch(function() {});
+            } else if (document.execCommand) {
+                try { document.execCommand('copy'); } catch (e) {}
+            }
+        });
+
+        refresh();
+        persistDev();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initDevUI);
+    } else {
+        initDevUI();
+    }
+    /* ============= /TEMP: CUBE POSITIONER UI ============= */
+})();
+</script>
+
+<!-- ============================================================
+     TEMP: CUBE POSITIONER PANEL (DEVELOPMENT ONLY)
+     Fixed bottom-right panel. Marks each cube with a numbered badge,
+     lets you drag the X/Y sliders or type exact values, live-previews
+     every move, randomizes all positions, and can copy the numbers
+     straight into the CUBE_CONFIG.positions block above.
+     Delete this whole <style> + <div> when done — the cubes remain.
+     ============================================================ -->
+<style>
+#cube-dev-ui {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 99999;
+    width: 276px;
+    font: 12px/1.45 system-ui, -apple-system, sans-serif;
+    color: #e6e6e6;
+    background: #11161d;
+    border: 1px solid #2b3542;
+    border-radius: 12px;
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.32);
+    padding: 12px;
+    user-select: none;
+}
+#cube-dev-ui * { box-sizing: border-box; }
+.cube-dev__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 3px;
+}
+.cube-dev__head strong { font-size: 12px; letter-spacing: 0.02em; }
+.cube-dev__head em {
+    font-style: normal;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #ff6b6b;
+    border: 1px solid rgba(255, 107, 107, 0.5);
+    border-radius: 999px;
+    padding: 1px 7px;
+}
+.cube-dev__hint { font-size: 10px; color: #8b95a5; margin-bottom: 9px; }
+.cube-dev__select { display: flex; gap: 5px; margin-bottom: 11px; }
+.cube-dev__select button {
+    flex: 1;
+    padding: 5px 0;
+    font-size: 11px;
+    background: transparent;
+    color: #cfd6e0;
+    border: 1px solid #2f3a48;
+    border-radius: 7px;
+    cursor: pointer;
+}
+.cube-dev__select button.cube-dev__sel-active {
+    background: #2f6fed;
+    border-color: #2f6fed;
+    color: #fff;
+}
+.cube-dev__row {
+    display: grid;
+    grid-template-columns: 16px 1fr 50px;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 11px;
+}
+.cube-dev__row input[type="range"] { width: 100%; accent-color: #2f6fed; }
+.cube-dev__row input[type="number"] {
+    width: 100%;
+    padding: 2px 4px;
+    font-size: 11px;
+    color: #e6e6e6;
+    background: #1a2029;
+    border: 1px solid #2b3542;
+    border-radius: 5px;
+    text-align: center;
+}
+.cube-dev__actions { display: flex; gap: 5px; margin-top: 3px; }
+.cube-dev__actions button {
+    flex: 1;
+    padding: 6px 0;
+    font-size: 11px;
+    background: #1a2029;
+    color: #e6e6e6;
+    border: 1px solid #2b3542;
+    border-radius: 7px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.cube-dev__actions button:hover { background: #232c39; }
+.cube-dev__status { min-height: 14px; margin-top: 6px; font-size: 10px; color: #79c66a; }
+#cube-dev-output {
+    width: 100%;
+    min-height: 46px;
+    margin-top: 9px;
+    padding: 6px;
+    font: 10px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: #9ee493;
+    background: #0b0f14;
+    border: 1px solid #22303f;
+    border-radius: 7px;
+    resize: vertical;
+}
+</style>
+<div id="cube-dev-ui" hidden>
+    <div class="cube-dev__head">
+        <strong>Cube Positioner</strong>
+        <em>temporary</em>
+    </div>
+    <div class="cube-dev__hint">Adjustments save automatically to this browser and are restored on reload. Copy the config when done, then delete this panel.</div>
+    <div class="cube-dev__select" id="cube-dev-select"></div>
+    <div class="cube-dev__row"><span>X</span><input type="range" id="cube-dev-x" min="0" max="100" step="0.1"><input type="number" id="cube-dev-xnum" min="0" max="100" step="0.1"></div>
+    <div class="cube-dev__row"><span>Y</span><input type="range" id="cube-dev-y" min="0" max="100" step="0.1"><input type="number" id="cube-dev-ynum" min="0" max="100" step="0.1"></div>
+    <div class="cube-dev__row"><span>W</span><input type="range" id="cube-dev-w" min="40" max="600" step="1"><input type="number" id="cube-dev-wnum" min="40" max="600" step="1"></div>
+    <div class="cube-dev__row"><span>O</span><input type="range" id="cube-dev-o" min="0" max="1" step="0.01"><input type="number" id="cube-dev-onum" min="0" max="1" step="0.01"></div>
+    <div class="cube-dev__actions">
+        <button type="button" id="cube-dev-random">Randomize</button>
+        <button type="button" id="cube-dev-reset">Reset</button>
+        <button type="button" id="cube-dev-copy">Copy config</button>
+        <button type="button" id="cube-dev-toggle">Hide</button>
+    </div>
+    <div class="cube-dev__status" id="cube-dev-status"></div>
+    <textarea id="cube-dev-output" spellcheck="false" aria-label="Exported cube positions"></textarea>
+</div>
+<script>
+(function() {
+    var box = document.getElementById('cube-dev-ui');
+    if (!box) return;
+
+    var cubes = document.querySelectorAll('.cable-band__cube');
+    var select = document.getElementById('cube-dev-select');
+    select.innerHTML = '';
+    Array.prototype.forEach.call(cubes, function(cube, i) {
+        var badge = document.createElement('button');
+        badge.type = 'button';
+        badge.dataset.i = i;
+        badge.textContent = 'Cube ' + (i + 1);
+        select.appendChild(badge);
+        cube.style.outline = '1px dashed rgba(47, 111, 237, 0.55)';
+    });
+
+    box.removeAttribute('hidden');
+
+    document.getElementById('cube-dev-toggle').addEventListener('click', function() {
+        box.hidden = !box.hidden;
+    });
+})();
+</script>
+<!-- /TEMP: CUBE POSITIONER PANEL ============================================================ -->
 {% endblock %}

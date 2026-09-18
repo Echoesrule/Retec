@@ -59,6 +59,35 @@
                 <input type="number" id="hero_quote_interval" name="hero_quote_interval" value="{{ hero_quote_interval }}" min="2000" step="1000">
                 <span style="font-size:0.8rem;opacity:0.7;">How long each quote shows before cycling to the next. 6000ms = 6 seconds.</span>
             </div>
+
+            <div class="admin-form__group admin-form__group--checkbox" style="border-top:1px solid var(--border,#eee);margin-top:1.2rem;padding-top:1.2rem;">
+                <label>
+                    <input type="checkbox" name="cube_positioner_enabled" value="1" {% if cube_positioner_enabled %}checked{% endif %}>
+                    Enable cube positioner (panel for tuning cube positions)
+                </label>
+                <span style="font-size:0.8rem;opacity:0.7;display:block;margin-top:0.4rem;">
+                    While this is on, open the homepage <strong>while logged in</strong> to drag cubes — changes save to the site automatically.
+                    Visitors never see the panel. Turn it off when you deploy.
+                </span>
+            </div>
+            <div class="admin-form__group">
+                <label>Currently saved cube positions</label>
+                <div style="background:var(--bg,#f5f5f5);border:1px solid var(--border,#ddd);border-radius:6px;padding:0.6rem;font-size:0.78rem;white-space:pre-wrap;word-break:break-word;max-height:140px;overflow:auto;">
+                    {% if cube_positions %}
+                        {{ cube_positions | tojson | indent(4) }}
+                    {% else %}
+                        None — cubes render at random.
+                    {% endif %}
+                </div>
+                <span style="font-size:0.8rem;opacity:0.7;">Set by the positioner panel. Clear to return cubes to random placement.</span>
+                <div style="margin-top:0.6rem;">
+                    <form method="POST" onsubmit="return confirm('Clear saved cube positions? Cubes will go back to random placement.')" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" name="clear_cube_positions" value="1" class="admin-btn admin-btn--danger" style="padding:0.45rem 0.9rem;font-size:0.8rem;">Clear saved positions</button>
+                    </form>
+                </div>
+            </div>
+
             <div class="admin-form__actions">
                 <button type="submit" class="admin-btn admin-btn--primary">Save Changes</button>
                 <a href="{{ url_for('admin_dashboard') }}" class="admin-btn">Cancel</a>
