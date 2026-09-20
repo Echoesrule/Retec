@@ -15,3 +15,11 @@ nul
 venv/
 .env.example
 node modules/
+
+# Local secrets and scratch files
+Overpswd.txt
+new_key
+new_key.pub
+todo.txt
+static/images/self-injection.cpp
+static/images/testimonialdesign inspo.jpg
