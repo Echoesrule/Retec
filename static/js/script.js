@@ -165,4 +165,61 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    /* ===== TESTIMONIALS CAROUSEL ===== */
+    const tTrack = document.querySelector('.testimonials__track');
+    if (tTrack) {
+        const tPrev = document.querySelector('.testimonials__arrow--prev');
+        const tNext = document.querySelector('.testimonials__arrow--next');
+        const tCards = Array.from(tTrack.querySelectorAll('.testimonial-card'));
+
+        const tStep = () => {
+            const first = tCards[0];
+            if (!first) return 0;
+            const gap = parseFloat(getComputedStyle(tTrack).columnGap) || 0;
+            return first.getBoundingClientRect().width + gap;
+        };
+
+        const tUpdate = () => {
+            const max = tTrack.scrollWidth - tTrack.clientWidth;
+            if (tPrev) tPrev.disabled = tTrack.scrollLeft <= 1;
+            if (tNext) tNext.disabled = tTrack.scrollLeft >= max - 1;
+        };
+
+        if (tPrev) tPrev.addEventListener('click', () => tTrack.scrollBy({ left: -tStep(), behavior: 'smooth' }));
+        if (tNext) tNext.addEventListener('click', () => tTrack.scrollBy({ left: tStep(), behavior: 'smooth' }));
+        tTrack.addEventListener('scroll', () => requestAnimationFrame(tUpdate), { passive: true });
+
+        let tDrag = false;
+        let tStartX = 0;
+        let tStartScroll = 0;
+
+        tTrack.addEventListener('pointerdown', (e) => {
+            if (e.pointerType !== 'mouse') return;
+            tDrag = true;
+            tStartX = e.pageX;
+            tStartScroll = tTrack.scrollLeft;
+            tTrack.classList.add('testimonials__track--dragging');
+            tTrack.setPointerCapture(e.pointerId);
+        });
+
+        tTrack.addEventListener('pointermove', (e) => {
+            if (!tDrag) return;
+            tTrack.scrollLeft = tStartScroll - (e.pageX - tStartX);
+        });
+
+        const tEndDrag = (e) => {
+            if (!tDrag) return;
+            tDrag = false;
+            tTrack.classList.remove('testimonials__track--dragging');
+            try { tTrack.releasePointerCapture(e.pointerId); } catch (_) {}
+        };
+
+        tTrack.addEventListener('pointerup', tEndDrag);
+        tTrack.addEventListener('pointercancel', tEndDrag);
+
+        window.addEventListener('resize', tUpdate);
+        setTimeout(tUpdate, 350);
+        tUpdate();
+    }
+
 });

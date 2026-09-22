@@ -222,26 +222,51 @@
 
 <!-- ===== TESTIMONIALS ===== -->
 {% if testimonials %}
-<section class="section testimonials section--light" id="testimonials">
+<section class="section testimonials testimonials--carousel section--light" id="testimonials" aria-label="Client reviews">
     <div class="container">
-        <h2 class="section__title" data-aos="fade-up">What People Say</h2>
-        <div class="testimonials__grid">
-            {% for t in testimonials %}
-            <div class="testimonial__card" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 }}">
-                <div class="testimonial__avatar">
-                    {% if t.avatar_filename %}
-                    <img src="{{ get_image_url(t.avatar_filename) }}" alt="{{ t.name }}" loading="lazy">
-                    {% else %}
-                    <i class="fa-solid fa-user"></i>
-                    {% endif %}
-                </div>
-                <p class="testimonial__text">{{ t.text }}</p>
-                <div class="testimonial__author">
-                    <strong>{{ t.name }}</strong>
-                    {% if t.role %}<span>{{ t.role }}</span>{% endif %}
-                </div>
+        <div class="testimonials__header" data-aos="fade-up">
+            <div>
+                <span class="testimonials__eyebrow">Our Reviews</span>
+                <h2 class="testimonials__title">What Our <span>Clients</span> Say</h2>
             </div>
-            {% endfor %}
+            <div class="testimonials__controls">
+                <button type="button" class="testimonials__arrow testimonials__arrow--prev" aria-label="Previous testimonial">
+                    <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="testimonials__arrow testimonials__arrow--next" aria-label="Next testimonial">
+                    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+        <div class="testimonials__viewport">
+            <div class="testimonials__track">
+                {% for t in testimonials %}
+                {% set role_split = (t.role or '').split(',', 1) %}
+                {% set person_role = role_split[0].strip() if role_split|length > 1 else '' %}
+                {% set company = role_split[1].strip() if role_split|length > 1 else t.role %}
+                <article class="testimonial-card" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 }}">
+                    <div class="testimonial-card__top">
+                        <div class="testimonial-card__avatar">
+                            {% if t.avatar_filename %}
+                            <img src="{{ get_image_url(t.avatar_filename) }}" alt="{{ t.name }}" loading="lazy">
+                            {% else %}
+                            <i class="fa-solid fa-user" aria-hidden="true"></i>
+                            {% endif %}
+                        </div>
+                        {% if company %}
+                        <div class="testimonial-card__company">{{ company }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="testimonial-card__quote">&ldquo;</div>
+                    <p class="testimonial-card__text">{{ t.text }}</p>
+                    <div class="testimonial-card__author">
+                        <strong>{{ t.name }}</strong>
+                        {% if person_role %}<span>{{ person_role }}</span>{% endif %}
+                        {% if company %}<small>{{ company }}</small>{% endif %}
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
         </div>
     </div>
 </section>

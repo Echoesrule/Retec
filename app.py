@@ -42,6 +42,7 @@ app.config['BREVO_LIST_ID'] = os.environ.get('BREVO_LIST_ID', '')
 app.config['ZEROBOUNCE_API_KEY'] = os.environ.get('ZEROBOUNCE_API_KEY', '')
 app.config['CLOUDINARY_URL'] = os.environ.get('CLOUDINARY_URL', '')
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600
+app.config['WTF_CSRF_SSL_STRICT'] = False
 
 _cloudinary_url = app.config['CLOUDINARY_URL']
 if _cloudinary_url:
@@ -915,7 +916,7 @@ def inject_globals():
         'fun_facts': fun_facts,
         'fun_fact': fun_facts[0].text if fun_facts else None,
         'github_stats': github_stats,
-        'meta_title': 'Retec Biz Yako.Tech Yetu',
+        'meta_title': 'Retec-Biz Yako.Tech Yetu',
         'meta_desc': 'RETEC builds modern websites, web applications, custom software, and digital solutions for businesses, creators, and organizations.',
         'meta_url': meta_url,
         'meta_image': meta_image,
