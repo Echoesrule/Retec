@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, Response
 from datetime import datetime, timezone
-import os, requests, csv, io, re, time, secrets, json
+import os, requests, csv, io, re, time, secrets, json, socket
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_wtf.csrf import CSRFProtect
@@ -457,6 +457,8 @@ def upload_image(file):
     saved_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(saved_path)
     if _cloudinary_url:
+        prev_timeout = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(30)
         try:
             ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
             params = {'folder': 'portfolio'}
@@ -467,6 +469,8 @@ def upload_image(file):
             return result['secure_url']
         except Exception as e:
             print(f'[UPLOAD] Cloudinary failed for {filename}: {e}')
+        finally:
+            socket.setdefaulttimeout(prev_timeout)
     else:
         print(f'[UPLOAD] No CLOUDINARY_URL set, saving locally: {filename}')
     return filename
@@ -1198,6 +1202,8 @@ def admin_hero_settings():
                         db.session.add(SiteSetting(key='hero_video', value=url))
                     db.session.commit()
                     flash('Hero video updated.', 'success')
+                else:
+                    flash('Hero video upload failed — check the file type and that it is under 16MB.', 'error')
             if request.files.get('poster') and request.files['poster'].filename:
                 url = upload_image(request.files['poster'])
                 if url:
@@ -1208,6 +1214,8 @@ def admin_hero_settings():
                         db.session.add(SiteSetting(key='hero_poster', value=url))
                     db.session.commit()
                     flash('Hero poster updated.', 'success')
+                else:
+                    flash('Hero poster upload failed — check the file type and that it is under 16MB.', 'error')
         else:
             if request.files.get('hero_image') and request.files['hero_image'].filename:
                 url = upload_image(request.files['hero_image'])
@@ -1219,6 +1227,8 @@ def admin_hero_settings():
                         db.session.add(SiteSetting(key='hero_image', value=url))
                     db.session.commit()
                     flash('Hero image updated.', 'success')
+                else:
+                    flash('Hero image upload failed — check the file type and that it is under 16MB.', 'error')
         return redirect(url_for('admin_hero_settings'))
     hero_bg_type = SiteSetting.query.filter_by(key='hero_bg_type').first()
     hero_video = SiteSetting.query.filter_by(key='hero_video').first()

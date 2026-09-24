@@ -20,7 +20,7 @@
                         </p>
 
                         <h1 class="hero-editorial__title hero-editorial__reveal">
-                            Biz Yako.<span class="hero-editorial__title-lite">Tech&nbsp;Yetu.</span>
+                            Bring Yourself To<span class="hero-editorial__title-lite">The &nbsp;Top.</span>
                         </h1>
 
                         <p class="hero-editorial__desc hero-editorial__reveal">
@@ -132,7 +132,7 @@
         <div class="services__intro" data-aos="fade-up">
             <div class="services__intro-heading">
                 <p class="section__eyebrow">About</p>
-                <h2 class="section__title">What is<br><span>RETEC?</span></h2>
+                <h2 class="section__title">What is<br><span>Retec?</span></h2>
             </div>
             <div class="services__intro-copy">
                 <p>A small studio for useful, well-made technology.</p>
@@ -855,13 +855,14 @@
 })();
 </script>
 
+{% if cube_positioner_enabled %}
 <!-- ============================================================
-     TEMP: CUBE POSITIONER PANEL (DEVELOPMENT ONLY)
-     Fixed bottom-right panel. Marks each cube with a numbered badge,
-     lets you drag the X/Y sliders or type exact values, live-previews
-     every move, randomizes all positions, and can copy the numbers
-     straight into the CUBE_CONFIG.positions block above.
-     Delete this whole <style> + <div> when done — the cubes remain.
+     CUBE POSITIONER PANEL (ADMIN ONLY)
+     Only rendered for a logged-in admin while the "Enable cube
+     positioner" switch is on in Admin → Hero Settings. Not sent to
+     visitors at all. Fixed bottom-right panel: numbered badges, X/Y
+     sliders or exact values, live preview, randomize, and "Copy
+     config" to bake positions into CUBE_CONFIG above.
      ============================================================ -->
 <style>
 #cube-dev-ui {
@@ -1004,7 +1005,8 @@
     });
 })();
 </script>
-<!-- /TEMP: CUBE POSITIONER PANEL ============================================================ -->
+<!-- /CUBE POSITIONER PANEL ============================================================ -->
+{% endif %}
 {% endblock %}
 
 {% block page_scripts %}

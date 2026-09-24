@@ -81,10 +81,10 @@
                 </div>
                 <span style="font-size:0.8rem;opacity:0.7;">Set by the positioner panel. Clear to return cubes to random placement.</span>
                 <div style="margin-top:0.6rem;">
-                    <form method="POST" onsubmit="return confirm('Clear saved cube positions? Cubes will go back to random placement.')" style="display:inline;">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" name="clear_cube_positions" value="1" class="admin-btn admin-btn--danger" style="padding:0.45rem 0.9rem;font-size:0.8rem;">Clear saved positions</button>
-                    </form>
+                    <button type="submit" form="clear-cube-positions-form"
+                            class="admin-btn admin-btn--danger" style="padding:0.45rem 0.9rem;font-size:0.8rem;">
+                        Clear saved positions
+                    </button>
                 </div>
             </div>
 
@@ -92,6 +92,11 @@
                 <button type="submit" class="admin-btn admin-btn--primary">Save Changes</button>
                 <a href="{{ url_for('admin_dashboard') }}" class="admin-btn">Cancel</a>
             </div>
+        </form>
+        <form id="clear-cube-positions-form" method="POST" class="admin-form"
+              onsubmit="return confirm('Clear saved cube positions? Cubes will go back to random placement.')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="clear_cube_positions" value="1">
         </form>
     </div>
 </div>
