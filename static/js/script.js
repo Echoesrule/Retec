@@ -1,50 +1,54 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    AOS.init({
-        duration: 600,
-        easing: 'ease-out-cubic',
-        once: true,
-        offset: 60
-    });
+    if (window.AOS) {
+        AOS.init({
+            duration: 600,
+            easing: 'ease-out-cubic',
+            once: true,
+            offset: 60
+        });
+    }
 
     const header = document.getElementById('header');
     const navToggle = document.getElementById('nav-toggle');
     const navMenu = document.getElementById('nav-menu');
-    const navLinks = document.querySelectorAll('.nav__link');
     const pageContent = document.getElementById('pageContent');
 
     /* ===== HEADER SCROLL ===== */
-    window.addEventListener('scroll', () => {
-        if (window.pageYOffset > 60) {
-            header.classList.add('header--scrolled');
-        } else {
-            header.classList.remove('header--scrolled');
-        }
-    });
+    if (header) {
+        let ticking = false;
+        window.addEventListener('scroll', () => {
+            if (ticking) return;
+            ticking = true;
+            requestAnimationFrame(() => {
+                header.classList.toggle('header--scrolled', window.pageYOffset > 60);
+                ticking = false;
+            });
+        }, { passive: true });
+    }
 
     /* ===== MOBILE MENU ===== */
+    const setNavMenu = (open) => {
+        if (!navToggle || !navMenu) return;
+        navToggle.classList.toggle('nav__toggle--active', open);
+        navMenu.classList.toggle('nav__menu--open', open);
+        navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        document.body.style.overflow = open ? 'hidden' : '';
+    };
+
     if (navToggle) {
-        navToggle.addEventListener('click', () => {
-            navToggle.classList.toggle('nav__toggle--active');
-            navMenu.classList.toggle('nav__menu--open');
-            const isOpen = navMenu.classList.contains('nav__menu--open');
-            navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-            document.body.style.overflow = isOpen ? 'hidden' : '';
+        navToggle.addEventListener('click', () => setNavMenu(!navMenu.classList.contains('nav__menu--open')));
+    }
+    if (navMenu) {
+        navMenu.addEventListener('click', (e) => {
+            if (e.target.closest('a')) setNavMenu(false);
         });
     }
 
-    navLinks.forEach(link => {
-        link.addEventListener('click', () => {
-            navToggle.classList.remove('nav__toggle--active');
-            navMenu.classList.remove('nav__menu--open');
-            navToggle.setAttribute('aria-expanded', 'false');
-            document.body.style.overflow = '';
-        });
-    });
-
     const scrollToSection = (hash) => {
-        if (!hash) return false;
-        const target = document.querySelector(hash);
+        if (!hash || hash === '#') return false;
+        let target;
+        try { target = document.querySelector(hash); } catch (_) { return false; }
         if (!target) return false;
         pageContent?.classList.remove('page-content--fading');
         target.scrollIntoView({ behavior: 'smooth' });
@@ -52,13 +56,34 @@ document.addEventListener('DOMContentLoaded', () => {
         return true;
     };
 
-    /* ===== SMOOTH SCROLL ===== */
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            if (scrollToSection(this.getAttribute('href'))) {
+    /* ===== SMOOTH SCROLL + PAGE TRANSITIONS (delegated) ===== */
+    document.addEventListener('click', (e) => {
+        const link = e.target.closest('a[href]');
+        if (!link || link.target === '_blank' || link.hasAttribute('download')) return;
+        const href = link.getAttribute('href');
+        if (!href || /^(mailto:|tel:|javascript:|about:)/i.test(href)) return;
+
+        if (href.startsWith('#')) {
+            if (scrollToSection(href)) e.preventDefault();
+            return;
+        }
+        if (href.startsWith('//') || /^https?:/i.test(href)) return;
+        if (!pageContent) return;
+
+        const url = new URL(href, window.location.href);
+        if (url.origin !== window.location.origin) return;
+        if (url.pathname === window.location.pathname && url.hash) {
+            if (scrollToSection(url.hash)) {
                 e.preventDefault();
+                return;
             }
-        });
+        }
+
+        e.preventDefault();
+        pageContent.classList.add('page-content--fading');
+        setTimeout(() => {
+            window.location.href = url.href;
+        }, 220);
     });
 
     /* ===== FUN FACT DISMISS ===== */
@@ -70,30 +95,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    /* ===== PAGE TRANSITIONS ===== */
+    /* ===== PAGE TRANSITIONS RESET ===== */
     if (pageContent) {
         window.addEventListener('pageshow', () => {
             pageContent.classList.remove('page-content--fading');
-            AOS.refresh();
-        });
-
-        document.querySelectorAll('a[href]').forEach(link => {
-            const href = link.getAttribute('href');
-            if (!href || href.startsWith('#') || href.startsWith('http') || href.startsWith('//') || link.getAttribute('target') === '_blank') return;
-            link.addEventListener('click', (e) => {
-                const url = new URL(href, window.location.href);
-                const isSamePageHash = url.pathname === window.location.pathname && url.hash;
-                if (isSamePageHash && scrollToSection(url.hash)) {
-                    e.preventDefault();
-                    return;
-                }
-
-                e.preventDefault();
-                pageContent.classList.add('page-content--fading');
-                setTimeout(() => {
-                    window.location.href = url.href;
-                }, 220);
-            });
+            if (window.AOS) AOS.refresh();
         });
     }
 
@@ -124,15 +130,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
                 .then(r => r.json())
                 .then(data => {
-                    if (data.valid) {
-                        statusEl.textContent = data.message;
-                        statusEl.className = 'subscribe__status subscribe__status--valid';
-                        subBtn.disabled = false;
-                    } else {
-                        statusEl.textContent = data.message;
-                        statusEl.className = 'subscribe__status subscribe__status--invalid';
-                        subBtn.disabled = true;
-                    }
+                    statusEl.textContent = data.message;
+                    statusEl.className = 'subscribe__status ' + (data.valid
+                        ? 'subscribe__status--valid'
+                        : 'subscribe__status--invalid');
+                    subBtn.disabled = !data.valid;
                 })
                 .catch(() => {
                     statusEl.textContent = 'Could not verify.';
@@ -148,21 +150,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const workGrid = document.querySelector('.work__grid');
     if (filters.length && workGrid) {
         const cards = workGrid.querySelectorAll('.work__card');
-        filters.forEach(btn => {
-            btn.addEventListener('click', () => {
-                filters.forEach(f => f.classList.remove('work__filter--active'));
-                btn.classList.add('work__filter--active');
-                const filter = btn.dataset.filter;
-                cards.forEach(card => {
-                    if (filter === 'all') {
-                        card.style.display = '';
-                    } else {
-                        const cat = card.dataset.category || '';
-                        card.style.display = cat === filter ? '' : 'none';
-                    }
-                });
+        const applyFilter = (btn) => {
+            filters.forEach(f => f.classList.remove('work__filter--active'));
+            btn.classList.add('work__filter--active');
+            const filter = btn.dataset.filter;
+            cards.forEach(card => {
+                if (filter === 'all') {
+                    card.style.display = '';
+                } else {
+                    const cat = card.dataset.category || '';
+                    card.style.display = cat === filter ? '' : 'none';
+                }
             });
-        });
+        };
+        filters.forEach(btn => btn.addEventListener('click', () => applyFilter(btn)));
     }
 
     /* ===== TESTIMONIALS CAROUSEL ===== */
@@ -218,7 +219,6 @@ document.addEventListener('DOMContentLoaded', () => {
         tTrack.addEventListener('pointercancel', tEndDrag);
 
         window.addEventListener('resize', tUpdate);
-        setTimeout(tUpdate, 350);
         tUpdate();
     }
 

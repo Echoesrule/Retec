@@ -36,7 +36,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/variables.css') }}?v={{ css_version }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts.css') }}?v={{ css_version }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ css_version }}">
-    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
 </head>
 <body class="{% if active == 'home' %}home-page{% else %}inner-page{% endif %}">
 
@@ -103,7 +103,7 @@
     {% endif %}
 
     <a href="/cv" class="floating-cv" aria-label="CV / Resume">
-        <i class="fa-solid fa-file-lines"></i>
+        <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
     </a>
 
     <a href="https://wa.me/+254114581500" target="_blank" rel="noopener" class="floating-whatsapp" aria-label="WhatsApp">
@@ -130,7 +130,7 @@
         <div class="container">
             <div class="footer__grid">
                 <div class="footer__group">
-                    <h4>Products</h4>
+                    <h3>Products</h3>
                     <ul>
                         <li><a href="/#services">Apps</a></li>
                         <li><a href="/#services">Workflows</a></li>
@@ -139,7 +139,7 @@
                     </ul>
                 </div>
                 <div class="footer__group">
-                    <h4>Solutions</h4>
+                    <h3>Solutions</h3>
                     <ul>
                         <li><a href="/#services">AI apps</a></li>
                         <li><a href="/#services">External apps</a></li>
@@ -148,14 +148,14 @@
                     </ul>
                 </div>
                 <div class="footer__group">
-                    <h4>Resources</h4>
+                    <h3>Resources</h3>
                     <ul>
                         <li><a href="/blog">Blog</a></li>
                         <li><a href="/blog">Reports</a></li>
                     </ul>
                 </div>
                 <div class="footer__group">
-                    <h4>Developers</h4>
+                    <h3>Developers</h3>
                     <ul>
                         <li><a href="/cv">Documentation</a></li>
                         <li><a href="/cv">Changelog</a></li>
@@ -164,7 +164,7 @@
                     </ul>
                 </div>
                 <div class="footer__group">
-                    <h4>Company</h4>
+                    <h3>Company</h3>
                     <ul>
                         <li><a href="/#about">About</a></li>
                         <li><a href="/#about">Careers</a></li>
@@ -180,11 +180,11 @@
                         <li><a href="/#contact">Security</a></li>
                         <li><a href="/admin">Admin</a></li>
                     </ul>
-                    <div class="footer__copyright"><span class="footer__dot">●</span> RETEC 2024</div>
+                    <div class="footer__copyright"><span class="footer__dot">●</span> RETEC {{ year }}</div>
                 </div>
             </div>
 
-            <div class="footer__brand-mark" aria-label="RETEC brand mark">
+            <div class="footer__brand-mark">
                 <svg class="footer__logo-svg" viewBox="0 0 560 140" role="img" aria-label="RETEC logo" xmlns="http://www.w3.org/2000/svg">
                     <g transform="translate(6, 18)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="0" y1="18" x2="42" y2="18" stroke-width="4"/>
@@ -198,10 +198,9 @@
         </div>
     </footer>
 
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-    <script src="{{ url_for('static', filename='js/anime.umd.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+    {% block page_scripts %}{% endblock %}
+    <script src="{{ url_for('static', filename='js/script.js') }}?v={{ css_version }}"></script>
+    <script src="{{ url_for('static', filename='js/analytics.js') }}?v={{ css_version }}"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         const navLinks = document.querySelectorAll('.nav__link, .nav__btn');
@@ -243,25 +242,6 @@
         }, { root: null, threshold: 0.55 });
 
         sections.forEach(s => obs.observe(s));
-
-        // Smooth scrolling for internal links and keep active state on click
-        navLinks.forEach(link => {
-            link.addEventListener('click', function(e) {
-                const href = this.getAttribute('href') || '';
-                if (href.startsWith('#') || href.startsWith('/#')) {
-                    e.preventDefault();
-                    const id = href.replace('/#', '').replace('#', '');
-                    const target = document.getElementById(id);
-                    if (target) {
-                        window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
-                        // set active immediately
-                        clearActive();
-                        if (this.classList.contains('nav__btn')) this.classList.add('nav__active');
-                        else this.classList.add('nav__link--active');
-                    }
-                }
-            });
-        });
     });
     </script>
 </body>

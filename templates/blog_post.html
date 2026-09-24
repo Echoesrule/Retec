@@ -130,7 +130,15 @@
         var pct = Math.min(Math.max(scrolled / total * 100, 0), 100);
         bar.style.width = pct + '%';
     }
-    window.addEventListener('scroll', updateProgress, {passive:true});
+    var ticking = false;
+    window.addEventListener('scroll', function() {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function() {
+            updateProgress();
+            ticking = false;
+        });
+    }, {passive:true});
     updateProgress();
 })();
 </script>
