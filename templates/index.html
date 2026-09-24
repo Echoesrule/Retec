@@ -103,15 +103,21 @@
                 <!-- ===== Client / trust bar ===== -->
                 <div class="hero-editorial__logos">
                     <span class="hero-editorial__logos-label">Selected work</span>
-                    {% if projects %}
-                        {% for p in projects[:5] %}
-                            <span class="hero-editorial__logo">{{ p.title }}</span>
-                        {% endfor %}
-                    {% else %}
-                        <span class="hero-editorial__logo">Web</span>
-                        <span class="hero-editorial__logo">Apps</span>
-                        <span class="hero-editorial__logo">Systems</span>
-                    {% endif %}
+                    <div class="hero-editorial__logos-track">
+                        <div class="hero-editorial__logos-list" id="selectedWorkList">
+                            {% for n in range(2) %}
+                                {% if projects %}
+                                    {% for p in projects[:5] %}
+                                        <span class="hero-editorial__logo">{{ p.title }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="hero-editorial__logo">Web</span>
+                                    <span class="hero-editorial__logo">Apps</span>
+                                    <span class="hero-editorial__logo">Systems</span>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
 
             </div>
@@ -119,47 +125,27 @@
     </div>
 </section>
 
-<script>
-(function () {
-    var hero = document.getElementById('hero');
-    if (!hero) return;
-    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    var reveals = hero.querySelectorAll('.hero-editorial__reveal');
-    if (!reveals.length) return;
-    hero.classList.add('hero-editorial--anim');
-    reveals.forEach(function (el, i) {
-        el.style.setProperty('--he-delay', (80 * i) + 'ms');
-    });
-    requestAnimationFrame(function () {
-        requestAnimationFrame(function () {
-            hero.classList.add('is-in');
-        });
-    });
-})();
-</script>
-
 <!-- ===== ABOUT ===== -->
 <section class="section about section--light" id="about">
     <div class="container">
-        <div class="about__content" data-aos="fade-up">
-            <p class="section__eyebrow">About</p>
-            <div class="about__intro">
-                <h2 class="about__title">What is<br><em>RETEC?</em></h2>
-                <div class="about__copy">
-                    <p class="about__lead">A small studio for useful, well-made technology.</p>
-                    <p class="about__text">
-                        RETEC is an independent software and digital solutions studio building practical technology for businesses, creators, and organizations.
-                    </p>
-                    <p class="about__text">
-                        From professional websites to custom web applications and business tools, we turn ideas and real-world problems into reliable digital products.
-                    </p>
-                </div>
+
+        <div class="services__intro" data-aos="fade-up">
+            <div class="services__intro-heading">
+                <p class="section__eyebrow">About</p>
+                <h2 class="section__title">What is<br><span>RETEC?</span></h2>
             </div>
-            <div class="about__details" aria-label="RETEC studio details">
-                <span>01 / Independent</span>
-                <span>02 / Practical</span>
-                <span>03 / Built with care</span>
+            <div class="services__intro-copy">
+                <p>A small studio for useful, well-made technology.</p>
+                <p>RETEC is an independent software and digital solutions studio building practical technology for businesses, creators, and organizations.</p>
+                <p>From professional websites to custom web applications and business tools, we turn ideas and real-world problems into reliable digital products.</p>
+                <a href="#contact" class="section__cta">Start a Project <i class="fa-solid fa-arrow-right"></i></a>
             </div>
+        </div>
+
+        <div class="about__details" aria-label="RETEC studio details">
+            <span class="about__detail"><span class="about__detail-num">01</span> Independent</span>
+            <span class="about__detail"><span class="about__detail-num">02</span> Practical</span>
+            <span class="about__detail"><span class="about__detail-num">03</span> Built with care</span>
         </div>
 
         <div class="founder-feature" data-aos="fade-up">
@@ -1019,4 +1005,9 @@
 })();
 </script>
 <!-- /TEMP: CUBE POSITIONER PANEL ============================================================ -->
+{% endblock %}
+
+{% block page_scripts %}
+<script src="{{ url_for('static', filename='js/anime.umd.min.js') }}?v={{ css_version }}"></script>
+<script src="{{ url_for('static', filename='js/lp-hero.js') }}?v={{ css_version }}"></script>
 {% endblock %}
