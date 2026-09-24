@@ -974,6 +974,9 @@ def not_found(e):
 
 @app.errorhandler(429)
 def rate_limited(e):
+    if request.path.startswith('/admin'):
+        flash('Too many attempts. Please try again in a minute.', 'error')
+        return redirect(url_for('admin_login'))
     flash('Too many messages. Please try again later.', 'error')
     return redirect(url_for('home') + '#contact')
 
@@ -1137,6 +1140,7 @@ def track_interest():
 # ===== ADMIN ROUTES =====
 
 @app.route('/admin/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute", methods=["POST"])
 @csrf.exempt
 def admin_login():
     if request.method == 'POST':
