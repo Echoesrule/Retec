@@ -1,21 +1,142 @@
 {% extends "base.html" %}
+
 {% block content %}
 
 <!-- ===== HERO ===== -->
-<section class="hero {% if hero_bg_type == 'image' %}hero--image{% endif %}" id="hero" {% if hero_bg_type == 'image' %}style="background-image:url('{{ hero_image_url }}')"{% endif %}>
-    {% if hero_bg_type == 'video' %}
-    <video id="heroVideo" class="hero__bg" src="{{ hero_video_url }}" autoplay muted loop playsinline poster="{{ hero_poster_url }}"></video>
-    {% endif %}
-    <div class="hero__overlay"></div>
-    <div class="container hero__container">
-        <div class="hero__text">
-            <p class="hero__eyebrow">We Are</p>
-            <h1 class="hero__title">RETEC</h1>
-            <p class="hero__subtitle">Design <span aria-hidden="true">|</span> Development <span aria-hidden="true">|</span> Digital solutions</p>
-            <p class="hero__year">2026</p>
-        </div>
+<section class="hero-editorial" id="hero">
+    <div class="container hero-editorial__container">
+
+        <div class="hero-editorial__canvas">
+
+            <div class="hero-editorial__grid">
+
+                    <!-- ===== Left column ===== -->
+                    <div class="hero-editorial__content">
+                        <p class="hero-editorial__pill hero-editorial__reveal">
+                            <span class="hero-editorial__pill-icon" aria-hidden="true">
+                                <i class="fa-solid fa-check"></i>
+                            </span>
+                            Trusted by growing businesses
+                        </p>
+
+                        <h1 class="hero-editorial__title hero-editorial__reveal">
+                            Biz Yako.<span class="hero-editorial__title-lite">Tech&nbsp;Yetu.</span>
+                        </h1>
+
+                        <p class="hero-editorial__desc hero-editorial__reveal">
+                            We design and build websites, web applications and digital systems that help businesses work better and reach further.
+                        </p>
+
+                        <div class="hero-editorial__social hero-editorial__reveal">
+                            <div class="hero-editorial__social-row">
+                                <span class="hero-editorial__stars" aria-hidden="true">
+                                    <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                                </span>
+                                <span class="hero-editorial__social-title">Loved by our clients</span>
+                                <span class="hero-editorial__social-value">5.0 rating</span>
+                            </div>
+                            <div class="hero-editorial__social-rule" aria-hidden="true"></div>
+                            <div class="hero-editorial__social-row">
+                                <span class="hero-editorial__social-value--main">Design · Development · Support</span>
+                                <span class="hero-editorial__social-meta">Kenya · Worldwide</span>
+                            </div>
+                        </div>
+
+                        <div class="hero-editorial__actions hero-editorial__reveal">
+                            <a href="#contact" class="hero-editorial__btn">
+                                Start a Project
+                                <span class="hero-editorial__btn-note">— Free consultation</span>
+                            </a>
+                            <a href="#work" class="hero-editorial__btn hero-editorial__btn--ghost">
+                                Our Work <span class="hero-editorial__btn-arrow" aria-hidden="true">↗</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- ===== Right visual ===== -->
+                    <div class="hero-editorial__visual hero-editorial__reveal">
+                        <div class="hero-editorial__panel">
+
+                            <img class="hero-editorial__img"
+                                 src="{{ hero_image_url }}"
+                                 alt="Exemplary work by RETEC"
+                                 loading="eager" decoding="async">
+
+                            <a href="#work" class="hero-editorial__play" aria-label="See our work">
+                                <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                            </a>
+                        </div>
+
+                        <div class="hero-editorial__stat" aria-hidden="true">
+                            <p class="hero-editorial__stat-label">— End to end</p>
+                            <p class="hero-editorial__stat-number">{{ (projects|length) if projects else '5' }}+</p>
+                            <p class="hero-editorial__stat-caption">Projects shipped</p>
+                        </div>
+
+                        {% set featured = projects[0] if projects else none %}
+                        <a href="{{ featured.demo_url or featured.github or '#work' }}"
+                           class="hero-editorial__card"
+                           {% if featured and (featured.demo_url or featured.github) %}target="_blank" rel="noopener noreferrer"{% endif %}
+                           aria-label="Featured project: {{ featured.title if featured else 'Kabura Adventures' }}">
+                            <span class="hero-editorial__card-thumb" aria-hidden="true">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            </span>
+                            <span class="hero-editorial__card-body">
+                                <span class="hero-editorial__card-label">Recent Project</span>
+                                <span class="hero-editorial__card-title">{{ featured.title if featured else 'Kabura Adventures' }}</span>
+                                <span class="hero-editorial__card-meta">{{ featured.category or 'Web Experience' }} · Selected Work</span>
+                            </span>
+                        </a>
+
+                        <div class="hero-editorial__chip hero-editorial__chip--top" aria-hidden="true">
+                            <span class="hero-editorial__chip-icon"><i class="fa-solid fa-check"></i></span>
+                            How can we help you grow?
+                        </div>
+                        <div class="hero-editorial__chip hero-editorial__chip--bottom" aria-hidden="true">
+                            <span class="hero-editorial__chip-icon"><i class="fa-solid fa-check"></i></span>
+                            Let's build your digital system
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ===== Client / trust bar ===== -->
+                <div class="hero-editorial__logos">
+                    <span class="hero-editorial__logos-label">Selected work</span>
+                    {% if projects %}
+                        {% for p in projects[:5] %}
+                            <span class="hero-editorial__logo">{{ p.title }}</span>
+                        {% endfor %}
+                    {% else %}
+                        <span class="hero-editorial__logo">Web</span>
+                        <span class="hero-editorial__logo">Apps</span>
+                        <span class="hero-editorial__logo">Systems</span>
+                    {% endif %}
+                </div>
+
+            </div>
+
     </div>
 </section>
+
+<script>
+(function () {
+    var hero = document.getElementById('hero');
+    if (!hero) return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var reveals = hero.querySelectorAll('.hero-editorial__reveal');
+    if (!reveals.length) return;
+    hero.classList.add('hero-editorial--anim');
+    reveals.forEach(function (el, i) {
+        el.style.setProperty('--he-delay', (80 * i) + 'ms');
+    });
+    requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+            hero.classList.add('is-in');
+        });
+    });
+})();
+</script>
 
 <!-- ===== ABOUT ===== -->
 <section class="section about section--light" id="about">
@@ -456,95 +577,6 @@
         </div>
     </div>
 </section>
-
-<style>
-.hero__bg {
-    object-fit: cover;
-}
-</style>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    var video = document.getElementById('heroVideo');
-    if (video) {
-        var started = false;
-        video.addEventListener('playing', function() { started = true; });
-        var playPromise = video.play();
-        if (playPromise !== undefined) {
-            playPromise.then(function() { started = true; }).catch(function() {
-                var tryPlay = function() {
-                    var p = video.play();
-                    if (p !== undefined) p.then(function() { started = true; }).catch(function(){});
-                };
-                document.addEventListener('touchstart', tryPlay, { once: true });
-                document.addEventListener('scroll', tryPlay, { once: true });
-            });
-        }
-    }
-
-    // Hero anime.js animations
-    var animate = window.anime.animate;
-    var stagger = window.anime.stagger;
-
-    // Set initial states
-    var heroElements = ['.hero__label', '.hero__title', '.hero__subtitle', '.hero__actions', '.hero__socials'];
-    heroElements.forEach(function(sel) {
-        var el = document.querySelector(sel);
-        if (el) { el.style.opacity = '0'; el.style.transform = 'translateY(30px)'; }
-    });
-
-    // Animate hero elements with stagger
-    animate('.hero__label', {
-        opacity: [0, 1],
-        translateY: [30, 0],
-        duration: 800,
-        delay: 200,
-        ease: 'outExpo'
-    });
-
-    animate('.hero__title', {
-        opacity: [0, 1],
-        translateY: [30, 0],
-        duration: 900,
-        delay: 400,
-        ease: 'outExpo'
-    });
-
-    animate('.hero__subtitle', {
-        opacity: [0, 1],
-        translateY: [30, 0],
-        duration: 800,
-        delay: 600,
-        ease: 'outExpo'
-    });
-
-    animate('.hero__actions', {
-        opacity: [0, 1],
-        translateY: [30, 0],
-        duration: 700,
-        delay: 800,
-        ease: 'outExpo'
-    });
-
-    animate('.hero__socials', {
-        opacity: [0, 1],
-        translateY: [30, 0],
-        duration: 700,
-        delay: 1000,
-        ease: 'outExpo'
-    });
-
-    // Subtle floating animation on social icons
-    animate('.hero__social-link', {
-        translateY: [-4, 4],
-        duration: 2000,
-        loop: true,
-        alternate: true,
-        ease: 'inOutSine',
-        delay: 1500
-    });
-});
-</script>
 
 <!-- ============================================================
      CUBE CONFIG — cube sketches in the cable band.
