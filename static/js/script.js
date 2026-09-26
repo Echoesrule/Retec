@@ -1,39 +1,19 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    if (window.AOS) {
-        AOS.init({
-            duration: 600,
-            easing: 'ease-out-cubic',
-            once: true,
-            offset: 60
-        });
-    }
-
-    const header = document.getElementById('header');
     const navToggle = document.getElementById('nav-toggle');
     const navMenu = document.getElementById('nav-menu');
-    const pageContent = document.getElementById('pageContent');
+    const motion = window.RETEC_MOTION || null;
 
-    /* ===== HEADER SCROLL ===== */
-    if (header) {
-        let ticking = false;
-        window.addEventListener('scroll', () => {
-            if (ticking) return;
-            ticking = true;
-            requestAnimationFrame(() => {
-                header.classList.toggle('header--scrolled', window.pageYOffset > 60);
-                ticking = false;
-            });
-        }, { passive: true });
-    }
-
-    /* ===== MOBILE MENU ===== */
+    /* ===== MOBILE MENU =====
+       State only. Scrolling, transitions and the reveal of the items themselves
+       are owned by the motion system (core.js / navigation.js). */
     const setNavMenu = (open) => {
         if (!navToggle || !navMenu) return;
         navToggle.classList.toggle('nav__toggle--active', open);
         navMenu.classList.toggle('nav__menu--open', open);
         navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-        document.body.style.overflow = open ? 'hidden' : '';
+        if (motion) motion.setScrollLocked(open);
+        else document.body.style.overflow = open ? 'hidden' : '';
     };
 
     if (navToggle) {
@@ -44,46 +24,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.target.closest('a')) setNavMenu(false);
         });
     }
-
-    const scrollToSection = (hash) => {
-        if (!hash || hash === '#') return false;
-        let target;
-        try { target = document.querySelector(hash); } catch (_) { return false; }
-        if (!target) return false;
-        pageContent?.classList.remove('page-content--fading');
-        target.scrollIntoView({ behavior: 'smooth' });
-        history.pushState(null, '', hash);
-        return true;
-    };
-
-    /* ===== SMOOTH SCROLL + PAGE TRANSITIONS (delegated) ===== */
-    document.addEventListener('click', (e) => {
-        const link = e.target.closest('a[href]');
-        if (!link || link.target === '_blank' || link.hasAttribute('download')) return;
-        const href = link.getAttribute('href');
-        if (!href || /^(mailto:|tel:|javascript:|about:)/i.test(href)) return;
-
-        if (href.startsWith('#')) {
-            if (scrollToSection(href)) e.preventDefault();
-            return;
+    /* Escape closes the drawer, as expected of any overlay. */
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && navMenu && navMenu.classList.contains('nav__menu--open')) {
+            setNavMenu(false);
+            navToggle && navToggle.focus();
         }
-        if (href.startsWith('//') || /^https?:/i.test(href)) return;
-        if (!pageContent) return;
-
-        const url = new URL(href, window.location.href);
-        if (url.origin !== window.location.origin) return;
-        if (url.pathname === window.location.pathname && url.hash) {
-            if (scrollToSection(url.hash)) {
-                e.preventDefault();
-                return;
-            }
-        }
-
-        e.preventDefault();
-        pageContent.classList.add('page-content--fading');
-        setTimeout(() => {
-            window.location.href = url.href;
-        }, 220);
     });
 
     /* ===== FUN FACT DISMISS ===== */
@@ -92,14 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (factClose && floatingFact) {
         factClose.addEventListener('click', () => {
             floatingFact.classList.add('floating-fact--hidden');
-        });
-    }
-
-    /* ===== PAGE TRANSITIONS RESET ===== */
-    if (pageContent) {
-        window.addEventListener('pageshow', () => {
-            pageContent.classList.remove('page-content--fading');
-            if (window.AOS) AOS.refresh();
         });
     }
 

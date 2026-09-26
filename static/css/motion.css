@@ -1,0 +1,548 @@
+/* =============================================================================
+   RETEC MOTION SYSTEM
+   -----------------------------------------------------------------------------
+   Presentation layer only. Loaded after style.css and always scoped to
+   `html.retec-motion` (set by js/motion/core.js once GSAP is live) so the
+   existing design keeps working untouched when JS is unavailable.
+
+   OWNERSHIP RULE: every property listed below is animated by exactly one
+   engine. GSAP owns transform / opacity / clip-path once `retec-motion` is on;
+   these rules only (a) provide the resting/initial state, (b) neutralise the
+   design's own hover transforms so GSAP never fights CSS, and (c) carry the
+   lightweight hover states that don't need JS.
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   1. LOADER + CURTAIN
+   ------------------------------------------------------------------------ */
+.retec-page-loader,
+.retec-curtain {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: grid;
+    pointer-events: none;
+    background: var(--bg);
+    color: var(--text);
+    visibility: hidden;
+}
+
+.retec-page-loader {
+    place-content: center;
+    justify-items: center;
+    gap: 1.35rem;
+    grid-auto-flow: row;
+}
+
+/* Boot gate: base.html adds retec-motion-boot before first paint so the page is
+   never seen unstyled, then retec-motion-boot-done to release it. */
+html.retec-motion-boot .retec-page-loader,
+html.retec-motion-boot-done .retec-page-loader {
+    visibility: visible;
+    pointer-events: all;
+}
+
+.retec-page-loader__wordmark {
+    display: flex;
+    gap: 0.06em;
+    font-family: var(--font-heading), Georgia, serif;
+    font-size: clamp(1.6rem, 3.2vw, 2.15rem);
+    font-weight: 400;
+    letter-spacing: 0.24em;
+    text-indent: 0.24em;
+    line-height: 1;
+}
+
+.retec-page-loader__char {
+    display: inline-block;
+    will-change: transform, opacity;
+}
+
+.retec-page-loader__foot {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    width: min(220px, 52vw);
+}
+
+.retec-page-loader__track {
+    position: relative;
+    flex: 1;
+    height: 1px;
+    overflow: hidden;
+    background: rgba(var(--text-rgb), 0.18);
+}
+
+.retec-page-loader__bar {
+    position: absolute;
+    inset: 0;
+    background: var(--warm);
+    transform: scaleX(0);
+    transform-origin: left center;
+    will-change: transform;
+}
+
+.retec-page-loader__count {
+    min-width: 3.2em;
+    font-size: 0.6rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-align: right;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Curtain is the light page-transition wipe: no wordmark, no progress.
+   The parked offset lives in JS (loader.js), not here: a transform declared in
+   CSS is parsed into GSAP's cache and then compounded with the tween. The
+   `visibility: hidden` from the shared rule above is the no-JS failsafe. */
+.retec-curtain {
+    z-index: 9999;
+    will-change: transform;
+}
+
+.retec-curtain__mark {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-family: var(--font-heading), Georgia, serif;
+    font-size: 0.68rem;
+    letter-spacing: 0.42em;
+    text-indent: 0.42em;
+    color: var(--muted);
+}
+
+/* Safety net: the loader must never be able to trap the page. */
+html.retec-motion-boot-failed .retec-page-loader,
+html.retec-motion-boot-failed .retec-curtain {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* ---------------------------------------------------------------------------
+   2. SCROLL PROGRESS — 2px, aligned to the RETEC grid
+   ------------------------------------------------------------------------ */
+.retec-scroll-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1001;
+    width: 100%;
+    height: 2px;
+    background: var(--warm);
+    transform: scaleX(0);
+    transform-origin: left center;
+    pointer-events: none;
+    will-change: transform;
+}
+
+/* ---------------------------------------------------------------------------
+   3. REVEAL PRIMITIVES
+   Initial states are declared here so there is no flash of unstyled motion,
+   and are only ever applied while GSAP is driving.
+   ------------------------------------------------------------------------ */
+/* The 110% park is applied by reveal.js with gsap.set(), not here. A transform
+   declared in CSS is parsed into GSAP's cache and then compounded with the
+   tween's own from-state, which parks the line at 220% — twice as far as the
+   mask is tall, i.e. permanently invisible. No CSS transform, no conflict. */
+html.retec-motion [data-motion="heading"] .retec-line__i,
+html.retec-motion [data-motion="reveal"] .retec-line__i {
+    will-change: transform;
+}
+
+/* Once a root has revealed, its lines are never parked in the mask again. This
+   extra attribute lifts the specificity above the rule above, so a killed or
+   never-started tween can never leave a heading clipped. */
+html.retec-motion [data-motion="heading"][data-motion-revealed] .retec-line__i,
+html.retec-motion [data-motion="reveal"][data-motion-revealed] .retec-line__i,
+html.retec-motion [data-motion="heading"] [data-motion-revealed] .retec-line__i,
+html.retec-motion [data-motion="reveal"] [data-motion-revealed] .retec-line__i {
+    transform: none;
+    will-change: auto;
+}
+
+html.retec-motion [data-motion="reveal"]:not([data-motion-revealed]) .retec-line,
+html.retec-motion [data-motion="heading"]:not([data-motion-revealed]) .retec-line {
+    will-change: auto;
+}
+
+/* Line mask wrapper injected by reveal.js. Padding/negative-margin keeps
+   descenders (g, y, p) from being clipped by overflow:hidden. */
+.retec-line {
+    display: block;
+    overflow: hidden;
+    padding-bottom: 0.14em;
+    margin-bottom: -0.14em;
+}
+
+.retec-line__i {
+    display: block;
+}
+
+/* ---------------------------------------------------------------------------
+   4. LIQUID CTA
+   A monochrome colour inversion: on hover the opposite colour flows left→right
+   and the covered surface inverts. A dark CTA fills WHITE (ink text over it),
+   a light CTA fills INK (white text over it). The mirrored text copy travels
+   with the fill, so contrast is correct at every frame — not just once the
+   sweep has landed. No CSS hover rule touches a liquid layer: GSAP owns the
+   travel, and the layers are parked off-axis only as the no-JS / reduced-motion
+   failsafe — never under `html.retec-motion`, where a CSS transform would
+   compound onto GSAP's xPercent.
+   ------------------------------------------------------------------------ */
+.hero-editorial__btn[data-liquid] {
+    /* The containing block every absolute liquid layer anchors to. */
+    position: relative;
+    --lt-fill: var(--white);
+    --lt-ink: var(--ink);
+}
+
+.hero-editorial__btn[data-liquid][data-liquid-theme="light"] {
+    --lt-fill: var(--ink);
+    --lt-ink: var(--white);
+}
+
+/* No z-index here: the wrapper must not create a stacking context, or the
+   invert text (z-index 2) behind it could never rise above the resting text
+   (z-index 1). The fill still paints below the content either way. */
+.hero-editorial__liquid {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    border-radius: inherit;
+}
+
+/* Every liquid layer is parked off-axis to the left as the no-JS /
+   reduced-motion failsafe (that's the only place it may exist). A transform
+   declared in CSS is parsed into GSAP's cache and then compounded with the
+   tween's own values — a CSS -100% would stack onto every xPercent, parking
+   the layers at -200% and landing the sweep at -100%: invisible forever. So
+   under the motion system the failsafe is switched off and GSAP alone parks
+   via gsap.set(), exactly as the reveal primitives do. */
+.hero-editorial__liquid-wave,
+.hero-editorial__liquid-invert {
+    transform: translate3d(-100%, 0, 0);
+}
+
+/* GSAP owns transform under the motion system: no CSS transform, no
+   compounding. The reduced-motion block below still forces the failsafe park
+   with !important, which outranks this. */
+html.retec-motion .hero-editorial__liquid-wave,
+html.retec-motion .hero-editorial__liquid-invert {
+    transform: none;
+}
+
+.hero-editorial__liquid-wave {
+    position: absolute;
+    left: 0;
+    top: -3%;
+    width: 100%;
+    height: 106%;
+    fill: var(--lt-fill, var(--white));
+    will-change: transform;
+}
+
+/* Depth comes from the transparency of the back layer and its half-step
+   trailing — not a second colour, so the fill stays strictly monochrome. */
+.hero-editorial__liquid-wave--back {
+    opacity: 0.42;
+}
+
+/* The mirrored text. Sits above the resting content (2 > 1) but is only ever
+   visible where the fill has arrived, because it translates in lockstep with
+   the front wave. Colour is theme-driven via --lt-ink. */
+.hero-editorial__liquid-invert {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    /* Mirrors .hero-editorial__btn padding (style.css) so it overlays the
+       resting text exactly; keep the two in sync. */
+    padding: 0.9rem 1.5rem;
+    color: var(--lt-ink, var(--ink));
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.hero-editorial__btn-content {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+/* The arrow transform is a GSAP property on motion-owned buttons; the design's
+   own transition must not fight the tween tick. */
+html.retec-motion .hero-editorial__btn[data-liquid] .hero-editorial__btn-arrow {
+    transition: none;
+}
+
+/* Neutralise the design's own transform on motion-owned buttons so the
+   magnetic + liquid modules are the only thing writing `transform`. The hover
+   surface stays the resting colour so the sweep is readable as it crosses. */
+html.retec-motion .hero-editorial__btn[data-liquid],
+html.retec-motion .hero-editorial__btn[data-magnetic] {
+    transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+
+html.retec-motion .hero-editorial__btn[data-liquid]:hover,
+html.retec-motion .hero-editorial__btn[data-liquid]:focus-visible,
+html.retec-motion .hero-editorial__btn[data-magnetic]:hover,
+html.retec-motion .hero-editorial__btn[data-magnetic]:focus-visible {
+    transform: none;
+}
+
+/* Subtle press state — hover-independent, so a tap on a touch screen still
+   reads as tactile. No scale, no bounce: just a calm loss of elevation. */
+html.retec-motion .hero-editorial__btn[data-liquid]:active {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
+    filter: brightness(0.985);
+}
+
+/* Keep the secondary button on its designed colours — the primary-button rule
+   above must not leak onto the ghost variant. */
+html.retec-motion .hero-editorial__btn--ghost,
+html.retec-motion .hero-editorial__btn--ghost:hover,
+html.retec-motion .hero-editorial__btn--ghost:focus-visible {
+    background: transparent;
+    color: var(--muted);
+}
+
+/* ---------------------------------------------------------------------------
+   5. CARD PHYSICS — ownership
+   The design gives cards a CSS hover lift, a CSS image zoom and a
+   `transition: transform` list. All three would fight GSAP for the same
+   property, so under `html.retec-motion` they are handed over: GSAP becomes
+   the only writer of transform, CSS keeps the colour/shadow/border states.
+   ------------------------------------------------------------------------ */
+html.retec-motion .work__card,
+html.retec-motion .blog__card,
+html.retec-motion .testimonial-card,
+html.retec-motion .service__item,
+html.retec-motion .process__item {
+    transition: box-shadow var(--duration-fast) var(--ease-standard),
+                border-color var(--duration-fast) var(--ease-standard),
+                background-color var(--duration-fast) var(--ease-standard),
+                color var(--duration-fast) var(--ease-standard);
+    will-change: auto;
+}
+
+html.retec-motion .work__card:hover,
+html.retec-motion .blog__card:hover,
+html.retec-motion .testimonial-card:hover,
+html.retec-motion .service__item:hover,
+html.retec-motion .process__item:hover,
+html.retec-motion .home-page .work__card:hover,
+html.retec-motion .home-page .blog__card:hover,
+html.retec-motion .home-page .service__item:hover,
+html.retec-motion .inner-page .blog__card:hover {
+    transform: none;
+}
+
+/* Images: the frame clip is GSAP's, the media scale is GSAP's. Neutralise the
+   design's own hover zoom so there is exactly one controller. */
+html.retec-motion [data-motion="image"] {
+    overflow: hidden;
+}
+
+html.retec-motion [data-motion="image"] img,
+html.retec-motion .work__card:hover .work__image-img,
+html.retec-motion .blog__card:hover .blog__card-image img,
+html.retec-motion .blog__card:hover [data-motion="image"] img,
+html.retec-motion .work__card:hover [data-motion="image"] img {
+    transform: none;
+}
+
+/* ---------------------------------------------------------------------------
+   6. HERO TITLE MASK
+   The headline is one optically-tuned line, so it is masked as a whole block
+   rather than split — a partial line split would change the ragging.
+   ------------------------------------------------------------------------ */
+html.retec-motion .hero-editorial__title {
+    overflow: hidden;
+    padding-bottom: 0.1em;
+    margin-bottom: -0.1em;
+}
+
+/* ---------------------------------------------------------------------------
+   7. NAVIGATION
+   ------------------------------------------------------------------------ */
+/* The hover rise is GSAP's alone (navigation.js). A CSS transform here would be
+   parsed into GSAP's cache and then compounded with the tween, so the old
+   --nav-shift hover rule is intentionally absent: one engine, one property. */
+
+/* Nav underline indicator: one transform-driven scale, design colours intact. */
+.nav__link::after {
+    transform-origin: left center;
+    transition: transform var(--duration-medium) var(--ease-expressive),
+                opacity var(--duration-medium) var(--ease-standard);
+}
+
+.nav__link--active::after,
+.nav__link:hover::after {
+    transform: scaleX(1);
+}
+
+/* ---------------------------------------------------------------------------
+   7. CUSTOM CURSOR (desktop, fine pointer, motion allowed only)
+   Sits above the page and the header, below the loader and curtain so it can
+   never float over the transition chrome.
+   ------------------------------------------------------------------------ */
+.retec-cursor {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9990;
+    pointer-events: none;
+    opacity: 0;
+    will-change: transform;
+}
+
+.retec-cursor__dot {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 6px;
+    height: 6px;
+    margin: -3px 0 0 -3px;
+    border-radius: 50%;
+    background: #fff;
+    /* Difference blending keeps a 6px dot legible over both the black hero and
+       the light editorial sections without changing either. */
+    mix-blend-mode: difference;
+    transition: width var(--duration-fast) var(--ease-expressive),
+                height var(--duration-fast) var(--ease-expressive),
+                margin var(--duration-fast) var(--ease-expressive),
+                border-radius var(--duration-fast) var(--ease-standard),
+                opacity var(--duration-fast) var(--ease-standard);
+}
+
+.retec-cursor__label {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    margin: -23px 0 0 -23px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: var(--white);
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-indent: 0.14em;
+    opacity: 0;
+    scale: 0.6;
+    transition: opacity var(--duration-fast) var(--ease-standard),
+                scale var(--duration-medium) var(--ease-expressive);
+}
+
+.retec-cursor.is-active { opacity: 1; }
+.retec-cursor.is-labelled .retec-cursor__dot { opacity: 0; }
+.retec-cursor.is-labelled .retec-cursor__label { opacity: 1; scale: 1; }
+.retec-cursor.is-pressed .retec-cursor__dot {
+    width: 26px;
+    height: 26px;
+    margin: -13px 0 0 -13px;
+}
+
+/* Text fields: a caret, not a disc. */
+.retec-cursor.is-caret .retec-cursor__label { display: none; }
+.retec-cursor.is-caret .retec-cursor__dot {
+    opacity: 1;
+    width: 2px;
+    height: 20px;
+    margin: -10px 0 0 -1px;
+    border-radius: 1px;
+}
+
+/* ---------------------------------------------------------------------------
+   8. MOBILE MENU / SCROLL LOCK
+   Lenis owns the lock when it is running; the overflow fallback only applies
+   when it is not, so the scrollbar never disappears and shifts the layout.
+   ------------------------------------------------------------------------ */
+html.retec-scroll-locked:not(.retec-motion) body {
+    overflow: hidden;
+}
+
+.nav__menu--open .nav__list > li {
+    opacity: 1;
+    transform: none;
+}
+
+/* ---------------------------------------------------------------------------
+   9. FORM + FOOTER MICRO-INTERACTIONS (CSS only, no JS cost)
+   ------------------------------------------------------------------------ */
+.form__input,
+.form__textarea,
+.form__select {
+    transition: border-color var(--duration-fast) var(--ease-standard),
+                box-shadow var(--duration-fast) var(--ease-standard),
+                background-color var(--duration-fast) var(--ease-standard);
+}
+
+.form__input:focus,
+.form__textarea:focus,
+.form__select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(58, 54, 48, 0.08);
+}
+
+.footer__meta-links a,
+.footer__group a {
+    transition: color var(--duration-fast) var(--ease-standard),
+                opacity var(--duration-fast) var(--ease-standard);
+}
+
+.footer__meta-links a:hover,
+.footer__group a:hover {
+    color: var(--text);
+}
+
+/* ---------------------------------------------------------------------------
+   10. REDUCED MOTION
+   Everything collapses to "content is simply there". No hidden content, no
+   transitions, no transforms, no cursor, no loader.
+   ------------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto !important; }
+
+    .retec-page-loader,
+    .retec-curtain,
+    .retec-cursor,
+    .retec-scroll-progress {
+        display: none !important;
+    }
+
+    .retec-line__i,
+    [data-motion] .retec-line__i {
+        transform: none !important;
+    }
+
+    .hero-editorial__liquid-wave,
+    .hero-editorial__liquid-invert {
+        transform: translate3d(-100%, 0, 0) !important;
+    }
+
+    html.retec-motion [data-motion="image"] img,
+    html.retec-motion .blog__card:hover .blog__card-image img {
+        transform: none !important;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

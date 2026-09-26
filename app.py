@@ -41,6 +41,8 @@ app.config['BREVO_API_KEY'] = os.environ.get('BREVO_API_KEY', '')
 app.config['BREVO_LIST_ID'] = os.environ.get('BREVO_LIST_ID', '')
 app.config['ZEROBOUNCE_API_KEY'] = os.environ.get('ZEROBOUNCE_API_KEY', '')
 app.config['CLOUDINARY_URL'] = os.environ.get('CLOUDINARY_URL', '')
+app.config['SMS_NOTIFY_TO'] = os.environ.get('SMS_NOTIFY_TO', '')
+app.config['SMS_SENDER'] = os.environ.get('SMS_SENDER', 'RETEC')
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600
 app.config['WTF_CSRF_SSL_STRICT'] = False
 
@@ -606,6 +608,52 @@ def send_email(name, email, business, project_type, budget, message, ip_address=
         app.logger.exception('Contact email failed: %s', exc)
         return False
 
+def send_sms_notification(name, email, business, project_type, budget, message):
+    """SMS the studio when a project inquiry is submitted.
+
+    Uses Brevo transactional SMS (same BREVO_API_KEY as email). Pay-per-SMS
+    via Brevo SMS credits; SMS credits must be enabled on the account. Fails
+    soft (logs only) so a failure never blocks the inquiry. Sent on top of the
+    existing Brevo email alert. `sender` is the alphanumeric sender name shown
+    to the recipient (max 11 chars), `recipient` must be in international
+    format with country code, digits only.
+    """
+    api_key = app.config['BREVO_API_KEY']
+    recipient = app.config.get('SMS_NOTIFY_TO', '')
+    sender = app.config.get('SMS_SENDER', 'RETEC')
+    if not api_key or not recipient:
+        app.logger.warning('SMS notification skipped: set SMS_NOTIFY_TO.')
+        return False
+    try:
+        content = (
+            f"New RETEC inquiry\n"
+            f"{name} | {business or 'N/A'}\n"
+            f"{email}\n"
+            f"{project_type or 'General'} | {budget or 'N/A'}\n"
+            f"Msg: {message[:80]}"
+        )
+        resp = requests.post(
+            'https://api.brevo.com/v3/transactionalSMS/send',
+            headers={'api-key': api_key, 'Content-Type': 'application/json', 'Accept': 'application/json'},
+            json={
+                'sender': sender,
+                'recipient': recipient,
+                'content': content,
+                'type': 'transactional',
+                'unicodeEnabled': False,
+                'tag': 'inquiry',
+            },
+            timeout=15,
+        )
+        if resp.ok:
+            app.logger.info('SMS inquiry notification sent (messageId %s)', resp.json().get('messageId', '?'))
+            return True
+        app.logger.error('Brevo SMS API error %s: %s', resp.status_code, resp.text[:500])
+        return False
+    except Exception as exc:
+        app.logger.exception('SMS notification failed: %s', exc)
+        return False
+
 def send_verification_code(email, code):
     if not email:
         app.logger.warning('Verification email skipped: no recipient email.')
@@ -1010,6 +1058,7 @@ def contact():
         else:
             flash('Your inquiry could not be sent right now. Please email us directly.', 'error')
         save_subscriber(form.email.data, form.name.data, source='contact')
+        send_sms_notification(form.name.data, form.email.data, form.business.data, form.project_type.data, form.budget.data, form.message.data)
         return redirect(url_for('home') + '#contact')
     context = get_homepage_data()
     context['form'] = form

@@ -2,7 +2,7 @@
 {% block content %}
 <section class="section section--light blog-page">
     <div class="container">
-        <div class="inner-page__intro">
+        <div class="inner-page__intro" data-motion="reveal" data-motion-slow>
             <div>
                 <p class="section__eyebrow">Insights</p>
                 <h1 class="section__title">Ideas Worth<br>Sharing</h1>
@@ -12,9 +12,9 @@
         {% if posts %}
         <div class="blog__grid">
             {% for post in posts %}
-            <article class="blog__card">
+            <article class="blog__card" data-motion="card">
                 {% if post.image_filename %}
-                <div class="blog__card-image">
+                <div class="blog__card-image" data-motion="image" data-cursor="view">
                     <img src="{{ get_image_url(post.image_filename) }}" alt="{{ post.title }}" loading="lazy">
                 </div>
                 {% endif %}
