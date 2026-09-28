@@ -5724,6 +5724,10 @@ select.form__input {
         font-size: clamp(3rem, 10vw, 4.2rem);
     }
 
+    .hero-editorial__title-word {
+        font-size: 1.28em;
+    }
+
     .hero-editorial__panel {
         max-width: 520px;
         margin: 0 auto;
