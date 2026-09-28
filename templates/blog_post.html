@@ -7,11 +7,11 @@
 
     <header class="editorial__hero">
         {% if post.image_filename %}
-        <div class="editorial__hero-img">
+        <div class="editorial__hero-img" data-motion="image" data-parallax>
             <img src="{{ get_image_url(post.image_filename) }}" alt="{{ post.title }}" loading="eager">
         </div>
         {% endif %}
-        <div class="editorial__hero-text">
+        <div class="editorial__hero-text" data-motion="reveal" data-motion-slow>
             <div class="editorial__hero-inner">
                 <a href="{{ url_for('blog') }}" class="editorial__back">
                     <i class="fa-solid fa-arrow-left"></i> Back to Blog
@@ -39,7 +39,7 @@
     </header>
 
     <div class="editorial__body">
-        <div class="editorial__content" id="editorialContent">
+        <div class="editorial__content" id="editorialContent" data-motion="reveal">
             {{ post.content | safe }}
         </div>
 
@@ -128,7 +128,7 @@
         var total = article.scrollHeight - window.innerHeight;
         var scrolled = -rect.top;
         var pct = Math.min(Math.max(scrolled / total * 100, 0), 100);
-        bar.style.width = pct + '%';
+        bar.style.transform = 'scaleX(' + (pct / 100) + ')';
     }
     var ticking = false;
     window.addEventListener('scroll', function() {

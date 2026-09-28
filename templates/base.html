@@ -3,6 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+    /* Boot gate. Added before first paint so the page is never seen uncovered.
+       If the motion system has not released it in time, the gate is treated as
+       failed and the loader is hidden — the visitor is never trapped. */
+    (function () {
+        try {
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            var root = document.documentElement;
+            root.classList.add('retec-motion-boot');
+            window.setTimeout(function () {
+                if (!root.classList.contains('retec-motion-boot')) return;
+                /* Defer to a live motion system: loader.js now settles on its
+                   own budget instead of awaiting window load, so a healthy
+                   entrance releases well before this gate fires. Only fail over
+                   when the animation system never came up at all (core.js
+                   missing or broken), so a slow first load is no longer
+                   preempted mid-entrance. */
+                var motion = window.RETEC_MOTION;
+                if (motion && typeof motion.live === 'function') {
+                    try { if (motion.live()) return; } catch (_) {}
+                }
+                root.classList.remove('retec-motion-boot');
+                root.classList.add('retec-motion-boot-failed');
+            }, 2200);
+        } catch (_) {}
+    })();
+    </script>
     <meta name="description" content="{{ meta_desc }}">
     <meta name="keywords" content="RETEC, web development, web applications, custom software, digital solutions, Kenya, Python, Flask">
     <title>{{ meta_title }}</title>
@@ -36,9 +63,41 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/variables.css') }}?v={{ css_version }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts.css') }}?v={{ css_version }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ css_version }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/motion.css') }}?v={{ css_version }}">
+
+    <!-- Motion stack. Order matters: core publishes the runtime every other
+         module depends on, and it must be present before any of them run. -->
+    <script defer src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollToPlugin.min.js"></script>
+    <script defer src="https://unpkg.com/lenis@1.3.26/dist/lenis.min.js"></script>
+    <script defer src="{{ url_for('static', filename='js/motion/core.js') }}?v={{ css_version }}"></script>
+    <script defer src="{{ url_for('static', filename='js/motion/loader.js') }}?v={{ css_version }}"></script>
+    <script defer src="{{ url_for('static', filename='js/motion/page-transitions.js') }}?v={{ css_version }}"></script>
+    <script defer src="{{ url_for('static', filename='js/motion/hero.js') }}?v={{ css_version }}"></script>
+    <script defer src="{{ url_for('static', filename='js/motion/reveal.js') }}?v={{ css_version }}"></script>
+    <script defer src="{{ url_for('static', filename='js/motion/images.js') }}?v={{ css_version }}"></script>
+    <script defer src="{{ url_for('static', filename='js/motion/liquid-button.js') }}?v={{ css_version }}"></script>
+    <script defer src="{{ url_for('static', filename='js/motion/magnetic.js') }}?v={{ css_version }}"></script>
+    <script defer src="{{ url_for('static', filename='js/motion/cards.js') }}?v={{ css_version }}"></script>
+    <script defer src="{{ url_for('static', filename='js/motion/projects.js') }}?v={{ css_version }}"></script>
+    <script defer src="{{ url_for('static', filename='js/motion/cursor.js') }}?v={{ css_version }}"></script>
+    <script defer src="{{ url_for('static', filename='js/motion/navigation.js') }}?v={{ css_version }}"></script>
     {% block extra_head %}{% endblock %}
 </head>
 <body class="{% if active == 'home' %}home-page{% else %}inner-page{% endif %}">
+
+    <div class="retec-page-loader" role="status" aria-label="Loading RETEC">
+        <span class="retec-page-loader__wordmark">RETEC</span>
+        <span class="retec-page-loader__foot">
+            <span class="retec-page-loader__track"><span class="retec-page-loader__bar"></span></span>
+            <span class="retec-page-loader__count" aria-hidden="true">0%</span>
+        </span>
+    </div>
+
+    <div class="retec-curtain" aria-hidden="true">
+        <span class="retec-curtain__mark">RETEC</span>
+    </div>
 
     <header class="header" id="header">
         <div class="container">

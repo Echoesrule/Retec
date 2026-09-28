@@ -20,7 +20,7 @@
                         </p>
 
                         <h1 class="hero-editorial__title hero-editorial__reveal">
-                            Bring Yourself To<span class="hero-editorial__title-lite">The &nbsp;Top.</span>
+                            Bring <span class="hero-editorial__title-word">Yourself</span> To<span class="hero-editorial__title-lite">The &nbsp;Top.</span>
                         </h1>
 
                         <p class="hero-editorial__desc hero-editorial__reveal">
@@ -43,11 +43,14 @@
                         </div>
 
                         <div class="hero-editorial__actions hero-editorial__reveal">
-                            <a href="#contact" class="hero-editorial__btn">
-                                Start a Project
-                                <span class="hero-editorial__btn-note">— Free consultation</span>
+                            <a href="#contact" class="hero-editorial__btn" data-liquid data-magnetic data-cursor="arrow">
+                                <span class="hero-editorial__liquid" aria-hidden="true">
+                                    <svg class="hero-editorial__liquid-wave hero-editorial__liquid-wave--back" viewBox="0 0 120 120" preserveAspectRatio="none" focusable="false"><path d="M0 16 C18 5 28 26 44 16 S70 5 86 16 S108 26 120 16 V120 H0 Z"/></svg>
+                                    <svg class="hero-editorial__liquid-wave" viewBox="0 0 120 120" preserveAspectRatio="none" focusable="false"><path d="M0 12 C15 2 25 22 40 12 S65 2 80 12 S105 22 120 12 V120 H0 Z"/></svg>
+                                </span>
+                                <span class="hero-editorial__btn-content">Start a Project <span class="hero-editorial__btn-note">— Free consultation</span><span class="hero-editorial__btn-arrow" data-liquid-arrow aria-hidden="true">↗</span></span>
                             </a>
-                            <a href="#work" class="hero-editorial__btn hero-editorial__btn--ghost">
+                            <a href="#work" class="hero-editorial__btn hero-editorial__btn--ghost" data-cursor="arrow">
                                 Our Work <span class="hero-editorial__btn-arrow" aria-hidden="true">↗</span>
                             </a>
                         </div>
@@ -129,7 +132,7 @@
 <section class="section about section--light" id="about">
     <div class="container">
 
-        <div class="services__intro" data-aos="fade-up">
+        <div class="services__intro" data-motion="reveal">
             <div class="services__intro-heading">
                 <p class="section__eyebrow">About</p>
                 <h2 class="section__title">What is<br><span>Retec?</span></h2>
@@ -148,7 +151,7 @@
             <span class="about__detail"><span class="about__detail-num">03</span> Built with care</span>
         </div>
 
-        <div class="founder-feature" data-aos="fade-up">
+        <div class="founder-feature" data-motion="reveal">
             <div class="founder-feature__topline">
                 <span>software engineer</span>
                 <span>RETEC / 2026</span>
@@ -157,7 +160,7 @@
                 <p class="founder-feature__kicker">Meet the Founder</p>
                 <h2>Meet<br>the Founder</h2>
             </div>
-            <div class="founder-feature__portrait">
+            <div class="founder-feature__portrait" data-motion="image" data-parallax>
                 <img src="{{ url_for('static', filename='images/founder.png') }}" alt="Retro, founder of RETEC" loading="eager" decoding="async">
             </div>
             <div class="founder-feature__footer">
@@ -175,7 +178,7 @@
 <section class="section columns section--light">
     <div class="container">
         <div class="columns__grid">
-            <div class="columns__item" data-aos="fade-up" data-aos-delay="0">
+            <div class="columns__item" data-motion="reveal" data-motion-delay="0">
                 <div class="columns__icon">
                     <img src="{{ url_for('static', filename='images/brain-circuit.png') }}" alt="">
                 </div>
@@ -185,7 +188,7 @@
                     <li>Clarify the real problem</li>
                 </ul>
             </div>
-            <div class="columns__item" data-aos="fade-up" data-aos-delay="100">
+            <div class="columns__item" data-motion="reveal" data-motion-delay="100">
                 <div class="columns__icon">
                     <img src="{{ url_for('static', filename='images/transparency.png') }}" alt="">
                 </div>
@@ -195,7 +198,7 @@
                     <li>Make every detail useful</li>
                 </ul>
             </div>
-            <div class="columns__item" data-aos="fade-up" data-aos-delay="200">
+            <div class="columns__item" data-motion="reveal" data-motion-delay="200">
                 <div class="columns__icon">
                     <img src="{{ url_for('static', filename='images/binary.png') }}" alt="">
                 </div>
@@ -205,7 +208,7 @@
                     <li>Keep the foundation reliable</li>
                 </ul>
             </div>
-            <div class="columns__item" data-aos="fade-up" data-aos-delay="300">
+            <div class="columns__item" data-motion="reveal" data-motion-delay="300">
                 <div class="columns__icon">
                     <img src="{{ url_for('static', filename='images/registration-paper.png') }}" alt="">
                 </div>
@@ -222,7 +225,7 @@
 <!-- ===== WORK ===== -->
 <section class="section work section--light" id="work">
     <div class="container">
-        <div class="services__intro" data-aos="fade-up">
+        <div class="services__intro" data-motion="reveal" data-motion-slow>
             <div class="services__intro-heading">
                 <p class="section__eyebrow">Our Work</p>
                 <h2 class="section__title">Selected<br><span><img src="{{ url_for('static', filename='images/app-development.png') }}" alt="" aria-hidden="true">Work</span></h2>
@@ -243,8 +246,8 @@
         {% endif %}
         <div class="work__grid">
             {% for project in projects %}
-            <article class="work__card" data-category="{{ project.category or '' }}" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 }}">
-                <div class="work__image">
+            <article class="work__card" data-category="{{ project.category or '' }}">
+                <div class="work__image" data-motion="image" data-parallax data-cursor="view">
                     <div class="work__image-placeholder">
                         {% if project.image %}
                         <img src="{{ project.image }}" alt="{{ project.title }}" class="work__image-img" loading="lazy">
@@ -279,7 +282,7 @@
             </article>
             {% endfor %}
         </div>
-        <div class="work__cta" data-aos="fade-up">
+        <div class="work__cta">
             <p class="work__cta-text">Looking for something you don't see here? We build custom digital solutions for businesses.</p>
             <div class="work__cta-actions">
                 <a href="#services" class="section__cta section__cta--outline">Explore Services <i class="fa-solid fa-arrow-right"></i></a>
@@ -297,7 +300,7 @@
 <!-- ===== SERVICES ===== -->
 <section class="section services section--light" id="services">
     <div class="container">
-        <div class="services__intro" data-aos="fade-up">
+        <div class="services__intro" data-motion="reveal">
             <div class="services__intro-heading">
                 <p class="section__eyebrow">How We Can Help You</p>
                 <h2 class="section__title">Services<br><span><img src="{{ url_for('static', filename='images/user-headset.png') }}" alt="" aria-hidden="true">We Offer</span></h2>
@@ -310,7 +313,7 @@
         </div>
         <div class="services__grid">
             {% for service in services %}
-            <div class="service__item" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 80 }}">
+            <div class="service__item" data-motion="reveal" data-motion-delay="{{ loop.index0 * 80 }}">
                 <span class="service__number">{{ '%02d'|format(loop.index) }}</span>
                 <div class="service__body">
                     <h3 class="service__name">{{ service.name }}</h3>
@@ -320,7 +323,7 @@
             </div>
             {% endfor %}
         </div>
-        <div class="services__cta" data-aos="fade-up">
+        <div class="services__cta" data-motion="reveal">
             <p class="services__cta-text">Not sure which service fits your business? Tell us what you need and we'll recommend the most practical option.</p>
             <a href="#contact" class="section__cta section__cta--outline">Start a Project <i class="fa-solid fa-arrow-right"></i></a>
         </div>
@@ -331,7 +334,7 @@
 {% if testimonials %}
 <section class="section testimonials testimonials--carousel section--light" id="testimonials" aria-label="Client reviews">
     <div class="container">
-        <div class="testimonials__header" data-aos="fade-up">
+        <div class="testimonials__header" data-motion="reveal">
             <div>
                 <span class="testimonials__eyebrow">Our Reviews</span>
                 <h2 class="testimonials__title">What Our <span>Clients</span> Say</h2>
@@ -346,12 +349,12 @@
             </div>
         </div>
         <div class="testimonials__viewport">
-            <div class="testimonials__track">
+            <div class="testimonials__track" data-cursor="drag">
                 {% for t in testimonials %}
                 {% set role_split = (t.role or '').split(',', 1) %}
                 {% set person_role = role_split[0].strip() if role_split|length > 1 else '' %}
                 {% set company = role_split[1].strip() if role_split|length > 1 else t.role %}
-                <article class="testimonial-card" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 }}">
+                <article class="testimonial-card" data-motion="reveal" data-motion-delay="{{ loop.index0 * 100 }}">
                     <div class="testimonial-card__top">
                         <div class="testimonial-card__avatar">
                             {% if t.avatar_filename %}
@@ -383,7 +386,7 @@
 {% if blog_posts %}
 <section class="section blog-preview section--light" id="blog">
     <div class="container">
-        <div class="services__intro" data-aos="fade-up">
+        <div class="services__intro" data-motion="reveal">
             <div class="services__intro-heading">
                 <p class="section__eyebrow">Insights</p>
                 <h2 class="section__title">Ideas Worth<br><span><img src="{{ url_for('static', filename='images/mind-share.png') }}" alt="" aria-hidden="true">Sharing</span></h2>
@@ -395,9 +398,9 @@
         </div>
         <div class="blog__grid">
             {% for post in blog_posts %}
-            <article class="blog__card" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 }}">
+            <article class="blog__card" data-motion="reveal" data-motion-delay="{{ loop.index0 * 100 }}">
                 {% if post.image_filename %}
-                <div class="blog__card-image">
+                <div class="blog__card-image" data-motion="image">
                     <img src="{{ get_image_url(post.image_filename) }}" alt="{{ post.title }}" loading="lazy">
                 </div>
                 {% endif %}
@@ -423,7 +426,7 @@
 <!-- ===== PROCESS ===== -->
 <section class="section process section--light" id="process">
     <div class="container">
-        <div class="services__intro" data-aos="fade-up">
+        <div class="services__intro" data-motion="reveal">
             <div class="services__intro-heading">
                 <p class="section__eyebrow">Our Process</p>
                 <h2 class="section__title">How<br><span><img src="{{ url_for('static', filename='images/briefcase-dollar.png') }}" alt="" aria-hidden="true">We Work</span></h2>
@@ -435,14 +438,14 @@
         </div>
         <div class="process__grid">
             {% for step in process %}
-            <div class="process__item" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 80 }}">
+            <div class="process__item" data-motion="reveal" data-motion-delay="{{ loop.index0 * 80 }}">
                 <span class="process__number">{{ '%02d'|format(loop.index) }}</span>
                 <h3 class="process__title">{{ step.title }}</h3>
                 <p class="process__desc">{{ step.desc }}</p>
             </div>
             {% endfor %}
         </div>
-        <div class="process__cta" data-aos="fade-up">
+        <div class="process__cta" data-motion="reveal">
             <a href="#contact" class="section__cta">Start a Project <i class="fa-solid fa-arrow-right"></i></a>
         </div>
     </div>
@@ -452,7 +455,7 @@
 <section class="section contact section--light" id="contact">
     <div class="container">
         <div class="contact__inner">
-            <div class="services__intro contact__intro" data-aos="fade-up">
+            <div class="services__intro contact__intro" data-motion="reveal">
                 <div class="services__intro-heading">
                     <p class="section__eyebrow">Contact</p>
                     <h2 class="section__title">Have a Project<br><span><img src="{{ url_for('static', filename='images/paper-plane.png') }}" alt="" aria-hidden="true">in Mind?</span></h2>
@@ -461,26 +464,26 @@
                     <p>Tell us what you're trying to build, what problem you're solving, and what success looks like. We'll help you figure out the most practical next step.</p>
                 </div>
             </div>
-            <div class="contact__main" data-aos="fade-up">
+            <div class="contact__main" data-motion="reveal">
             <form class="contact__form" method="POST" action="{{ url_for('contact') }}">
                 <input type="hidden" name="csrf_token" value="{{ form.csrf_token._value() if form else '' }}">
                 <input type="text" name="website" tabindex="-1" autocomplete="off" class="form__honeypot" aria-hidden="true">
                 <div class="form__row">
                     <div class="form__group">
                         <label for="name" class="form__label">Name</label>
-                        <input type="text" id="name" name="name" class="form__input" placeholder="Your name" value="{{ form.name.data if form and form.name.data else '' }}" required>
+                        <input type="text" id="name" name="name" class="form__input" data-cursor="text" placeholder="Your name" value="{{ form.name.data if form and form.name.data else '' }}" required>
                         {% if form and form.name.errors %}<span class="form__error">{{ form.name.errors[0] }}</span>{% endif %}
                     </div>
                     <div class="form__group">
                         <label for="email" class="form__label">Email</label>
-                        <input type="email" id="email" name="email" class="form__input" placeholder="you@example.com" value="{{ form.email.data if form and form.email.data else '' }}" required>
+                        <input type="email" id="email" name="email" class="form__input" data-cursor="text" placeholder="you@example.com" value="{{ form.email.data if form and form.email.data else '' }}" required>
                         {% if form and form.email.errors %}<span class="form__error">{{ form.email.errors[0] }}</span>{% endif %}
                     </div>
                 </div>
                 <div class="form__row">
                     <div class="form__group">
                         <label for="business" class="form__label">Business / Organization</label>
-                        <input type="text" id="business" name="business" class="form__input" placeholder="Optional" value="{{ form.business.data if form and form.business.data else '' }}">
+                        <input type="text" id="business" name="business" class="form__input" data-cursor="text" placeholder="Optional" value="{{ form.business.data if form and form.business.data else '' }}">
                         {% if form and form.business.errors %}<span class="form__error">{{ form.business.errors[0] }}</span>{% endif %}
                     </div>
                     <div class="form__group">
@@ -513,7 +516,7 @@
                     <img src="{{ url_for('static', filename='images/phone.jpg') }}" alt="Replace this placeholder with your own image" loading="lazy">
                 </div>
             </div>
-            <div class="contact__details" data-aos="fade-up">
+            <div class="contact__details" data-motion="reveal">
                 <p class="contact__text contact__text--pricing">Basic websites typically start from around KSh 15,000–25,000. Web applications and custom software are quoted based on requirements.</p>
                 <div class="contact__links">
                     <a href="mailto:contact.retec@gmail.com" class="contact__link">
@@ -541,7 +544,7 @@
 <!-- ===== SUBSCRIBE / NEWSLETTER ===== -->
 <section class="section subscribe section--light" id="subscribe">
     <div class="container">
-        <div class="subscribe__inner" data-aos="fade-up">
+        <div class="subscribe__inner" data-motion="reveal">
             <div class="services__intro">
                 <div class="services__intro-heading">
                     <p class="section__eyebrow">Newsletter</p>
@@ -1009,7 +1012,4 @@
 {% endif %}
 {% endblock %}
 
-{% block page_scripts %}
-<script src="{{ url_for('static', filename='js/anime.umd.min.js') }}?v={{ css_version }}"></script>
-<script src="{{ url_for('static', filename='js/lp-hero.js') }}?v={{ css_version }}"></script>
-{% endblock %}
+{% block page_scripts %}{% endblock %}

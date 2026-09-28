@@ -186,11 +186,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script type="module">
-import { animate, stagger, createTimeline } from 'https://cdn.jsdelivr.net/npm/animejs@4/+esm';
-window._anime = { animate, stagger, createTimeline };
-window.dispatchEvent(new Event('animejs-ready'));
-</script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
 <script>
 (function(){
     var title = document.getElementById('csTitle').value;
@@ -666,73 +662,30 @@ window.dispatchEvent(new Event('animejs-ready'));
 
     renderIGPost(); renderIGStory(); renderFBPreview(); renderFiverrPreview(); renderAllSummary();
 
-    // === ANIME.JS v4 ANIMATIONS ===
+    // === GSAP PREVIEW ANIMATIONS ===
     function resetAnimClasses(container) {
-        container.querySelectorAll('.ani-hero,.ani-brand,.ani-title,.ani-sub,.ani-cta,.ani-badge,.ani-feat,.ani-feats').forEach(function(el) {
-            el.style.opacity = '0';
-            el.style.transform = 'translateY(20px)';
+        if (!container || !window.gsap) return;
+        window.gsap.set(container.querySelectorAll('.ani-hero,.ani-brand,.ani-title,.ani-sub,.ani-cta,.ani-badge,.ani-feat'), { clearProps: 'all' });
+    }
+    function runPreview(id, steps) {
+        if (!window.gsap) return;
+        var container = document.getElementById(id); if (!container) return;
+        resetAnimClasses(container);
+        var tl = window.gsap.timeline({ defaults: { ease: 'power2.out' } });
+        steps.forEach(function (step) {
+            var target = container.querySelectorAll(step[0]); if (!target.length) return;
+            tl.fromTo(target, step[1], Object.assign({}, step[2], { duration: step[3] }), step[4]);
         });
-        var hero = container.querySelector('.ani-hero');
-        if (hero) { hero.style.transform = 'scale(1.1)'; hero.style.opacity = '0'; }
-        var feats = container.querySelector('.ani-feats');
-        if (feats) feats.style.transform = 'none';
     }
-
-    function animateIGPost() {
-        var a = window._anime; if (!a) return;
-        var el = document.getElementById('igPostPreview');
-        resetAnimClasses(el);
-        a.createTimeline({ defaults: { easing: 'easeOutCubic' } })
-          .add(el.querySelector('.ani-hero'), { opacity: [0, 1], scale: [1.15, 1], duration: 900, easing: 'easeOutQuad' })
-          .add(el.querySelector('.ani-brand'), { opacity: [0, 1], y: [15, 0], duration: 400 }, '-=500')
-          .add(el.querySelector('.ani-title'), { opacity: [0, 1], y: [20, 0], duration: 500 }, '-=300')
-          .add(el.querySelector('.ani-sub'), { opacity: [0, 1], y: [15, 0], duration: 400 }, '-=250')
-          .add(el.querySelector('.ani-cta'), { opacity: [0, 1], x: [-15, 0], duration: 400 }, '-=200');
-    }
-
-    function animateIGStory() {
-        var a = window._anime; if (!a) return;
-        var el = document.getElementById('igStoryPreview');
-        resetAnimClasses(el);
-        a.createTimeline({ defaults: { easing: 'easeOutCubic' } })
-          .add(el.querySelector('.ani-hero'), { opacity: [0, 1], scale: [1.15, 1], duration: 900, easing: 'easeOutQuad' })
-          .add(el.querySelector('.ani-brand'), { opacity: [0, 1], y: [15, 0], duration: 400 }, '-=500')
-          .add(el.querySelector('.ani-title'), { opacity: [0, 1], y: [25, 0], duration: 500 }, '-=300')
-          .add(el.querySelector('.ani-sub'), { opacity: [0, 1], y: [15, 0], duration: 400 }, '-=250')
-          .add(el.querySelector('.ani-cta'), { opacity: [0, 1], y: [10, 0], duration: 400, easing: 'easeOutBack' }, '-=200');
-    }
-
-    function animateFBPreview() {
-        var a = window._anime; if (!a) return;
-        var el = document.getElementById('fbPreview');
-        resetAnimClasses(el);
-        a.createTimeline({ defaults: { easing: 'easeOutCubic' } })
-          .add(el.querySelector('.ani-hero'), { opacity: [0, 1], scale: [1.08, 1], duration: 800, easing: 'easeOutQuad' })
-          .add(el.querySelector('.ani-brand'), { opacity: [0, 1], duration: 300 }, '-=400')
-          .add(el.querySelector('.ani-title'), { opacity: [0, 1], y: [12, 0], duration: 400 }, '-=250')
-          .add(el.querySelector('.ani-sub'), { opacity: [0, 1], y: [10, 0], duration: 400 }, '-=200');
-    }
-
-    function animateFiverr() {
-        var a = window._anime; if (!a) return;
-        var el = document.getElementById('fiverrPreview');
-        resetAnimClasses(el);
-        a.createTimeline({ defaults: { easing: 'easeOutCubic' } })
-          .add(el.querySelector('.ani-badge'), { opacity: [0, 1], scale: [0.5, 1], duration: 500, easing: 'easeOutBack' })
-          .add(el.querySelector('.ani-title'), { opacity: [0, 1], y: [20, 0], duration: 500 }, '-=250')
-          .add(el.querySelector('.ani-hero'), { opacity: [0, 1], scale: [1.1, 1], duration: 700, easing: 'easeOutQuad' }, '-=300')
-          .add(el.querySelectorAll('.ani-feat'), { opacity: [0, 1], x: [-20, 0], duration: 400, delay: a.stagger(120) }, '-=350')
-          .add(el.querySelector('.ani-cta'), { opacity: [0, 1], scale: [0.9, 1], duration: 400, easing: 'easeOutBack' }, '-=150');
-    }
-
+    function animateIGPost() { runPreview('igPostPreview', [['.ani-hero',{autoAlpha:0,scale:1.15},{autoAlpha:1,scale:1},0.9],['.ani-brand',{autoAlpha:0,y:15},{autoAlpha:1,y:0},0.4,'-=0.5'],['.ani-title',{autoAlpha:0,y:20},{autoAlpha:1,y:0},0.5,'-=0.3'],['.ani-sub',{autoAlpha:0,y:15},{autoAlpha:1,y:0},0.4,'-=0.25'],['.ani-cta',{autoAlpha:0,x:-15},{autoAlpha:1,x:0},0.4,'-=0.2']]); }
+    function animateIGStory() { runPreview('igStoryPreview', [['.ani-hero',{autoAlpha:0,scale:1.15},{autoAlpha:1,scale:1},0.9],['.ani-brand',{autoAlpha:0,y:15},{autoAlpha:1,y:0},0.4,'-=0.5'],['.ani-title',{autoAlpha:0,y:25},{autoAlpha:1,y:0},0.5,'-=0.3'],['.ani-sub',{autoAlpha:0,y:15},{autoAlpha:1,y:0},0.4,'-=0.25'],['.ani-cta',{autoAlpha:0,y:10},{autoAlpha:1,y:0,ease:'back.out(1.7)'},0.4,'-=0.2']]); }
+    function animateFBPreview() { runPreview('fbPreview', [['.ani-hero',{autoAlpha:0,scale:1.08},{autoAlpha:1,scale:1},0.8],['.ani-brand',{autoAlpha:0},{autoAlpha:1},0.3,'-=0.4'],['.ani-title',{autoAlpha:0,y:12},{autoAlpha:1,y:0},0.4,'-=0.25'],['.ani-sub',{autoAlpha:0,y:10},{autoAlpha:1,y:0},0.4,'-=0.2']]); }
+    function animateFiverr() { runPreview('fiverrPreview', [['.ani-badge',{autoAlpha:0,scale:0.5},{autoAlpha:1,scale:1,ease:'back.out(1.7)'},0.5],['.ani-title',{autoAlpha:0,y:20},{autoAlpha:1,y:0},0.5,'-=0.25'],['.ani-hero',{autoAlpha:0,scale:1.1},{autoAlpha:1,scale:1},0.7,'-=0.3'],['.ani-feat',{autoAlpha:0,x:-20},{autoAlpha:1,x:0,stagger:0.12},0.4,'-=0.35'],['.ani-cta',{autoAlpha:0,scale:0.9},{autoAlpha:1,scale:1,ease:'back.out(1.7)'},0.4,'-=0.15']]); }
     window.animateIGPost = animateIGPost;
     window.animateIGStory = animateIGStory;
     window.animateFBPreview = animateFBPreview;
     window.animateFiverr = animateFiverr;
-
-    window.addEventListener('animejs-ready', function() {
-        setTimeout(function() { animateIGPost(); }, 300);
-    });
+    window.setTimeout(animateIGPost, 300);
 
     // Tabs
     document.getElementById('csTabs').addEventListener('click', function(e) {

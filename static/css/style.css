@@ -6,7 +6,7 @@
 }
 
 html {
-    scroll-behavior: smooth;
+    scroll-behavior: auto;
     font-size: 16px;
 }
 
@@ -768,10 +768,6 @@ ul { list-style: none; }
     transition: opacity 0.25s ease;
 }
 
-.page-content--fading {
-    opacity: 0;
-}
-
 .nav__link--active {
     color: var(--text);
 }
@@ -923,9 +919,11 @@ ul { list-style: none; }
 
 .reading-progress__bar {
     height: 100%;
-    width: 0%;
+    width: 100%;
     background: linear-gradient(90deg, var(--dark-1), var(--color-warning));
-    transition: width 0.1s linear;
+    transform: scaleX(0);
+    transform-origin: left center;
+    will-change: transform;
     border-radius: 0 2px 2px 0;
 }
 
@@ -5264,7 +5262,29 @@ select.form__input {
     text-wrap: balance;
     color: var(--ink);
 }
+.hero-editorial__title-bigger{
+    margin: 1.5rem 0 0;
+    font-family: var(--font-heading), Georgia, serif;
+    font-size: clamp(5.8rem, 7vw, 6.2rem);
+    font-weight: 500;
+    line-height: 0.92;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+    color: var(--ink);
 
+}
+.hero-editorial__title-word {
+    display: inline-block;
+    
+    font-family: inherit;
+    font-size: 1.5em;
+    font-weight: inherit;
+    letter-spacing: inherit;
+    line-height: inherit;
+    color: inherit;
+    margin-inline: 0.08em;
+    vertical-align: baseline;
+}
 .hero-editorial__title-lite {
     display: block;
     margin-top: 0.4rem;
@@ -5666,22 +5686,6 @@ select.form__input {
     font-style: italic;
 }
 
-/* ————— Reveal ————— */
-.hero-editorial--anim .hero-editorial__reveal {
-    opacity: 0;
-    transform: translateY(22px);
-}
-
-.hero-editorial--anim .hero-editorial__title-lite,
-.hero-editorial--anim .hero-editorial__card {
-    opacity: 0;
-}
-
-.hero-editorial--anim .hero-editorial__visual,
-.hero-editorial--anim .hero-editorial__card {
-    will-change: opacity, transform;
-}
-
 /* ————— Motion ————— */
 @keyframes retec-float {
     0%, 100% { transform: translateY(0); }
@@ -5718,6 +5722,10 @@ select.form__input {
 
     .hero-editorial__title {
         font-size: clamp(3rem, 10vw, 4.2rem);
+    }
+
+    .hero-editorial__title-word {
+        font-size: 1.28em;
     }
 
     .hero-editorial__panel {
