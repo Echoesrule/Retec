@@ -304,6 +304,21 @@ img { max-width: 100%; display: block; }
 .admin-empty { text-align: center; color: #999; padding: 2rem 1rem !important; }
 .admin-empty a { color: #000; text-decoration: underline; }
 
+/* ===== ENQUIRY DETAIL ROW ===== */
+.admin-enquiry-detail[hidden] { display: none !important; }
+.admin-enquiry-detail > td { background: #fafafa; }
+.admin-enquiry-detail__message {
+    margin: 0.5rem 0;
+    padding: 0.75rem;
+    background: #fff;
+    border: 1px solid #eee;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.admin-enquiry-detail__meta { color: #666; font-size: 0.75rem; }
+
 /* ===== THUMBNAIL ===== */
 .admin-thumb {
     width: 48px;
