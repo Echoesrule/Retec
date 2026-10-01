@@ -259,6 +259,9 @@
                     </div>
                 </div>
                 <div class="work__info">
+                    {% if project.status_label %}
+                    <span class="work__status work__status--{{ project.status }}"><span class="sr-only">Project status: </span>{{ project.status_label }}</span>
+                    {% endif %}
                     <h3 class="work__title">{{ project.title }}</h3>
                     <p class="work__description">{{ project.description }}</p>
                     <div class="work__tags">
@@ -388,12 +391,12 @@
     <div class="container">
         <div class="services__intro" data-motion="reveal">
             <div class="services__intro-heading">
-                <p class="section__eyebrow">Insights</p>
+                <p class="section__eyebrow">Journal</p>
                 <h2 class="section__title">Ideas Worth<br><span><img src="{{ url_for('static', filename='images/mind-share.png') }}" alt="" aria-hidden="true">Sharing</span></h2>
             </div>
             <div class="services__intro-copy">
                 <p>Practical ideas on websites, technology, and building a stronger digital presence.</p>
-                <a href="{{ url_for('blog') }}" class="section__cta">View All Insights <i class="fa-solid fa-arrow-right"></i></a>
+                <a href="{{ url_for('blog') }}" class="section__cta">Visit The Journal <i class="fa-solid fa-arrow-right"></i></a>
             </div>
         </div>
         <div class="blog__grid">

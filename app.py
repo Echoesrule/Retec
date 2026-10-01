@@ -1,6 +1,6 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, Response
-from datetime import datetime, timezone
-import os, requests, csv, io, re, time, secrets, json, socket
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, Response, make_response
+from datetime import datetime, timezone, timedelta
+import os, requests, csv, io, re, time, secrets, json, socket, threading
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_wtf.csrf import CSRFProtect
@@ -10,12 +10,27 @@ from functools import wraps
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from dotenv import load_dotenv
-from forms import ContactForm, PROJECT_TYPES, BUDGET_OPTIONS
+from forms import (ContactForm, PartnerForm, PROJECT_TYPES, BUDGET_OPTIONS,
+                   COLLABORATION_TYPES)
+import journal
 
 import cloudinary
 import cloudinary.uploader
 
 load_dotenv()
+
+
+def clean_env_int(value, default):
+    """Environment integer with a fallback, so a typo cannot crash boot."""
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError):
+        return default
+
+# Fail fast, before Flask, SQLAlchemy or any model exists, if we have been
+# pointed at a remote database by accident. See db_guard.py for why this is
+# not optional and what the escape hatches are.
+import db_guard
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
@@ -26,6 +41,7 @@ if _db_url and _db_url.startswith('postgres://'):
     _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
 if _db_url and ('render.com' in _db_url or 'supabase.co' in _db_url) and 'sslmode=' not in _db_url:
     _db_url += '&sslmode=require' if '?' in _db_url else '?sslmode=require'
+db_guard.assert_boot_allowed(_db_url, where='app.py')
 app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
@@ -46,6 +62,25 @@ app.config['SMS_SENDER'] = os.environ.get('SMS_SENDER', 'RETEC')
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600
 app.config['WTF_CSRF_SSL_STRICT'] = False
 
+# ===== JOURNAL CONFIGURATION =====
+# Everything here is optional: with no scheduler, no interval and no AI key
+# the Journal still works, it just has to be fetched by hand from the admin.
+JOURNAL_SCHEDULER_ENABLED = os.environ.get('JOURNAL_SCHEDULER_ENABLED', '1') not in ('0', 'false', 'False')
+JOURNAL_FETCH_INTERVAL_MINUTES = clean_env_int(os.environ.get('JOURNAL_FETCH_INTERVAL_MINUTES'), 60)
+# Run the fetch off the request thread so no visitor waits on a feed.
+JOURNAL_FETCH_IN_BACKGROUND = os.environ.get('JOURNAL_FETCH_IN_BACKGROUND', '1') not in ('0', 'false', 'False')
+JOURNAL_AI_ENABLED = os.environ.get('JOURNAL_AI_ENABLED', '1') not in ('0', 'false', 'False')
+JOURNAL_MAX_DRAFTS_PER_SOURCE = clean_env_int(os.environ.get('JOURNAL_MAX_DRAFTS_PER_SOURCE'), 8)
+JOURNAL_PUBLISHER = {
+    'name': 'RETEC',
+    'url': 'https://retec.dev',
+    'logo': '/static/images/logo.svg',
+    'same_as': [
+        'https://github.com/echoesrule',
+        'https://www.linkedin.com/in/emmanuel-kiprono-14a800389',
+    ],
+}
+
 _cloudinary_url = app.config['CLOUDINARY_URL']
 if _cloudinary_url:
     cloudinary.config(cloudinary_url=_cloudinary_url)
@@ -57,6 +92,9 @@ csrf = CSRFProtect(app)
 limiter = Limiter(get_remote_address, app=app, default_limits=['200 per day', '50 per hour'])
 
 db = SQLAlchemy(app)
+# Second lock: even on a real production deploy, drop_all()/drop_table() are
+# refused unless the operator sets two confirming env vars.
+db_guard.guard_destructive_operations(db, _db_url)
 bcrypt = Bcrypt(app)
 
 try:
@@ -83,6 +121,24 @@ def _format_datetime_filter(dt, fmt='%Y-%m-%d %H:%M'):
         return ''
     return dt.strftime(fmt)
 
+@app.template_filter('journal_content')
+def _journal_content_filter(value):
+    """Render stored article HTML through the allow-list, then mark it safe.
+
+    Content is sanitised on write; doing it again on read means an article that
+    predates the sanitiser — or one restored from a backup — still cannot inject
+    markup into the page. Markup that survives is escaped by the filter itself,
+    so the trailing `|safe` in the template only means "this string is already
+    HTML", not "trust it".
+    """
+    return journal.sanitize_html(value)
+
+@app.template_filter('human_date')
+def _human_date_filter(value, fmt='%B %d, %Y'):
+    if not value:
+        return ''
+    return value.strftime(fmt).replace(' 0', ' ')
+
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'mp4', 'webm', 'ogg'}
 VIDEO_EXTENSIONS = {'mp4', 'webm', 'ogg'}
 
@@ -104,12 +160,32 @@ class Project(db.Model):
     demo_url = db.Column(db.String(500), default='')
     featured = db.Column(db.Boolean, default=False)
     visible = db.Column(db.Boolean, default=True)
+    status = db.Column(db.String(50), default='')
     sort_order = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def tag_list(self):
         return [t.strip() for t in self.tags.split(',') if t.strip()] or ['N/A']
+
+# Single source of truth for the project lifecycle. Internal values stay in the
+# database; the label is the only thing ever presented, so the enum is never
+# exposed to the frontend or hardcoded into a card.
+PROJECT_STATUSES = [
+    ('live', 'Live'),
+    ('in_progress', 'In Progress'),
+    ('completed', 'Completed'),
+    ('concept', 'Concept'),
+    ('archived', 'Archived'),
+]
+PROJECT_STATUS_VALUES = {value for value, _ in PROJECT_STATUSES}
+PROJECT_STATUS_LABELS = dict(PROJECT_STATUSES)
+
+def clean_project_status(value):
+    """Whitelist a submitted status. Unknown or missing values stay '' so the
+    badge is hidden rather than showing a status nobody chose."""
+    value = (value or '').strip()
+    return value if value in PROJECT_STATUS_VALUES else ''
 
 class PageView(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -151,16 +227,272 @@ class Testimonial(db.Model):
     sort_order = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-class BlogPost(db.Model):
+# ===== RETEC JOURNAL =====
+#
+# One article system for all three content types. The table keeps its original
+# name (`blog_post`) and every column the old blog had, so existing articles
+# survive the refactor untouched; the Journal only adds columns.
+
+JOURNAL_CONTENT_TYPES = [
+    ('insight', 'Insight'),
+    ('brief', 'Brief'),
+    ('case_study', 'Case Study'),
+]
+JOURNAL_CONTENT_TYPE_VALUES = {value for value, _ in JOURNAL_CONTENT_TYPES}
+JOURNAL_CONTENT_TYPE_LABELS = dict(JOURNAL_CONTENT_TYPES)
+
+# Labels used in card/detail templates: plural for filter chips, singular for
+# the badge above a headline.
+JOURNAL_CONTENT_TYPE_PLURALS = {
+    'insight': 'Insights',
+    'brief': 'Briefs',
+    'case_study': 'Case Studies',
+}
+
+# Article lifecycle. `new` is the inbox state a fetched story lands in before
+# anyone has looked at it; everything else is a deliberate editorial decision.
+#
+#   fetched -> new -> draft -> review -> published
+#                                        \-> rejected -> draft (resubmitted)
+#   any -> archived
+#
+# `published` can only ever be set by an authenticated admin action. The
+# ingestion pipeline writes `new` and stops there.
+JOURNAL_STATUSES = [
+    ('new', 'New'),
+    ('draft', 'Draft'),
+    ('review', 'In Review'),
+    ('published', 'Published'),
+    ('rejected', 'Rejected'),
+    ('archived', 'Archived'),
+]
+JOURNAL_STATUS_VALUES = {value for value, _ in JOURNAL_STATUSES}
+JOURNAL_STATUS_LABELS = dict(JOURNAL_STATUSES)
+
+# Legal transitions, enforced server-side. Anything absent is refused, so a
+# crafted POST cannot resurrect a rejected story or publish an archived one
+# without an explicit intermediate step.
+JOURNAL_STATUS_TRANSITIONS = {
+    'new': {'draft', 'review', 'published', 'rejected', 'archived'},
+    'draft': {'review', 'published', 'rejected', 'archived'},
+    'review': {'draft', 'published', 'rejected', 'archived'},
+    'published': {'draft', 'archived'},
+    'rejected': {'draft', 'archived'},
+    'archived': {'draft'},
+}
+
+
+class JournalArticle(db.Model):
+    """A single Journal article: RETEC original writing or a reviewed Brief."""
+
+    __tablename__ = 'blog_post'
+    __table_args__ = (
+        db.Index('ix_blog_post_status', 'status'),
+        db.Index('ix_blog_post_content_type', 'content_type'),
+        db.Index('ix_blog_post_category', 'category'),
+        db.Index('ix_blog_post_published_at', 'published_at'),
+        db.Index('ix_blog_post_status_published_at', 'status', 'published_at'),
+        db.Index('ix_blog_post_canonical_url', 'canonical_url'),
+        db.Index('ix_blog_post_external_id', 'external_id'),
+    )
+
+    # ----- Editorial content -----
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
-    slug = db.Column(db.String(200), unique=True, nullable=False)
-    content = db.Column(db.Text, nullable=False)
+    slug = db.Column(db.String(200), unique=True, nullable=False, index=True)
+    # `summary` is the excerpt shown on cards and in meta descriptions.
     summary = db.Column(db.String(500), default='')
+    content = db.Column(db.Text, nullable=False)
     image_filename = db.Column(db.String(200), default='')
+    content_type = db.Column(db.String(30), default='insight')
+    category = db.Column(db.String(100), default='')
+    author = db.Column(db.String(120), default='')
+    is_featured = db.Column(db.Boolean, default=False)
+    reading_time = db.Column(db.Integer, nullable=True)
+    # ----- Lifecycle -----
+    # Indexed by the explicit `ix_blog_post_status` entry in __table_args__.
+    status = db.Column(db.String(20), default='draft')
+    # Legacy mirror of `status`. Kept in sync so older queries and the existing
+    # `published_at` logic keep working; never read it as the source of truth.
     published = db.Column(db.Boolean, default=False)
+    published_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # ----- External source (nullable; only Briefs set these) -----
+    source_name = db.Column(db.String(200), default='')
+    source_url = db.Column(db.String(500), default='')
+    source_published_at = db.Column(db.DateTime, nullable=True)
+    # ----- Ingestion bookkeeping (nullable) -----
+    external_id = db.Column(db.String(255), nullable=True)
+    canonical_url = db.Column(db.String(500), nullable=True)
+    url_fingerprint = db.Column(db.String(40), nullable=True)
+    title_fingerprint = db.Column(db.String(40), nullable=True)
+    original_title = db.Column(db.String(300), default='')
+    original_excerpt = db.Column(db.Text, default='')
+    image_url = db.Column(db.String(500), default='')
+    fetched_at = db.Column(db.DateTime, nullable=True)
+    source_record_id = db.Column(db.Integer, nullable=True)
+    ai_generated = db.Column(db.Boolean, default=False)
+
+    # ----- Presentation helpers -----
+
+    @property
+    def content_type_label(self):
+        return JOURNAL_CONTENT_TYPE_LABELS.get(self.content_type, 'Insight')
+
+    @property
+    def status_label(self):
+        return JOURNAL_STATUS_LABELS.get(self.status, 'Draft')
+
+    @property
+    def is_published(self):
+        return self.status == 'published'
+
+    @property
+    def is_external(self):
+        """True when the article rests on a third-party source we must credit."""
+        return bool(self.source_name or self.source_url)
+
+    @property
+    def display_date(self):
+        return self.published_at or self.created_at
+
+    @property
+    def hero_image(self):
+        """Best available image: an uploaded file first, then the fetched one.
+
+        External images can vanish, so `cover_image` reports whether the URL
+        is one we control; the templates fall back gracefully when it is not.
+        """
+        if self.image_filename:
+            return get_image_url(self.image_filename)
+        return self.image_url or ''
+
+    @property
+    def cover_image(self):
+        return self.image_filename or ''
+
+    def can_transition_to(self, status):
+        return status in JOURNAL_STATUS_TRANSITIONS.get(self.status or 'draft', set())
+
+    def apply_status(self, status):
+        """Move the article to ``status``, keeping timestamps and the legacy
+        `published` flag consistent. Assumes the transition has been checked."""
+        self.status = status
+        self.published = status == 'published'
+        if status == 'published' and self.published_at is None:
+            self.published_at = datetime.utcnow()
+
+    def estimated_reading_time(self):
+        return self.reading_time or journal.estimate_reading_time(self.content or '')
+
+
+class NewsSource(db.Model):
+    """A configured RSS/Atom source the Journal fetches Briefs from.
+
+    Sources live in the database, never in code, so adding or retiring a feed
+    is an admin action.
+    """
+
+    __tablename__ = 'news_source'
+    __table_args__ = (
+        db.Index('ix_news_source_active', 'is_active'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(160), nullable=False)
+    feed_url = db.Column(db.String(500), nullable=False, unique=True)
+    website_url = db.Column(db.String(500), default='')
+    category = db.Column(db.String(60), default='', index=True)
+    is_active = db.Column(db.Boolean, default=True)
+    last_fetched_at = db.Column(db.DateTime, nullable=True)
+    last_success_at = db.Column(db.DateTime, nullable=True)
+    last_error = db.Column(db.Text, default='')
+    last_status = db.Column(db.String(20), default='')
+    consecutive_failures = db.Column(db.Integer, default=0)
+    articles_created = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    @property
+    def fetch_ago(self):
+        return journal.suggested_fetch_time(self.last_success_at or self.last_fetched_at)
+
+    @property
+    def health(self):
+        """One word the admin can scan in the sources table."""
+        if not self.last_fetched_at:
+            return 'untried'
+        if not self.last_error:
+            return 'ok'
+        if self.consecutive_failures >= 5:
+            return 'failing'
+        return 'degraded'
+
+
+class NewsFetchRun(db.Model):
+    """One pass over one source, kept as the admin-facing ingestion log.
+
+    `slot` doubles as the cross-process lock: the scheduler inserts the current
+    time bucket, and a unique index on it means only one worker can claim a
+    given interval. The row is rolled back with the rest of the run if the
+    fetch fails, so a transient error is retried rather than skipped.
+    """
+
+    __tablename__ = 'news_fetch_run'
+    __table_args__ = (
+        db.Index('ix_news_fetch_run_slot', 'slot', unique=True),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    source_id = db.Column(db.Integer, nullable=True)
+    slot = db.Column(db.String(24), nullable=True)
+    trigger = db.Column(db.String(20), default='schedule')
+    started_at = db.Column(db.DateTime, default=datetime.utcnow)
+    finished_at = db.Column(db.DateTime, nullable=True)
+    ok = db.Column(db.Boolean, default=False)
+    entries_seen = db.Column(db.Integer, default=0)
+    drafts_created = db.Column(db.Integer, default=0)
+    duplicates_skipped = db.Column(db.Integer, default=0)
+    drafts_generated = db.Column(db.Integer, default=0)
+    error = db.Column(db.Text, default='')
+
+
+class BlogPost(db.Model):
+    """DEPRECATED ALIAS.
+
+    The Journal owns article content now. `JournalArticle` is the model;
+    this name is kept only so an old import keeps working, and it resolves to
+    the very same table.
+    """
+    __table__ = JournalArticle.__table__
+
+
+def clean_journal_content_type(value):
+    value = (value or '').strip().lower()
+    return value if value in JOURNAL_CONTENT_TYPE_VALUES else 'insight'
+
+
+def clean_journal_status(value):
+    value = (value or '').strip().lower()
+    return value if value in JOURNAL_STATUS_VALUES else ''
+
+
+def clean_optional_int(value):
+    try:
+        value = int(value)
+        return value if value > 0 else None
+    except (TypeError, ValueError):
+        return None
+
+def clean_optional_date(value):
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, '%Y-%m-%d')
+    except ValueError:
+        return None
 
 class SiteSetting(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -419,6 +751,36 @@ class Subscriber(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+class PartnerApplication(db.Model):
+    """Applications from the Become a Partner page.
+
+    Kept separate from Subscriber on purpose: an applicant is a prospective
+    collaborator, not a site subscriber, and mixing the two would put partner
+    leads into the marketing list and the newsletter.
+    """
+    __tablename__ = 'partner_application'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(255), nullable=False)
+    company = db.Column(db.String(200), default='')
+    role = db.Column(db.String(150), default='')
+    portfolio = db.Column(db.String(500), default='')
+    collaboration_type = db.Column(db.String(50), default='')
+    expertise = db.Column(db.String(300), default='')
+    message = db.Column(db.Text, default='')
+    status = db.Column(db.String(20), default='new')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+# Review states for an application. Internal values only; the admin label is
+# derived from these so an arbitrary submitted string can never be persisted.
+PARTNER_APPLICATION_STATUSES = [
+    ('new', 'New'),
+    ('reviewing', 'Reviewing'),
+    ('replied', 'Replied'),
+    ('archived', 'Archived'),
+]
+PARTNER_APPLICATION_STATUS_VALUES = {value for value, _ in PARTNER_APPLICATION_STATUSES}
+
 # ===== HELPERS =====
 
 _geo_cache = {}
@@ -554,7 +916,9 @@ def get_projects(category=None):
             'demo_url': p.demo_url or '',
             'image': get_image_url(p.image_filename),
             'id': p.id,
-            'category': p.category
+            'category': p.category,
+            'status': clean_project_status(p.status),
+            'status_label': PROJECT_STATUS_LABELS.get(clean_project_status(p.status), '')
         } for p in db_projects]
     if Project.query.count() == 0:
         return get_github_projects()
@@ -652,6 +1016,51 @@ def send_sms_notification(name, email, business, project_type, budget, message):
         return False
     except Exception as exc:
         app.logger.exception('SMS notification failed: %s', exc)
+        return False
+
+def send_partner_application(application):
+    """Email a partner application to the studio.
+
+    Mirrors send_email() so both public forms use the same Brevo transport.
+    `application` is a persisted PartnerApplication row, which is written
+    before this is called: the database is the record of truth and the email is
+    only the alert, so a mail failure never loses an application.
+    """
+    api_key = app.config['BREVO_API_KEY']
+    if not api_key or not app.config['MAIL_FROM'] or not app.config['MAIL_TO']:
+        app.logger.warning('Partner email skipped: BREVO_API_KEY or sender/recipient not configured.')
+        return False
+    try:
+        body = (
+            f"New RETEC partner application\n\n"
+            f"Name: {application.name}\n"
+            f"Email: {application.email}\n"
+            f"Company / Studio: {application.company or 'N/A'}\n"
+            f"Role / Specialty: {application.role or 'N/A'}\n"
+            f"Collaboration Type: {application.collaboration_type or 'Not specified'}\n"
+            f"Website / Portfolio: {application.portfolio or 'N/A'}\n"
+            f"Areas of Expertise: {application.expertise or 'N/A'}\n"
+            f"Received: {application.created_at.strftime('%Y-%m-%d %H:%M UTC')}\n\n"
+            f"About them:\n{application.message}"
+        )
+        resp = requests.post(
+            'https://api.brevo.com/v3/smtp/email',
+            headers={'api-key': api_key, 'Content-Type': 'application/json'},
+            json={
+                'sender': {'email': app.config['MAIL_FROM']},
+                'to': [{'email': app.config['MAIL_TO']}],
+                'replyTo': {'email': application.email},
+                'subject': f"Partner Application: {(application.collaboration_type or 'General')[:80]}",
+                'textContent': body,
+            },
+            timeout=15,
+        )
+        if resp.ok:
+            return True
+        app.logger.error('Brevo partner email error %s: %s', resp.status_code, resp.text)
+        return False
+    except Exception as exc:
+        app.logger.exception('Partner email failed: %s', exc)
         return False
 
 def send_verification_code(email, code):
@@ -898,10 +1307,408 @@ def save_subscriber(email, name='', source='website'):
     return subscriber, created
 
 def slugify(text):
-    text = text.lower().strip()
+    text = (text or '').lower().strip()
     text = re.sub(r'[^\w\s-]', '', text)
-    text = re.sub(r'[-\s]+', '-', text)
-    return text
+    text = re.sub(r'[-\s]+', '-', text).strip('-')
+    return text[:180]
+
+
+def unique_slug(title, exclude_id=None):
+    """A slug that is unique across the Journal.
+
+    Collisions are common here: syndicated headlines repeat, and an admin can
+    easily reuse a wordmark. The numeric suffix keeps the URL stable and
+    readable instead of failing the save.
+    """
+    base = slugify(title) or 'journal-article'
+    candidate, suffix = base, 2
+    while True:
+        query = JournalArticle.query.filter_by(slug=candidate)
+        if exclude_id is not None:
+            query = query.filter(JournalArticle.id != exclude_id)
+        if query.first() is None:
+            return candidate
+        candidate = '%s-%d' % (base, suffix)
+        suffix += 1
+
+
+# ===== JOURNAL: NEWS INGESTION PIPELINE =====
+#
+#   fetch -> validate -> normalise -> deduplicate -> DRAFT -> admin review
+#
+# The hard rule this section exists to enforce: nothing here can set an
+# article's status to `published`. `run_journal_ingestion` writes `new` and
+# returns; promoting a story is an explicit, authenticated admin action.
+
+
+def _dedupe_reason_for(item):
+    """Why ``item`` is already in the Journal, or '' when it is new.
+
+    Checked strongest-first: the source's own identifier, then the canonical
+    URL, then the headline. The title scan is bounded to recent fetches so the
+    cost per item stays flat as the archive grows.
+    """
+    if item.external_id:
+        row = JournalArticle.query.filter(
+            JournalArticle.external_id == item.external_id,
+            JournalArticle.source_record_id.isnot(None),
+        ).first()
+        if row is not None:
+            return 'external id %s' % item.external_id
+
+    fingerprint = journal.url_fingerprint(item.url)
+    if fingerprint:
+        row = JournalArticle.query.filter_by(url_fingerprint=fingerprint).first()
+        if row is not None:
+            return 'already fetched from %s' % (row.source_name or 'another source')
+        row = JournalArticle.query.filter(
+            JournalArticle.canonical_url == journal.normalise_url(item.url)
+        ).first()
+        if row is not None:
+            return 'already fetched from %s' % (row.source_name or 'another source')
+
+    title_key = journal.title_fingerprint(item.title)
+    if title_key:
+        row = JournalArticle.query.filter_by(title_fingerprint=title_key).first()
+        if row is not None:
+            return 'matching headline already fetched (%s)' % (row.source_name or 'another source')
+        since = datetime.utcnow() - timedelta(days=journal.DEDUPE_WINDOW_DAYS)
+        candidates = JournalArticle.query.filter(
+            JournalArticle.original_title != '',
+            JournalArticle.fetched_at >= since,
+        ).order_by(JournalArticle.fetched_at.desc()).limit(
+            journal.DEDUPE_TITLE_CANDIDATES).all()
+        for candidate in candidates:
+            if journal.titles_match(candidate.original_title or '', item.title):
+                return 'near-identical headline already fetched (%s)' % (
+                    candidate.source_name or 'another source')
+    return ''
+
+
+def _build_draft_from_item(item, source, ai_editor=None):
+    """Create one unpublished Brief draft, or return ``(None, reason)``.
+
+    Nothing from the source body is copied: the draft starts from the
+    normalised metadata, and if AI drafting is configured and succeeds it is
+    the model's own analysis of that metadata, not the publisher's article.
+    """
+    reason = _dedupe_reason_for(item)
+    if reason:
+        return None, reason
+
+    now = datetime.utcnow()
+    draft_body = ''
+    headline = item.title
+    excerpt = item.excerpt
+    ai_used = False
+
+    if ai_editor is not None and ai_editor.enabled:
+        proposal = ai_editor.draft(item, source_name=source.name)
+        if proposal:
+            draft_body = journal.compose_brief_body(proposal['sections'], fallback_excerpt=item.excerpt)
+            headline = proposal['headline'] or item.title
+            excerpt = proposal['excerpt'] or item.excerpt
+            ai_used = True
+
+    if not draft_body:
+        # No AI configured, or the call failed. The draft still exists so the
+        # story is in the queue rather than lost; the admin writes it up.
+        draft_body = (
+            '<p><em>Awaiting editorial drafting. RETEC has not yet written '
+            'this story up — read the original source, then replace this '
+            'placeholder with the Brief.</em></p>'
+        )
+
+    article = JournalArticle(
+        title=headline[:200],
+        slug=unique_slug(headline),
+        summary=excerpt[:500],
+        content=draft_body,
+        content_type='brief',
+        category=_journal_category_from_source(source.category),
+        status='new',
+        published=False,
+        published_at=None,
+        # Source attribution. Required for any Brief we publish.
+        source_name=source.name,
+        source_url=item.url,
+        source_published_at=item.published_at,
+        # Ingestion bookkeeping for de-duplication and provenance.
+        external_id=item.external_id or None,
+        canonical_url=journal.normalise_url(item.url) or None,
+        url_fingerprint=journal.url_fingerprint(item.url) or None,
+        title_fingerprint=journal.title_fingerprint(item.title) or None,
+        original_title=item.title,
+        original_excerpt=item.excerpt,
+        image_url=item.image_url or '',
+        fetched_at=now,
+        source_record_id=source.id,
+        ai_generated=ai_used,
+        reading_time=journal.estimate_reading_time(draft_body),
+    )
+    db.session.add(article)
+    return article, ''
+
+
+def _fetch_one_source(source, trigger='schedule', ai_editor=None,
+                      max_drafts=JOURNAL_MAX_DRAFTS_PER_SOURCE):
+    """Fetch a single source and turn its new stories into drafts.
+
+    Never raises: a broken feed is recorded against the source and the run
+    moves on, so one bad URL cannot stop the other fifteen.
+    """
+    run = NewsFetchRun(source_id=source.id, trigger=trigger, started_at=datetime.utcnow())
+    db.session.add(run)
+    source.last_fetched_at = run.started_at
+    created, duplicates, generated = 0, 0, 0
+
+    try:
+        payload = journal.fetch_feed(source.feed_url)
+        items = journal.parse_feed(payload, source_url=source.feed_url)
+        run.entries_seen = len(items)
+    except journal.FeedError as exc:
+        run.ok = False
+        run.error = str(exc)[:1000]
+        run.finished_at = datetime.utcnow()
+        source.last_status = 'error'
+        source.last_error = run.error
+        source.consecutive_failures = (source.consecutive_failures or 0) + 1
+        db.session.commit()
+        print('[JOURNAL] source %r failed: %s' % (source.name, run.error))
+        return run
+    except Exception as exc:  # unexpected: still must not kill the pipeline
+        run.ok = False
+        run.error = 'unexpected %s: %s' % (type(exc).__name__, str(exc)[:200])
+        run.finished_at = datetime.utcnow()
+        source.last_status = 'error'
+        source.last_error = run.error
+        source.consecutive_failures = (source.consecutive_failures or 0) + 1
+        db.session.commit()
+        print('[JOURNAL] source %r raised %s: %s' % (source.name, type(exc).__name__, exc))
+        return run
+
+    for item in items:
+        if created >= max_drafts:
+            break
+        try:
+            article, reason = _build_draft_from_item(item, source, ai_editor)
+            if article is None:
+                duplicates += 1
+                continue
+            created += 1
+            if article.ai_generated:
+                generated += 1
+        except Exception as exc:
+            # Roll back just this item so a bad entry cannot poison the rest.
+            db.session.rollback()
+            duplicates += 1
+            print('[JOURNAL] skipping entry from %r: %s: %s'
+                  % (source.name, type(exc).__name__, exc))
+
+    source.last_status = 'ok'
+    source.last_error = ''
+    source.last_success_at = datetime.utcnow()
+    source.consecutive_failures = 0
+    source.articles_created = (source.articles_created or 0) + created
+    run.ok = True
+    run.drafts_created = created
+    run.duplicates_skipped = duplicates
+    run.drafts_generated = generated
+    run.finished_at = datetime.utcnow()
+    db.session.commit()
+    print('[JOURNAL] %s: %d entries, %d drafts, %d duplicates, %d AI-written'
+          % (source.name, run.entries_seen, created, duplicates, generated))
+    return run
+
+
+def run_journal_ingestion(source_ids=None, trigger='manual', generate_ai=True):
+    """Fetch every active source (or the given ones) and create drafts.
+
+    Returns a summary dict. The return value is for the admin UI and the log;
+    it is never used to publish anything.
+    """
+    query = NewsSource.query.filter_by(is_active=True)
+    if source_ids:
+        query = query.filter(NewsSource.id.in_(source_ids))
+    sources = query.order_by(NewsSource.category, NewsSource.name).all()
+
+    ai_editor = journal.AiEditor() if (generate_ai and JOURNAL_AI_ENABLED) else None
+    if generate_ai and JOURNAL_AI_ENABLED and not (ai_editor and ai_editor.enabled):
+        ai_editor = None
+
+    summary = {
+        'sources': len(sources), 'entries': 0, 'created': 0, 'duplicates': 0,
+        'generated': 0, 'failures': [],
+    }
+    for source in sources:
+        try:
+            run = _fetch_one_source(source, trigger=trigger, ai_editor=ai_editor)
+        except Exception as exc:
+            # Belt and braces: _fetch_one_source already contains its own
+            # failures, so reaching here means a database-level problem.
+            db.session.rollback()
+            summary['failures'].append('%s: %s' % (source.name, type(exc).__name__))
+            continue
+        summary['entries'] += run.entries_seen or 0
+        summary['created'] += run.drafts_created or 0
+        summary['duplicates'] += run.duplicates_skipped or 0
+        summary['generated'] += run.drafts_generated or 0
+        if not run.ok and run.error:
+            summary['failures'].append('%s: %s' % (source.name, run.error))
+    return summary
+
+
+def regenerate_article_draft(article):
+    """Re-run AI drafting for one article, in place.
+
+    Only ever rewrites the body of a draft. An article that has already been
+    published, rejected or archived is left alone unless an admin explicitly
+    moves it back to `draft` first, so published copy is never rewritten
+    underneath readers.
+    """
+    if article.status not in ('new', 'draft', 'review', 'rejected'):
+        return False, 'Only an unapproved draft can be rewritten automatically.'
+    editor = journal.AiEditor()
+    if not editor.enabled:
+        return False, 'No AI drafting key is configured on this server.'
+    if not article.source_url:
+        return False, 'This article has no external source to draft from.'
+
+    item = journal.FeedItem(
+        external_id=article.external_id or '',
+        url=article.source_url,
+        title=article.original_title or article.title,
+        excerpt=article.original_excerpt or article.summary,
+        published_at=article.source_published_at,
+    )
+    proposal = editor.draft(item, source_name=article.source_name or '')
+    if not proposal:
+        return False, 'The drafting request did not return a usable draft.'
+
+    body = journal.compose_brief_body(proposal['sections'], fallback_excerpt=item.excerpt)
+    article.content = body
+    article.title = (proposal['headline'] or article.title)[:200]
+    article.summary = (proposal['excerpt'] or article.summary)[:500]
+    article.reading_time = journal.estimate_reading_time(body)
+    article.ai_generated = True
+    # Re-drafting returns the article to the queue. It is never published.
+    if article.status in ('rejected', 'review'):
+        article.status = 'new'
+        article.published = False
+    article.updated_at = datetime.utcnow()
+    db.session.commit()
+    return True, 'Editorial draft regenerated. Review it before publishing.'
+
+
+# ===== JOURNAL: SCHEDULING =====
+#
+# There is no scheduler process in this project and none is being added. The
+# Journal piggybacks on the web app: a request that arrives after the interval
+# has elapsed claims the current time bucket with a uniquely-indexed row and
+# does the fetch on a background thread. That means:
+#
+#   * no new dependency, no new service, no cron to keep alive;
+#   * on a sleeping host the Journal simply catches up on the first request;
+#   * two workers waking together cannot both fetch, because the second one's
+#     slot insert violates the unique index;
+#   * a run that raises rolls its slot back, so it is retried next time.
+#
+# `flask fetch-journal` runs the same code path for anyone who would rather
+# drive it from cron.
+
+_journal_tick_lock = threading.Lock()
+
+
+def _journal_due():
+    """The current interval bucket if a fetch is due, else ``None``."""
+    if not JOURNAL_SCHEDULER_ENABLED or app.config.get('TESTING'):
+        return None
+    if JOURNAL_FETCH_INTERVAL_MINUTES <= 0:
+        return None
+    slot = journal.due_slot(interval_minutes=JOURNAL_FETCH_INTERVAL_MINUTES)
+    if slot is None:
+        return None
+    try:
+        # Nothing to fetch: do not claim the slot, or the interval is burned on
+        # an empty pass and the log fills with meaningless runs.
+        if not NewsSource.query.filter_by(is_active=True).first():
+            return None
+        if NewsFetchRun.query.filter_by(slot=slot).first() is not None:
+            return None
+    except Exception:
+        db.session.rollback()
+        return None
+    return slot
+
+
+def _run_scheduled_fetch(slot):
+    """Claim the slot, fetch, then record the run. Runs in its own app context.
+
+    The claim is committed on its own so concurrent workers cannot both run the
+    same slot, then released again if the pass aborts, so a crash is retried on
+    the next request instead of silently skipping the interval.
+    """
+    with app.app_context():
+        try:
+            run = NewsFetchRun(slot=slot, trigger='schedule', started_at=datetime.utcnow())
+            db.session.add(run)
+            db.session.commit()
+        except Exception:
+            # Slot already claimed by another worker. Nothing to do.
+            db.session.rollback()
+            return
+        try:
+            summary = run_journal_ingestion(trigger='schedule')
+        except Exception as exc:
+            db.session.rollback()
+            print('[JOURNAL] scheduled fetch aborted: %s: %s' % (type(exc).__name__, exc))
+            _release_fetch_slot(slot)
+            return
+        run.finished_at = datetime.utcnow()
+        run.ok = not summary['failures']
+        run.entries_seen = summary['entries']
+        run.drafts_created = summary['created']
+        run.duplicates_skipped = summary['duplicates']
+        run.source_id = None
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+
+def _release_fetch_slot(slot):
+    """Drop a scheduler claim so the interval is retried rather than skipped."""
+    with app.app_context():
+        try:
+            NewsFetchRun.query.filter_by(slot=slot).delete()
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+
+def journal_scheduler_tick():
+    """``before_request`` hook. Cheap when not due; never raises."""
+    if not _journal_tick_lock.acquire(blocking=False):
+        return
+    try:
+        slot = _journal_due()
+        if not slot:
+            return
+        if JOURNAL_FETCH_IN_BACKGROUND:
+            threading.Thread(
+                target=_run_scheduled_fetch, args=(slot,),
+                name='retec-journal-fetch', daemon=True,
+            ).start()
+        else:
+            _run_scheduled_fetch(slot)
+    except Exception as exc:
+        print('[JOURNAL] scheduler tick failed: %s: %s' % (type(exc).__name__, exc))
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+    finally:
+        _journal_tick_lock.release()
 
 services = [
     {
@@ -948,6 +1755,54 @@ process = [
     {'title': 'Build', 'desc': 'We design and develop the solution while keeping the project practical, maintainable, and focused on its goals.'},
     {'title': 'Launch', 'desc': 'We test, deploy, and prepare the product for real users.'},
     {'title': 'Support', 'desc': 'We can continue improving, maintaining, and supporting the solution after launch.'},
+]
+
+# ===== BECOME A PARTNER PAGE CONTENT =====
+# Editorial copy for the collaboration page. Held here alongside `services` and
+# `process` so the template stays presentational, mirroring how the homepage
+# sections are sourced. Deliberately free of invented scale, client counts,
+# partner logos or testimonials.
+
+partner_collaborator_types = [
+    {
+        'name': 'Designers',
+        'desc': 'UI/UX, product and visual designers who want serious technical execution for their concepts.',
+    },
+    {
+        'name': 'Developers',
+        'desc': 'Frontend, backend, mobile and specialised developers who can contribute to larger builds.',
+    },
+    {
+        'name': 'Creative Studios',
+        'desc': 'Branding, creative and production studios that need a technical development partner.',
+    },
+    {
+        'name': 'Marketing Agencies',
+        'desc': 'Agencies that need websites, landing pages, applications or custom digital systems for their clients.',
+    },
+    {
+        'name': 'Specialists',
+        'desc': 'Photographers, videographers, copywriters, SEO specialists and other professionals who complement digital work.',
+    },
+    {
+        'name': 'Technology Partners',
+        'desc': 'People or companies offering services, integrations or technical expertise that extend what RETEC can deliver.',
+    },
+]
+
+partner_process = [
+    {'title': 'Introduce', 'desc': 'Tell us who you are, what you specialise in and the kind of projects you work on.'},
+    {'title': 'Align', 'desc': 'We discuss the project, responsibilities, scope, timelines and expectations.'},
+    {'title': 'Build', 'desc': 'Each collaborator contributes within their area of expertise while RETEC coordinates the technical and product direction where appropriate.'},
+    {'title': 'Deliver', 'desc': 'We work together to deliver a cohesive, professional result for the client.'},
+]
+
+partner_reasons = [
+    {'title': 'Complementary Skills', 'desc': 'Bring your expertise together with RETEC’s design and development capabilities.'},
+    {'title': 'Flexible Collaboration', 'desc': 'Work together on individual projects without requiring a permanent employment relationship.'},
+    {'title': 'Clear Responsibilities', 'desc': 'Define scope, deliverables and responsibilities before any work begins.'},
+    {'title': 'Quality First', 'desc': 'Maintain a high standard across design, development and delivery.'},
+    {'title': 'Long-Term Relationships', 'desc': 'Strong collaborations can develop into recurring project partnerships.'},
 ]
 
 # ===== CONTEXT PROCESSORS =====
@@ -1014,6 +1869,34 @@ def track_pageview():
             db.session.add(LocationLog(ip_address=ip, country=geo['country'], city=geo['city']))
             db.session.commit()
 
+@app.before_request
+def journal_scheduler_hook():
+    """Give the fetch pipeline a chance to run, once per interval.
+
+    Registered before pageview tracking so it never inflates analytics. The
+    work itself happens off-thread and is claimed by a uniquely-indexed slot,
+    so the common path here is a single indexed SELECT and a thread that does
+    not start.
+    """
+    if request.path.startswith('/static') or request.path.startswith('/track'):
+        return
+    journal_scheduler_tick()
+
+@app.cli.command('fetch-journal')
+def fetch_journal_command():
+    """Fetch configured news sources and create Brief drafts. Never publishes.
+
+    Drive this from cron on a host where you would rather not piggyback on web
+    requests:  flask fetch-journal
+    """
+    summary = run_journal_ingestion(trigger='cli')
+    print('sources: %d | entries: %d | drafts: %d (ai: %d) | duplicates: %d'
+          % (summary['sources'], summary['entries'], summary['created'],
+             summary['generated'], summary['duplicates']))
+    for failure in summary['failures']:
+        print('  FAILED %s' % failure)
+    print('All created articles are drafts awaiting admin review.')
+
 # ===== ERROR HANDLERS =====
 
 @app.errorhandler(404)
@@ -1034,7 +1917,8 @@ def get_homepage_data():
     return {
         'projects': get_projects(),
         'testimonials': Testimonial.query.filter_by(active=True).order_by(Testimonial.sort_order).all(),
-        'blog_posts': BlogPost.query.filter_by(published=True).order_by(BlogPost.created_at.desc()).limit(3).all(),
+        'blog_posts': JournalArticle.query.filter_by(status='published').order_by(
+            JournalArticle.published_at.desc().nullslast()).limit(3).all(),
         'services': services,
         'process': process,
         'project_types': PROJECT_TYPES,
@@ -1112,33 +1996,288 @@ def verify_email():
         return jsonify({'valid': True, 'message': 'Email looks good.'})
     return jsonify({'valid': False, 'message': 'Could not verify this email.'})
 
+# `/partner` is the canonical URL (footer link, form target, url_for output) and
+# `/become-a-partner` is a readable alias. Both are registered on the same view
+# and neither redirects, so no incoming link can go stale. Declared alias-first
+# because werkzeug builds the last-registered matching rule, which is what
+# url_for() emits.
+@app.route('/become-a-partner', methods=['GET', 'POST'])
+@app.route('/partner', methods=['GET', 'POST'])
+@limiter.limit("5 per hour")
+def partner():
+    """Become a Partner / collaboration page and application form.
+
+    Both routes render the same template: `/become-a-partner` is the readable
+    alias people tend to link to, `/partner` is the short one used in the
+    footer. No redirect between them so neither URL can go stale.
+    """
+    form = PartnerForm()
+    honeypot = request.form.get('website', '')
+    if form.validate_on_submit() and not honeypot:
+        # SelectField.pre_validate already rejects anything outside the
+        # COLLABORATION_TYPES choices server-side, so reaching here means the
+        # submitted type came from the whitelist.
+        application = PartnerApplication(
+            name=form.name.data.strip(),
+            email=form.email.data.strip(),
+            company=form.company.data.strip(),
+            role=form.role.data.strip(),
+            portfolio=form.portfolio.data.strip(),
+            collaboration_type=form.collaboration_type.data,
+            expertise=form.expertise.data.strip(),
+            message=form.message.data.strip(),
+        )
+        db.session.add(application)
+        db.session.commit()
+        send_partner_application(application)
+        flash('Thank you for reaching out. We read every application and will reply if there is a fit.', 'success')
+        return redirect(url_for('partner'))
+    return render_template('partner.html', **_partner_context(form))
+
+def _partner_context(form):
+    """Template context for the partner page, shared by the GET and the
+    re-render-after-invalid paths so both always see identical data."""
+    return {
+        'active': 'partner',
+        'form': form,
+        'collaboration_types': COLLABORATION_TYPES,
+        'collaborator_types': partner_collaborator_types,
+        'partner_process': partner_process,
+        'partner_reasons': partner_reasons,
+        'meta_title': 'Become a Partner — RETEC',
+        'meta_desc': 'RETEC collaborates with designers, developers, agencies and '
+                     'specialists on digital projects. Tell us what you do and how you '
+                     'would like to work together.',
+    }
+
 @app.route('/cv')
 def cv():
     return render_template('cv.html', active='cv')
 
+# ===== RETEC JOURNAL (PUBLIC) =====
+#
+# `/blog` stays the canonical URL. It is linked from the navbar, the footer,
+# the sitemap and any article that has been shared, and a Journal rename is not
+# a reason to break those. `/journal` is a permanent redirect to it so the new
+# name resolves for anyone who types or links it.
+
+JOURNAL_PER_PAGE = 9
+JOURNAL_RELATED_COUNT = 3
+JOURNAL_FEATURED_FALLBACK_WINDOW = 60  # days a featured article stays lead
+
+
+def _published_articles():
+    return JournalArticle.query.filter_by(status='published')
+
+
+def _journal_article_query(content_type='', category=''):
+    query = _published_articles()
+    if content_type:
+        query = query.filter_by(content_type=content_type)
+    if category:
+        query = query.filter_by(category=category)
+    return query
+
+
+def _journal_category_from_source(source_category):
+    """Map a source's uppercase category onto an article category.
+
+    Sources are grouped with values like 'KENYA / BUSINESS' and 'GLOBAL
+    TECHNOLOGY'; articles use title-case topics like 'Technology'. Writing the
+    raw source value into `category` would create filters the public pages can
+    never reach, since the category chips come from published articles.
+    """
+    if not source_category:
+        return ''
+    cleaned = source_category.replace('/', ' ').strip().title()
+    for candidate in journal.JOURNAL_CATEGORIES:
+        if candidate.lower() == cleaned.lower():
+            return candidate
+    # 'Kenya Business' and 'Global Technology' have no exact article topic; fall
+    # back to the closest single word that is one.
+    for word in cleaned.split():
+        for candidate in journal.JOURNAL_CATEGORIES:
+            if candidate.lower() == word.lower():
+                return candidate
+    return ''
+
+
+def _journal_categories():
+    """Categories that actually have published articles, alphabetically."""
+    return [row[0] for row in db.session.query(JournalArticle.category)
+            .filter(JournalArticle.status == 'published', JournalArticle.category != '')
+            .distinct().order_by(JournalArticle.category).all()]
+
+
+def _journal_featured(exclude_ids=()):
+    """The featured article, chosen from the database.
+
+    An explicit `is_featured` article wins. Otherwise the most recent
+    publication takes the lead, so a brand new post is never buried — but only
+    within a recent window, after which a stale manual pick is respected.
+    """
+    exclude = list(exclude_ids or ())
+    query = JournalArticle.query.filter(JournalArticle.status == 'published')
+    if exclude:
+        query = query.filter(JournalArticle.id.notin_(exclude))
+    manual = query.filter(JournalArticle.is_featured == True).order_by(
+        JournalArticle.published_at.desc().nullslast(),
+        JournalArticle.updated_at.desc()).first()
+    if manual is not None:
+        return manual
+    cutoff = datetime.utcnow() - timedelta(days=JOURNAL_FEATURED_FALLBACK_WINDOW)
+    return query.filter(JournalArticle.published_at >= cutoff).order_by(
+        JournalArticle.published_at.desc()).first()
+
+
+@app.route('/journal')
+def journal_redirect():
+    return redirect(url_for('blog'), code=301)
+
+
 @app.route('/blog')
 def blog():
-    posts = BlogPost.query.filter_by(published=True).order_by(BlogPost.created_at.desc()).all()
-    return render_template('blog.html', active='blog', posts=posts)
+    content_type = request.args.get('type', '').strip().lower()
+    if content_type not in JOURNAL_CONTENT_TYPE_VALUES:
+        content_type = ''
+    category = request.args.get('category', '').strip()
+    page = max(1, request.args.get('page', 1, type=int))
+
+    # The lead article is picked from the unfiltered archive so filtering the
+    # grid never produces an empty page with a stranger sitting above it.
+    featured = _journal_featured()
+    exclude = [featured.id] if featured is not None else []
+
+    query = _journal_article_query(content_type, category)
+    if exclude:
+        query = query.filter(JournalArticle.id.notin_(exclude))
+    pagination = query.order_by(
+        JournalArticle.published_at.desc().nullslast(),
+        JournalArticle.id.desc(),
+    ).paginate(page=page, per_page=JOURNAL_PER_PAGE, error_out=False)
+
+    meta_title = 'RETEC Journal'
+    if content_type:
+        meta_title = '%s — RETEC Journal' % JOURNAL_CONTENT_TYPE_PLURALS.get(content_type, 'Journal')
+    if category:
+        meta_title = '%s — RETEC Journal' % category
+    return render_template(
+        'blog.html', active='blog', posts=pagination.items,
+        pagination=pagination, featured_post=featured,
+        categories=_journal_categories(),
+        active_content_type=content_type, active_category=category,
+        journal_content_types=JOURNAL_CONTENT_TYPES,
+        meta_title=meta_title,
+        meta_desc='RETEC insights on business and technology, briefings on the '
+                  'developments that matter to Kenyan businesses, and stories '
+                  'from the projects we build.',
+    )
+
+
+@app.route('/journal/<slug>')
+def journal_post_redirect(slug):
+    return redirect(url_for('blog_post', slug=slug), code=301)
+
 
 @app.route('/blog/<slug>')
 def blog_post(slug):
-    post = BlogPost.query.filter_by(slug=slug, published=True).first_or_404()
-    prev_post = BlogPost.query.filter(
-        BlogPost.published == True, BlogPost.created_at < post.created_at
-    ).order_by(BlogPost.created_at.desc()).first()
-    next_post = BlogPost.query.filter(
-        BlogPost.published == True, BlogPost.created_at > post.created_at
-    ).order_by(BlogPost.created_at.asc()).first()
-    related = BlogPost.query.filter(
-        BlogPost.published == True, BlogPost.id != post.id
-    ).order_by(BlogPost.created_at.desc()).limit(3).all()
-    meta_title = f"{post.title} — RETEC"
-    meta_desc = post.summary or post.title
-    meta_image = get_image_url(post.image_filename) if post.image_filename else url_for('static', filename='images/favicon.svg', _external=True)
-    return render_template('blog_post.html', post=post, prev_post=prev_post,
-        next_post=next_post, related=related,
-        meta_title=meta_title, meta_desc=meta_desc, meta_image=meta_image)
+    post = JournalArticle.query.filter_by(slug=slug, status='published').first_or_404()
+
+    published = JournalArticle.query.filter(
+        JournalArticle.status == 'published', JournalArticle.id != post.id,
+    )
+    prev_post = published.filter(JournalArticle.published_at <= post.display_date).order_by(
+        JournalArticle.published_at.desc()).first()
+    next_post = published.filter(JournalArticle.published_at > post.display_date).order_by(
+        JournalArticle.published_at.asc()).first()
+
+    # Related: same category first, then same content type, then recency.
+    # Purely database-driven -- nothing here is hand-picked.
+    related = published.order_by(
+        db.case((JournalArticle.category == post.category, 0), else_=1),
+        db.case((JournalArticle.content_type == post.content_type, 0), else_=1),
+        JournalArticle.published_at.desc().nullslast(),
+    ).limit(JOURNAL_RELATED_COUNT).all()
+
+    canonical = url_for('blog_post', slug=post.slug, _external=True)
+    meta_title = '%s — RETEC Journal' % post.title
+    meta_desc = journal.truncate(post.summary or journal.strip_html(post.content)[:180], 200)
+    meta_image = post.hero_image or url_for('static', filename='images/favicon.svg', _external=True)
+
+    return render_template(
+        'blog_post.html', post=post, prev_post=prev_post, next_post=next_post,
+        related=related, canonical_url=canonical,
+        meta_title=meta_title, meta_desc=meta_desc, meta_image=meta_image,
+        meta_url=canonical, meta_og_type='article',
+        structured_data=_journal_structured_data(post, canonical, meta_desc, meta_image),
+        publisher=JOURNAL_PUBLISHER,
+    )
+
+
+def _journal_structured_data(post, canonical, description, image):
+    """Schema.org payload describing the article actually on screen.
+
+    The type follows the nature of the content, not its label:
+
+      * INSIGHT     -> BlogPosting: RETEC's own editorial.
+      * CASE_STUDY  -> Article: a write-up of a project we delivered.
+      * BRIEF       -> Article, cited. A Brief is RETEC *commentary* on someone
+        else's reporting, so declaring it NewsArticle would be claiming the
+        original news report, which it is not. `citation` points at the source
+        so the relationship stays explicit for readers and for search engines.
+    """
+    schema_type = {
+        'insight': 'BlogPosting',
+        'case_study': 'Article',
+        'brief': 'Article',
+    }.get(post.content_type, 'Article')
+
+    publisher = JOURNAL_PUBLISHER
+    data = {
+        '@context': 'https://schema.org',
+        '@type': schema_type,
+        'headline': post.title,
+        'description': description,
+        'url': canonical,
+        'mainEntityOfPage': {'@type': 'WebPage', '@id': canonical},
+        'publisher': {
+            '@type': 'Organization',
+            'name': publisher['name'],
+            'url': publisher['url'],
+            'logo': {
+                '@type': 'ImageObject',
+                'url': url_for('static', filename='images/logo.svg', _external=True),
+            },
+            'sameAs': publisher['same_as'],
+        },
+        'isPartOf': {
+            '@type': 'Blog',
+            'name': 'RETEC Journal',
+            'url': url_for('blog', _external=True),
+        },
+    }
+    if image:
+        data['image'] = image
+    data['author'] = (
+        {'@type': 'Person', 'name': post.author} if post.author
+        else {'@type': 'Organization', 'name': publisher['name']}
+    )
+    if post.display_date:
+        data['datePublished'] = post.display_date.isoformat()
+    if post.updated_at:
+        data['dateModified'] = post.updated_at.isoformat()
+    if post.category:
+        data['articleSection'] = post.category
+    if post.source_url:
+        # Attribution, not ownership: the third-party report is the origin of
+        # the story, RETEC is the publisher of the analysis.
+        data['citation'] = {
+            '@type': 'CreativeWork',
+            'name': post.original_title or post.title,
+            'url': post.source_url,
+            'publisher': {'@type': 'Organization', 'name': post.source_name or 'Source'},
+        }
+    return data
 
 # ===== TRACKING ROUTES =====
 
@@ -1387,7 +2526,7 @@ def admin_dashboard():
     unique_visitors = db.session.query(PageView.ip_address).distinct().count()
     project_count = Project.query.count()
     testimonial_count = Testimonial.query.count()
-    blog_count = BlogPost.query.count()
+    blog_count = JournalArticle.query.count()
     top_pages = db.session.query(
         PageView.page, db.func.count(PageView.id).label('count')
     ).group_by(PageView.page).order_by(db.desc('count')).limit(10).all()
@@ -1427,7 +2566,9 @@ def admin_projects():
     except Exception:
         pass
     imported_urls = {p.github_url for p in projects if p.github_url}
-    return render_template('admin/projects.html', projects=projects, github_repos=github_repos, imported_urls=imported_urls)
+    return render_template('admin/projects.html', projects=projects, github_repos=github_repos,
+        imported_urls=imported_urls, project_status_values=PROJECT_STATUS_VALUES,
+        project_status_labels=PROJECT_STATUS_LABELS)
 
 @app.route('/admin/projects/add', methods=['GET', 'POST'])
 @admin_required
@@ -1448,6 +2589,7 @@ def admin_project_add():
             demo_url=request.form.get('demo_url', ''),
             featured=bool(request.form.get('featured')),
             visible=bool(request.form.get('visible')),
+            status=clean_project_status(request.form.get('status')),
             sort_order=int(request.form.get('sort_order', 0))
         )
         db.session.add(project)
@@ -1461,7 +2603,8 @@ def admin_project_add():
         'description': request.args.get('description', ''),
         'github_url': request.args.get('github_url', '')
     }
-    return render_template('admin/project_form.html', project=None, prefill=prefill, categories=categories)
+    return render_template('admin/project_form.html', project=None, prefill=prefill,
+        categories=categories, project_statuses=PROJECT_STATUSES)
 
 @app.route('/admin/projects/edit/<int:id>', methods=['GET', 'POST'])
 @admin_required
@@ -1480,6 +2623,7 @@ def admin_project_edit(id):
         project.demo_url = request.form.get('demo_url', '')
         project.featured = bool(request.form.get('featured'))
         project.visible = bool(request.form.get('visible'))
+        project.status = clean_project_status(request.form.get('status'))
         project.sort_order = int(request.form.get('sort_order', 0))
         if request.files.get('image') and request.files['image'].filename:
             delete_image(project.image_filename)
@@ -1489,7 +2633,8 @@ def admin_project_edit(id):
         return redirect(url_for('admin_projects'))
     categories = db.session.query(Project.category).distinct().order_by(Project.category).all()
     categories = [c[0] for c in categories if c[0]]
-    return render_template('admin/project_form.html', project=project, prefill={}, categories=categories)
+    return render_template('admin/project_form.html', project=project, prefill={},
+        categories=categories, project_statuses=PROJECT_STATUSES)
 
 @app.route('/admin/projects/github-sync', methods=['POST'])
 @admin_required
@@ -1883,69 +3028,345 @@ def admin_testimonial_delete(id):
     flash('Testimonial deleted.', 'success')
     return redirect(url_for('admin_testimonials'))
 
-# ----- Blog -----
+# ----- RETEC Journal: moderation -----
+#
+# The Journal is one CMS. Everything below -- original Insights, reviewed
+# Briefs, Case Studies, and the fetch pipeline that produces new Brief drafts
+# -- is edited, approved and retired from this one place, with the same
+# session-gated `admin_required` decorator the rest of the dashboard uses.
+
+JOURNAL_ADMIN_PER_PAGE = 25
+
+
+def _admin_article_or_404(id):
+    return JournalArticle.query.get_or_404(id)
+
+
+def _redirect_back_to_queue(fallback_endpoint='admin_blog'):
+    """Return to the queue tab the admin came from, so filters survive an action."""
+    status = request.args.get('status', '').strip()
+    if status in JOURNAL_STATUS_VALUES:
+        return redirect(url_for(fallback_endpoint, status=status))
+    return redirect(url_for(fallback_endpoint))
+
+
+def _apply_article_form(article, form, is_new=False):
+    """Write an admin's submitted article fields onto the model.
+
+    Shared by create and edit so the two cannot drift apart. Content and any
+    external HTML always go through the sanitiser: feed text and model output
+    are untrusted input and this is the boundary that makes them safe to render.
+    """
+    title = form.get('title', '').strip()
+    content = form.get('content', '').strip()
+    if not title:
+        raise ValueError('A headline is required.')
+    if not content:
+        raise ValueError('Article body is required.')
+
+    content_type = clean_journal_content_type(form.get('content_type'))
+    source_url = form.get('source_url', '').strip()
+    if source_url and not journal.is_safe_http_url(source_url):
+        raise ValueError('The source URL must be a valid http(s) address.')
+
+    article.title = title[:200]
+    article.slug = unique_slug(title, exclude_id=None if is_new else article.id)
+    # Keep the dedupe fingerprint in step with the headline. Without this an
+    # admin-written article is invisible to the fetcher's title check, and the
+    # same story can come back as a "new" draft.
+    article.title_fingerprint = journal.title_fingerprint(title) or None
+    article.summary = form.get('summary', '').strip()[:500]
+    article.content = journal.sanitize_html(content)
+    article.content_type = content_type
+    article.category = form.get('category', '').strip()[:100]
+    article.author = form.get('author', '').strip()[:120]
+    article.reading_time = clean_optional_int(form.get('reading_time'))
+
+    # Source attribution only exists for externally-based content. Switching an
+    # article back to an Insight clears it rather than leaving a stale credit.
+    if content_type == 'brief':
+        article.source_name = form.get('source_name', '').strip()[:200]
+        article.source_url = source_url[:500]
+        article.source_published_at = clean_optional_date(form.get('source_published_at'))
+    else:
+        article.source_name = ''
+        article.source_url = ''
+        article.source_published_at = None
+
+    published_at = clean_optional_date(form.get('published_at'))
+    if published_at is not None:
+        article.published_at = published_at
+
+    article.is_featured = bool(form.get('is_featured'))
+    if article.is_featured:
+        # Exactly one lead story: clear any other manual pick so the landing
+        # page never has to choose between two.
+        JournalArticle.query.filter(
+            JournalArticle.id != (article.id or -1),
+            JournalArticle.is_featured == True,
+        ).update({'is_featured': False}, synchronize_session=False)
+    article.updated_at = datetime.utcnow()
+    return article
+
 
 @app.route('/admin/blog')
 @admin_required
 def admin_blog():
-    posts = BlogPost.query.order_by(BlogPost.created_at.desc()).all()
-    return render_template('admin/blog.html', posts=posts)
+    """Moderation queue. Defaults to the inbox so new fetches are seen first."""
+    status = request.args.get('status', '').strip()
+    if status not in JOURNAL_STATUS_VALUES:
+        status = ''
+    content_type = request.args.get('type', '').strip()
+    if content_type not in JOURNAL_CONTENT_TYPE_VALUES:
+        content_type = ''
+    page = max(1, request.args.get('page', 1, type=int))
+
+    query = JournalArticle.query
+    if status:
+        query = query.filter_by(status=status)
+    if content_type:
+        query = query.filter_by(content_type=content_type)
+
+    pagination = query.order_by(
+        JournalArticle.fetched_at.desc().nullslast(),
+        JournalArticle.created_at.desc(),
+        JournalArticle.id.desc(),
+    ).paginate(page=page, per_page=JOURNAL_ADMIN_PER_PAGE, error_out=False)
+
+    counts = {row[0]: row[1] for row in db.session.query(
+        JournalArticle.status, db.func.count(JournalArticle.id)
+    ).group_by(JournalArticle.status).all()}
+    counts['all'] = sum(counts.values())
+
+    active_sources = NewsSource.query.filter_by(is_active=True).count()
+    failed_sources = NewsSource.query.filter(NewsSource.is_active == True,
+                                             NewsSource.last_error != '').count()
+
+    return render_template(
+        'admin/blog.html', articles=pagination.items, pagination=pagination,
+        status_counts=counts, active_status=status, active_content_type=content_type,
+        journal_content_types=JOURNAL_CONTENT_TYPES,
+        journal_statuses=JOURNAL_STATUSES,
+        content_type_labels=JOURNAL_CONTENT_TYPE_LABELS,
+        active_sources=active_sources, failed_sources=failed_sources,
+        source_count=NewsSource.query.count(),
+        scheduler_on=JOURNAL_SCHEDULER_ENABLED,
+        interval_minutes=JOURNAL_FETCH_INTERVAL_MINUTES,
+        ai_ready=JOURNAL_AI_ENABLED and journal.AiEditor().enabled,
+    )
+
 
 @app.route('/admin/blog/add', methods=['GET', 'POST'])
+@app.route('/admin/blog/new', methods=['GET', 'POST'])
 @admin_required
 def admin_blog_add():
     if request.method == 'POST':
-        title = request.form.get('title', '').strip()
-        content = request.form.get('content', '').strip()
-        if not title or not content:
-            flash('Title and content are required.', 'error')
+        form = request.form
+        try:
+            article = _apply_article_form(JournalArticle(), form, is_new=True)
+        except ValueError as exc:
+            flash(str(exc), 'error')
             return redirect(url_for('admin_blog_add'))
-        slug = slugify(title)
-        existing = BlogPost.query.filter_by(slug=slug).first()
-        if existing:
-            slug = f"{slug}-{int(datetime.now().timestamp())}"
+        requested = clean_journal_status(form.get('status'))
+        # A brand new article can be created directly in a reviewable state,
+        # but never "published" straight from an empty form: it lands in the
+        # queue like any other draft and is promoted by an explicit action.
+        article.status = 'draft' if requested in ('new', 'draft', 'review') else 'draft'
+        article.published = False
+        article.created_at = datetime.utcnow()
+        db.session.add(article)
         image = upload_image(request.files.get('image'))
-        post = BlogPost(title=title, slug=slug, content=content,
-            summary=request.form.get('summary', ''),
-            image_filename=image,
-            published=bool(request.form.get('published')))
-        db.session.add(post)
+        article.image_filename = image or ''
         db.session.commit()
-        flash('Blog post created.', 'success')
-        return redirect(url_for('admin_blog'))
-    return render_template('admin/blog_form.html', post=None)
+        flash('Journal article created as a draft.', 'success')
+        return redirect(url_for('admin_blog_edit', id=article.id))
+    return render_template('admin/blog_form.html', article=None, post=None,
+                           journal_content_types=JOURNAL_CONTENT_TYPES,
+                           journal_statuses=JOURNAL_STATUSES,
+                           categories=journal.JOURNAL_CATEGORIES)
+
 
 @app.route('/admin/blog/edit/<int:id>', methods=['GET', 'POST'])
 @admin_required
 def admin_blog_edit(id):
-    post = BlogPost.query.get_or_404(id)
+    article = _admin_article_or_404(id)
     if request.method == 'POST':
-        title = request.form.get('title', '').strip()
-        content = request.form.get('content', '').strip()
-        if not title or not content:
-            flash('Title and content are required.', 'error')
+        form = request.form
+        try:
+            _apply_article_form(article, form)
+        except ValueError as exc:
+            flash(str(exc), 'error')
             return redirect(url_for('admin_blog_edit', id=id))
-        post.title = title
-        post.content = content
-        post.summary = request.form.get('summary', '')
-        post.published = bool(request.form.get('published'))
         if request.files.get('image') and request.files['image'].filename:
-            delete_image(post.image_filename)
-            post.image_filename = upload_image(request.files['image'])
+            delete_image(article.image_filename)
+            article.image_filename = upload_image(request.files['image'])
+        elif form.get('remove_image'):
+            delete_image(article.image_filename)
+            article.image_filename = ''
+        requested = clean_journal_status(form.get('status'))
+        if requested and requested != article.status and article.can_transition_to(requested):
+            article.apply_status(requested)
+        elif requested == 'published' and not article.can_transition_to('published'):
+            flash('That status change is not allowed from the current state.', 'error')
         db.session.commit()
-        flash('Blog post updated.', 'success')
-        return redirect(url_for('admin_blog'))
-    return render_template('admin/blog_form.html', post=post)
+        flash('Journal article updated.', 'success')
+        return _redirect_back_to_queue()
+    return render_template('admin/blog_form.html', article=article, post=article,
+                           journal_content_types=JOURNAL_CONTENT_TYPES,
+                           journal_statuses=JOURNAL_STATUSES,
+                           categories=journal.JOURNAL_CATEGORIES)
+
+
+@app.route('/admin/blog/view/<int:id>')
+@admin_required
+def admin_blog_view(id):
+    """Read-only preview of an article in any state, including drafts.
+
+    Served from the same template as the public page so what an admin approves
+    is what a reader sees. Never reachable without a session, and never
+    indexed: the response carries a noindex header and the page is not linked
+    from the site.
+    """
+    article = _admin_article_or_404(id)
+    related = _published_articles().filter(JournalArticle.id != article.id).order_by(
+        JournalArticle.published_at.desc().nullslast()).limit(JOURNAL_RELATED_COUNT).all()
+    canonical = url_for('blog_post', slug=article.slug, _external=True)
+    response = make_response(render_template(
+        'blog_post.html', post=article, prev_post=None, next_post=None,
+        related=related, canonical_url=canonical,
+        meta_title='[Preview] %s' % article.title,
+        meta_desc=journal.truncate(article.summary or '', 200),
+        meta_image=article.hero_image or url_for('static', filename='images/favicon.svg', _external=True),
+        meta_url=canonical, meta_og_type='article',
+        structured_data=_journal_structured_data(
+            article, canonical, journal.truncate(article.summary or '', 200),
+            article.hero_image),
+        publisher=JOURNAL_PUBLISHER, is_preview=True,
+    ))
+    response.headers['X-Robots-Tag'] = 'noindex, nofollow'
+    return response
+
+
+@app.route('/admin/blog/status/<int:id>', methods=['POST'])
+@admin_required
+def admin_blog_status(id):
+    """Move an article between editorial states.
+
+    This is the only path to `published`, and it sits behind `admin_required`
+    plus the transition table in `JOURNAL_STATUS_TRANSITIONS`. An unrecognised
+    or illegal target leaves the article exactly as it was.
+    """
+    article = _admin_article_or_404(id)
+    target = clean_journal_status(request.form.get('status'))
+    if not target:
+        flash('Unknown status.', 'error')
+        return _redirect_back_to_queue()
+    if target == article.status:
+        return _redirect_back_to_queue()
+    if not article.can_transition_to(target):
+        flash('An article cannot move from %s to %s.'
+              % (article.status_label, JOURNAL_STATUS_LABELS.get(target, target)), 'error')
+        return _redirect_back_to_queue()
+    article.apply_status(target)
+    db.session.commit()
+    flash('%s is now %s.' % (article.title[:60], article.status_label.lower()), 'success')
+    return _redirect_back_to_queue()
+
+
+@app.route('/admin/blog/publish/<int:id>', methods=['POST'])
+@admin_required
+def admin_blog_publish(id):
+    """Approve & publish.
+
+    Same checks as the generic status route, spelled out because this is the
+    button an admin actually clicks. A Brief cannot go out without its source
+    link, so third-party reporting is never published unattributed.
+    """
+    article = _admin_article_or_404(id)
+    if article.status == 'published':
+        return _redirect_back_to_queue()
+    if not article.can_transition_to('published'):
+        flash('This article cannot be published from its current state.', 'error')
+        return _redirect_back_to_queue()
+    if article.content_type == 'brief' and not article.source_url:
+        flash('A Brief needs a source URL before it can be published.', 'error')
+        return _redirect_back_to_queue()
+    article.apply_status('published')
+    article.updated_at = datetime.utcnow()
+    db.session.commit()
+    flash('Published: %s' % article.title[:70], 'success')
+    return _redirect_back_to_queue()
+
+
+@app.route('/admin/blog/reject/<int:id>', methods=['POST'])
+@admin_required
+def admin_blog_reject(id):
+    article = _admin_article_or_404(id)
+    if not article.can_transition_to('rejected'):
+        flash('This article cannot be rejected from its current state.', 'error')
+        return _redirect_back_to_queue()
+    article.apply_status('rejected')
+    if article.is_featured:
+        article.is_featured = False
+    db.session.commit()
+    flash('Rejected: %s' % article.title[:70], 'success')
+    return _redirect_back_to_queue()
+
+
+@app.route('/admin/blog/archive/<int:id>', methods=['POST'])
+@admin_required
+def admin_blog_archive(id):
+    article = _admin_article_or_404(id)
+    if not article.can_transition_to('archived'):
+        flash('This article cannot be archived from its current state.', 'error')
+        return _redirect_back_to_queue()
+    article.apply_status('archived')
+    if article.is_featured:
+        article.is_featured = False
+    db.session.commit()
+    flash('Archived: %s' % article.title[:70], 'success')
+    return _redirect_back_to_queue()
+
+
+@app.route('/admin/blog/redraft/<int:id>', methods=['POST'])
+@admin_required
+def admin_blog_redraft(id):
+    article = _admin_article_or_404(id)
+    ok, message = regenerate_article_draft(article)
+    flash(message, 'success' if ok else 'error')
+    return _redirect_back_to_queue()
+
 
 @app.route('/admin/blog/delete/<int:id>', methods=['POST'])
 @admin_required
 def admin_blog_delete(id):
-    post = BlogPost.query.get_or_404(id)
-    delete_image(post.image_filename)
-    db.session.delete(post)
+    article = _admin_article_or_404(id)
+    if article.status == 'published':
+        flash('Archive a published article instead of deleting it — the URL stays alive.',
+              'error')
+        return _redirect_back_to_queue()
+    delete_image(article.image_filename)
+    db.session.delete(article)
     db.session.commit()
-    flash('Blog post deleted.', 'success')
-    return redirect(url_for('admin_blog'))
+    flash('Draft deleted.', 'success')
+    return _redirect_back_to_queue()
+
+
+@app.route('/admin/blog/fetch', methods=['POST'])
+@admin_required
+def admin_blog_fetch():
+    """Run the ingestion pipeline now, on demand."""
+    source_ids = clean_optional_int(request.form.get('source_id'))
+    summary = run_journal_ingestion(
+        source_ids=[source_ids] if source_ids else None, trigger='manual')
+    if summary['failures']:
+        flash('%d source(s) failed: %s' % (len(summary['failures']),
+                                           '; '.join(summary['failures'][:3])), 'error')
+    flash('Fetched %d sources: %d entries, %d new drafts (%d AI-written), %d duplicates skipped.'
+          % (summary['sources'], summary['entries'], summary['created'],
+             summary['generated'], summary['duplicates']), 'success')
+    return _redirect_back_to_queue()
+
 
 @app.route('/admin/upload-image', methods=['POST'])
 @csrf.exempt
@@ -1959,21 +3380,182 @@ def admin_upload_image():
         return jsonify({'error': 'Upload failed'}), 400
     return jsonify({'url': get_image_url(url)})
 
+
+# ----- RETEC Journal: sources -----
+
+@app.route('/admin/blog/sources')
+@admin_required
+def admin_blog_sources():
+    sources = NewsSource.query.order_by(
+        NewsSource.is_active.desc(), NewsSource.category, NewsSource.name).all()
+    runs = NewsFetchRun.query.order_by(
+        NewsFetchRun.started_at.desc()).limit(15).all()
+    counts = {row[0]: row[1] for row in db.session.query(
+        JournalArticle.content_type, db.func.count(JournalArticle.id)
+    ).filter(JournalArticle.source_record_id.isnot(None)).group_by(
+        JournalArticle.content_type).all()}
+    return render_template(
+        'admin/blog_sources.html', sources=sources, recent_runs=runs,
+        draft_counts=counts, source_categories=journal.SOURCE_CATEGORIES,
+        status_labels=JOURNAL_STATUSES, content_type_labels=JOURNAL_CONTENT_TYPE_LABELS,
+        scheduler_on=JOURNAL_SCHEDULER_ENABLED, interval_minutes=JOURNAL_FETCH_INTERVAL_MINUTES,
+        ai_ready=JOURNAL_AI_ENABLED and journal.AiEditor().enabled,
+        ai_enabled=JOURNAL_AI_ENABLED,
+        max_drafts=JOURNAL_MAX_DRAFTS_PER_SOURCE,
+    )
+
+
+def _apply_source_form(source):
+    """Validate and write the source fields an admin submitted."""
+    name = request.form.get('name', '').strip()
+    feed_url = request.form.get('feed_url', '').strip()
+    website_url = request.form.get('website_url', '').strip()
+    if not name:
+        raise ValueError('A source name is required.')
+    if not journal.is_safe_http_url(feed_url):
+        raise ValueError('The feed URL must be a valid http(s) address.')
+    if website_url and not journal.is_safe_http_url(website_url):
+        raise ValueError('The website URL must be a valid http(s) address.')
+    clash = NewsSource.query.filter(
+        NewsSource.feed_url == feed_url, NewsSource.id != (source.id or -1)).first()
+    if clash is not None:
+        raise ValueError('That feed URL is already configured as "%s".' % clash.name)
+    source.name = name[:160]
+    source.feed_url = feed_url[:500]
+    source.website_url = website_url[:500]
+    # Match the category case-insensitively and store the canonical spelling.
+    # Source categories are stored uppercase ("TECHNOLOGY") while article
+    # categories are title case, so a hand-typed value would otherwise be
+    # silently discarded.
+    category = request.form.get('category', '').strip()
+    canonical = next((c for c in journal.SOURCE_CATEGORIES
+                      if c.lower() == category.lower()), '')
+    source.category = canonical
+    source.is_active = bool(request.form.get('is_active'))
+    source.updated_at = datetime.utcnow()
+    return source
+
+
+@app.route('/admin/blog/sources/add', methods=['POST'])
+@admin_required
+def admin_blog_source_add():
+    source = NewsSource(is_active=True)
+    try:
+        _apply_source_form(source)
+    except ValueError as exc:
+        db.session.rollback()
+        flash(str(exc), 'error')
+        return redirect(url_for('admin_blog_sources'))
+    db.session.add(source)
+    db.session.commit()
+    flash('Source added. It will be picked up on the next fetch.', 'success')
+    return redirect(url_for('admin_blog_sources'))
+
+
+@app.route('/admin/blog/sources/edit/<int:id>', methods=['POST'])
+@admin_required
+def admin_blog_source_edit(id):
+    source = NewsSource.query.get_or_404(id)
+    try:
+        _apply_source_form(source)
+    except ValueError as exc:
+        flash(str(exc), 'error')
+        return redirect(url_for('admin_blog_sources'))
+    db.session.commit()
+    flash('Source updated.', 'success')
+    return redirect(url_for('admin_blog_sources'))
+
+
+@app.route('/admin/blog/sources/toggle/<int:id>', methods=['POST'])
+@admin_required
+def admin_blog_source_toggle(id):
+    source = NewsSource.query.get_or_404(id)
+    source.is_active = not source.is_active
+    source.updated_at = datetime.utcnow()
+    db.session.commit()
+    flash('%s is now %s.' % (source.name, 'active' if source.is_active else 'disabled'), 'success')
+    return redirect(url_for('admin_blog_sources'))
+
+
+@app.route('/admin/blog/sources/delete/<int:id>', methods=['POST'])
+@admin_required
+def admin_blog_source_delete(id):
+    source = NewsSource.query.get_or_404(id)
+    # Drafts already created keep their source name and URL -- removing a feed
+    # must not strip attribution from an article that cites it.
+    db.session.delete(source)
+    db.session.commit()
+    flash('Source removed. Existing Briefs keep their attribution.', 'success')
+    return redirect(url_for('admin_blog_sources'))
+
+
 # ----- Content Studio -----
 
 @app.route('/admin/content-studio')
 @admin_required
 def admin_content_studio():
-    posts = BlogPost.query.filter_by(published=True).order_by(BlogPost.created_at.desc()).all()
+    posts = JournalArticle.query.filter_by(status='published').order_by(
+        JournalArticle.published_at.desc().nullslast()).all()
     return render_template('admin/content_studio.html', posts=posts)
 
 @app.route('/admin/content-studio/<int:id>')
 @admin_required
 def admin_content_studio_post(id):
-    post = BlogPost.query.get_or_404(id)
+    post = JournalArticle.query.get_or_404(id)
     hero_url = get_image_url(post.image_filename) if post.image_filename else ''
     return render_template('admin/content_studio_post.html', post=post, hero_url=hero_url,
         site_url=request.host_url.rstrip('/'))
+
+# ----- Partner applications -----
+
+@app.route('/admin/partner-applications')
+@admin_required
+def admin_partner_applications():
+    page = request.args.get('page', 1, type=int)
+    per_page = 25
+    applications = PartnerApplication.query.order_by(PartnerApplication.created_at.desc()).paginate(
+        page=page, per_page=per_page)
+    counts = {row[0]: row[1] for row in db.session.query(
+        PartnerApplication.status, db.func.count(PartnerApplication.id)
+    ).group_by(PartnerApplication.status).all()}
+    return render_template('admin/partner_applications.html',
+        applications=applications, counts=counts,
+        status_labels=PARTNER_APPLICATION_STATUSES)
+
+@app.route('/admin/partner-applications/status/<int:id>', methods=['POST'])
+@admin_required
+def admin_partner_application_status(id):
+    application = PartnerApplication.query.get_or_404(id)
+    status = request.form.get('status', '').strip()
+    # An unrecognised value leaves the stored status untouched rather than
+    # resetting it, so a malformed request cannot silently clear a decision.
+    if status in PARTNER_APPLICATION_STATUS_VALUES:
+        application.status = status
+        db.session.commit()
+        flash('Application marked as %s.' % application.status, 'success')
+    return redirect(url_for('admin_partner_applications'))
+
+@app.route('/admin/partner-applications/delete/<int:id>', methods=['POST'])
+@admin_required
+def admin_partner_application_delete(id):
+    db.session.delete(PartnerApplication.query.get_or_404(id))
+    db.session.commit()
+    flash('Application deleted.', 'success')
+    return redirect(url_for('admin_partner_applications'))
+
+@app.route('/admin/partner-applications/export.csv')
+@admin_required
+def admin_partner_applications_export():
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Received', 'Name', 'Email', 'Company', 'Role',
+                     'Collaboration Type', 'Portfolio', 'Expertise', 'Status', 'Message'])
+    for a in PartnerApplication.query.order_by(PartnerApplication.created_at.desc()).all():
+        writer.writerow([a.created_at, a.name, a.email, a.company, a.role,
+                         a.collaboration_type, a.portfolio, a.expertise, a.status, a.message])
+    output.seek(0)
+    return Response(output.getvalue(), mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment;filename=partner-applications.csv'})
 
 # ----- Subscribers -----
 
@@ -2010,6 +3592,29 @@ with app.app_context():
             ('subscriber', 'validated', 'BOOLEAN DEFAULT false'),
             ('project', 'demo_url', 'VARCHAR(500) DEFAULT \'\''),
             ('project', 'visible', 'BOOLEAN DEFAULT true'),
+            ('project', 'status', 'VARCHAR(50) DEFAULT \'\''),
+            ('blog_post', 'category', 'VARCHAR(100) DEFAULT \'\''),
+            ('blog_post', 'content_type', 'VARCHAR(30) DEFAULT \'insight\''),
+            ('blog_post', 'author', 'VARCHAR(120) DEFAULT \'\''),
+            ('blog_post', 'is_featured', 'BOOLEAN DEFAULT false'),
+            ('blog_post', 'reading_time', 'INTEGER'),
+            ('blog_post', 'source_name', 'VARCHAR(200) DEFAULT \'\''),
+            ('blog_post', 'source_url', 'VARCHAR(500) DEFAULT \'\''),
+            ('blog_post', 'source_published_at', 'TIMESTAMP'),
+            ('blog_post', 'published_at', 'TIMESTAMP'),
+            # Journal lifecycle + ingestion bookkeeping. All additive and
+            # nullable/defaulted, so existing articles survive untouched.
+            ('blog_post', 'status', 'VARCHAR(20) DEFAULT \'draft\''),
+            ('blog_post', 'external_id', 'VARCHAR(255)'),
+            ('blog_post', 'canonical_url', 'VARCHAR(500)'),
+            ('blog_post', 'url_fingerprint', 'VARCHAR(40)'),
+            ('blog_post', 'title_fingerprint', 'VARCHAR(40)'),
+            ('blog_post', 'original_title', 'VARCHAR(300) DEFAULT \'\''),
+            ('blog_post', 'original_excerpt', 'TEXT'),
+            ('blog_post', 'image_url', 'VARCHAR(500) DEFAULT \'\''),
+            ('blog_post', 'fetched_at', 'TIMESTAMP'),
+            ('blog_post', 'source_record_id', 'INTEGER'),
+            ('blog_post', 'ai_generated', 'BOOLEAN DEFAULT false'),
             ('fun_fact', 'duration_seconds', 'INTEGER DEFAULT 6'),
             ('fun_fact', 'text', 'TEXT DEFAULT \'\''),
             ('fun_fact', 'active', 'BOOLEAN DEFAULT true'),
@@ -2027,6 +3632,55 @@ with app.app_context():
                 db.session.rollback()
     except Exception as e:
         print('Startup note (migration):', e)
+        db.session.rollback()
+    try:
+        # Indexes for the Journal's query patterns. create_all() only builds
+        # indexes on tables it creates, so an existing blog_post needs these
+        # added explicitly.
+        import sqlalchemy as sa
+        for statement in [
+            'CREATE INDEX IF NOT EXISTS ix_blog_post_slug ON blog_post (slug)',
+            'CREATE INDEX IF NOT EXISTS ix_blog_post_status ON blog_post (status)',
+            'CREATE INDEX IF NOT EXISTS ix_blog_post_content_type ON blog_post (content_type)',
+            'CREATE INDEX IF NOT EXISTS ix_blog_post_category ON blog_post (category)',
+            'CREATE INDEX IF NOT EXISTS ix_blog_post_published_at ON blog_post (published_at)',
+            'CREATE INDEX IF NOT EXISTS ix_blog_post_status_published_at ON blog_post (status, published_at)',
+            'CREATE INDEX IF NOT EXISTS ix_blog_post_canonical_url ON blog_post (canonical_url)',
+            'CREATE INDEX IF NOT EXISTS ix_blog_post_external_id ON blog_post (external_id)',
+        ]:
+            db.session.execute(sa.text(statement))
+        db.session.commit()
+    except Exception as e:
+        print('Startup note (journal indexes):', e)
+        db.session.rollback()
+    try:
+        # Backfill: articles that existed before the Journal have a `published`
+        # flag but no `status`. Derive it once, then the status column is the
+        # single source of truth from here on.
+        updated = db.session.execute(sa.text(
+            "UPDATE blog_post SET status = 'published' "
+            "WHERE (status IS NULL OR status = '') AND published = true"))
+        db.session.execute(sa.text(
+            "UPDATE blog_post SET status = 'draft' WHERE status IS NULL OR status = ''"))
+        db.session.commit()
+        if updated.rowcount:
+            print('Journal: backfilled %d published article(s).' % updated.rowcount)
+    except Exception as e:
+        print('Startup note (journal backfill):', e)
+        db.session.rollback()
+    try:
+        # Starter sources, written once so the feed list is admin data from
+        # then on. Seeding is skipped entirely if any source already exists, so
+        # this can never resurrect a source an admin deleted.
+        if NewsSource.query.count() == 0:
+            for name, feed_url, website_url, category in journal.DEFAULT_NEWS_SOURCES:
+                db.session.add(NewsSource(
+                    name=name, feed_url=feed_url, website_url=website_url,
+                    category=category, is_active=True))
+            db.session.commit()
+            print('Journal: seeded %d starter news sources.' % len(journal.DEFAULT_NEWS_SOURCES))
+    except Exception as e:
+        print('Startup note (journal sources):', e)
         db.session.rollback()
     try:
         if not User.query.first():

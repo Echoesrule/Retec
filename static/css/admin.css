@@ -269,11 +269,18 @@ img { max-width: 100%; display: block; }
     border: 1px solid #e0e0e0;
     margin-bottom: 1.5rem;
 }
-.admin-card__title {
-    font-size: 1rem;
-    font-weight: 600;
+.admin-card__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
     padding: 1rem 1.25rem;
     border-bottom: 1px solid #eee;
+}
+.admin-card__head .admin-card__title {
+    padding: 0;
+    border-bottom: 0;
 }
 
 /* ===== TABLE ===== */
@@ -320,6 +327,25 @@ img { max-width: 100%; display: block; }
     color: #ccc;
     font-size: 0.8rem;
 }
+
+/* ===== PROJECT STATUS CHIP ===== */
+.admin-status {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border: 1px solid #ddd;
+    background: #fafafa;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: #666;
+}
+.admin-status--live { color: #000; border-color: #999; }
+.admin-status--in_progress { border-color: #ccc; }
+.admin-status--completed { color: #888; }
+.admin-status--concept { color: #999; border-color: #eee; }
+.admin-status--archived { color: #aaa; border-color: #f0f0f0; }
 
 /* ===== ACTIONS ===== */
 .admin-actions { display: flex; gap: 0.5rem; flex-wrap: nowrap; }
@@ -403,6 +429,7 @@ img { max-width: 100%; display: block; }
 .admin-form__group input[type="text"],
 .admin-form__group input[type="url"],
 .admin-form__group input[type="number"],
+.admin-form__group select,
 .admin-form__group textarea {
     width: 100%;
     padding: 0.6rem 0.75rem;
@@ -413,6 +440,7 @@ img { max-width: 100%; display: block; }
     transition: border-color 0.15s ease;
 }
 .admin-form__group input:focus,
+.admin-form__group select:focus,
 .admin-form__group textarea:focus { border-color: #000; }
 
 /* Editor toolbar */
@@ -466,6 +494,27 @@ img { max-width: 100%; display: block; }
     cursor: pointer;
 }
 .admin-form__group--checkbox input[type="checkbox"] { width: 16px; height: 16px; }
+
+.admin-form__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 1rem;
+}
+
+.admin-form__source {
+    margin: 0 0 1.25rem;
+    padding: 1.25rem;
+    border: 1px solid var(--light-border);
+    border-radius: 6px;
+}
+
+.admin-form__hint {
+    margin: 0 0 1rem;
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
 .admin-form__actions {
     display: flex;
     gap: 0.75rem;
@@ -723,6 +772,7 @@ img { max-width: 100%; display: block; }
     .admin-form__group input[type="text"],
     .admin-form__group input[type="url"],
     .admin-form__group input[type="number"],
+    .admin-form__group select,
     .admin-form__group textarea {
         font-size: 16px; /* prevent iOS zoom */
     }
@@ -1056,3 +1106,371 @@ img { max-width: 100%; display: block; }
 .cs-vslide-doodle--dots span { width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.2); animation: vsPulse 2s ease-in-out infinite; }
 .cs-vslide-doodle--dots span:nth-child(2) { animation-delay: 0.3s; }
 .cs-vslide-doodle--dots span:nth-child(3) { animation-delay: 0.6s; }
+
+/* ===== PARTNER APPLICATIONS ===== */
+.admin-page__sub {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 1rem;
+    margin: 0.35rem 0 0;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+.admin-select {
+    padding: 0.3rem 0.4rem;
+    border: 1px solid var(--light-border);
+    border-radius: 4px;
+    background: #fff;
+    font-size: 0.78rem;
+}
+.partner-app__count { white-space: nowrap; }
+.partner-app__count::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 0.4rem;
+    border-radius: 50%;
+    background: #ccc;
+    vertical-align: middle;
+}
+.partner-app__count--new::before { background: #000; }
+.partner-app__count--reviewing::before { background: #c99445; }
+.partner-app__count--replied::before { background: #2f7d6d; }
+.partner-app__count--archived::before { background: #e0e0e0; }
+
+.partner-app__email,
+.partner-app__meta {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--text-muted);
+}
+.partner-app__detail > td { background: #fafafa; }
+.partner-app__detail-label {
+    margin: 0 0 0.2rem !important;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #999;
+}
+.partner-app__detail-label:not(:first-child) { margin-top: 0.9rem !important; }
+.partner-app__detail p { margin: 0 0 0.2rem; font-size: 0.85rem; }
+.partner-app__detail-message { white-space: pre-wrap; }
+
+/* ============================================================
+   RETEC JOURNAL — MODERATION QUEUE & SOURCE MANAGEMENT
+   Appended block. Reuses the admin palette already defined at
+   the top of this file; no new root tokens.
+   ============================================================ */
+
+/* ----- Page head actions ----- */
+.admin-page__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+.admin-page__actions form { display: inline; }
+
+/* ----- Inline notices ----- */
+.jr-alert {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    font-size: 0.85rem;
+}
+.jr-alert a { text-decoration: underline; font-weight: 600; }
+.jr-alert i { color: #666; }
+.jr-alert--warn {
+    border-color: #ffe0b2;
+    background: #fff8e1;
+}
+.jr-alert--warn i { color: var(--orange); }
+.jr-alert code {
+    padding: 0.05rem 0.3rem;
+    border-radius: 3px;
+    background: #f3f3f3;
+    font-size: 0.8rem;
+}
+.jr-muted { color: #999; font-size: 0.8rem; }
+
+/* ----- Status tabs ----- */
+.jr-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #ddd;
+}
+.jr-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 0.85rem;
+    border-bottom: 2px solid transparent;
+    color: #666;
+    font-size: 0.82rem;
+    font-weight: 600;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+.jr-tab:hover { color: #000; }
+.jr-tab--active { color: #000; border-bottom-color: #000; }
+.jr-tab__count {
+    padding: 0.05rem 0.35rem;
+    border-radius: 999px;
+    background: #ececec;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+.jr-tab--active .jr-tab__count { background: #000; color: #fff; }
+
+/* ----- Filter strip ----- */
+.jr-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+.jr-filters__label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #888;
+}
+.jr-filters select {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid #ddd;
+    font-family: inherit;
+    font-size: 0.85rem;
+    background: #fff;
+}
+
+/* ----- Queue table ----- */
+.jr-table { width: 100%; }
+.jr-table--compact td,
+.jr-table--compact th { padding: 0.5rem 0.6rem; font-size: 0.8rem; }
+
+.jr-row--inactive td { opacity: 0.55; }
+
+.jr-headline {
+    display: flex;
+    gap: 0.7rem;
+    min-width: 15rem;
+}
+.jr-thumb {
+    flex: 0 0 56px;
+    width: 56px;
+    height: 42px;
+    object-fit: cover;
+    border: 1px solid #eee;
+}
+.jr-headline strong { display: block; line-height: 1.3; }
+.jr-excerpt {
+    display: block;
+    margin-top: 0.2rem;
+    color: #888;
+    font-size: 0.78rem;
+    line-height: 1.4;
+}
+.jr-tag {
+    display: inline-block;
+    margin-top: 0.3rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.jr-tag--ai { background: #ede7f6; color: #5e35b1; }
+
+.jr-source {
+    display: block;
+    color: #1976d2;
+    font-size: 0.78rem;
+    word-break: break-all;
+}
+.jr-source:hover { text-decoration: underline; }
+.jr-source--feed { color: #666; font-size: 0.72rem; }
+
+.jr-actions { white-space: nowrap; }
+.jr-actions__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    align-items: center;
+}
+.jr-actions form { display: inline; }
+.jr-btn--ghost {
+    border-style: dashed;
+    color: #666;
+}
+.jr-btn--edit-source { cursor: pointer; }
+
+.jr-error {
+    display: block;
+    max-width: 22rem;
+    margin-top: 0.2rem;
+    color: var(--red);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+/* ----- Status pills ----- */
+.jr-status {
+    display: inline-block;
+    padding: 0.18rem 0.5rem;
+    border-radius: 999px;
+    background: #ececec;
+    color: #555;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.jr-status--new { background: #e3f2fd; color: #1565c0; }
+.jr-status--draft { background: #eceff1; color: #546e7a; }
+.jr-status--review { background: #fff3e0; color: #e65100; }
+.jr-status--published,
+.jr-status--ok { background: #e8f5e9; color: #2e7d32; }
+.jr-status--rejected { background: #fbe9e7; color: #c62828; }
+.jr-status--archived { background: #f5f5f5; color: #9e9e9e; }
+
+/* ----- Source health ----- */
+.jr-health {
+    display: inline-block;
+    padding: 0.15rem 0.45rem;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.jr-health--untried { color: #999; }
+.jr-health--ok { border-color: #c8e6c9; color: var(--green); }
+.jr-health--degraded { border-color: #ffe0b2; color: var(--orange); }
+.jr-health--failing { border-color: #ffccbc; color: var(--red); }
+
+/* Two optional notes can share the admin pagination row (article count, then
+   ingestion cadence), so they are spaced apart rather than left stacked. */
+.admin-pagination__info + .admin-pagination__info {
+    margin-left: 0.75rem;
+    padding-left: 0.75rem;
+    border-left: 1px solid #e0e0e0;
+}
+
+.jr-footnote {
+    margin-top: 1rem;
+    color: #999;
+    font-size: 0.78rem;
+}
+
+/* ----- Source form grid ----- */
+.admin-form__grid--source {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0 0.85rem;
+}
+.admin-form__grid--source .admin-form__group--wide { grid-column: span 2; }
+
+/* The hint block doubles as the heading for the source fields. */
+.admin-form__source .admin-form__hint {
+    margin-bottom: 0.9rem;
+    color: #888;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+/* ----- Edit drawer ----- */
+.jr-drawer { position: fixed; inset: 0; z-index: 200; }
+.jr-drawer[hidden] { display: none; }
+.jr-drawer__scrim {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+}
+.jr-drawer__panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(30rem, 100%);
+    overflow-y: auto;
+    background: #fff;
+    box-shadow: -8px 0 30px rgba(0, 0, 0, 0.18);
+}
+.jr-drawer__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.1rem 1.25rem;
+    border-bottom: 1px solid #eee;
+}
+.jr-drawer__head h2 { font-size: 1rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.jr-drawer__close {
+    border: 0;
+    background: none;
+    font-size: 1.6rem;
+    line-height: 1;
+    color: #888;
+    cursor: pointer;
+}
+.jr-drawer__close:hover { color: #000; }
+.jr-drawer-open { overflow: hidden; }
+
+/* The checkbox inside a drawer is nested in a group, not a group itself. */
+.jr-drawer .admin-form__group--checkbox { margin-top: 0.5rem; }
+
+@media screen and (max-width: 768px) {
+    .admin-form__grid--source { grid-template-columns: 1fr; }
+    .admin-form__grid--source .admin-form__group--wide { grid-column: auto; }
+    .jr-drawer__panel { width: 100%; }
+    .jr-tabs { gap: 0; overflow-x: auto; }
+    .jr-tab { white-space: nowrap; }
+    /* Row-per-record layout: the queue has more columns than a phone can show. */
+    .jr-table--responsive thead { display: none; }
+    .jr-table--responsive,
+    .jr-table--responsive tbody,
+    .jr-table--responsive tr,
+    .jr-table--responsive td { display: block; width: 100%; }
+    .jr-table--responsive tr {
+        margin-bottom: 0.85rem;
+        border: 1px solid #e0e0e0;
+        background: #fff;
+    }
+    .jr-table--responsive td {
+        display: flex;
+        gap: 0.75rem;
+        align-items: baseline;
+        border-bottom: 1px solid #f2f2f2;
+    }
+    .jr-table--responsive td::before {
+        content: attr(data-label);
+        flex: 0 0 6.5rem;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #999;
+    }
+    .jr-table--responsive td:last-child { border-bottom: 0; }
+    .jr-actions { white-space: normal; }
+    .jr-actions__row { padding-top: 0.25rem; }
+}

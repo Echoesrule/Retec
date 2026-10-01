@@ -1,0 +1,286 @@
+{% extends "admin/base.html" %}
+{% block title %}Journal Sources{% endblock %}
+{% set active = "blog" %}
+{% block content %}
+<div class="admin-page">
+
+    <div class="admin-page__head">
+        <div>
+            <h1 class="admin-page__title">Journal Sources</h1>
+            <p class="admin-page__sub">
+                Where Brief candidates come from. Fetching runs
+                {{ 'every ' ~ interval_minutes ~ ' minutes' if scheduler_on else 'only when you trigger it manually' }},
+                creates drafts, and never publishes anything.
+            </p>
+        </div>
+        <div class="admin-page__actions">
+            <form method="POST" action="{{ url_for('admin_blog_fetch') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="admin-btn admin-btn--primary">
+                    <i class="fa-solid fa-rotate"></i> Fetch now
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {%- if not ai_ready %}
+    <div class="jr-alert jr-alert--warn">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        AI drafting is not configured
+        {%- if not ai_enabled %}, so every fetched story arrives as a plain unedited draft{% endif %}.
+        Set <code>JOURNAL_AI_API_KEY</code> (and <code>JOURNAL_AI_MODEL</code>) in
+        <code>.env</code> to enable it.
+    </div>
+    {%- endif %}
+
+    {# ---------- Add a source ---------- #}
+    <div class="admin-card">
+        <div class="admin-card__head">
+            <h2 class="admin-card__title">Add a source</h2>
+            <span class="jr-muted">RSS or Atom. Up to {{ max_drafts }} new drafts per fetch.</span>
+        </div>
+        <form method="POST" action="{{ url_for('admin_blog_source_add') }}" class="admin-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="admin-form__grid admin-form__grid--source">
+                <div class="admin-form__group">
+                    <label for="new-name">Name *</label>
+                    <input type="text" id="new-name" name="name" required maxlength="160"
+                           placeholder="e.g. Rest of World">
+                </div>
+                <div class="admin-form__group">
+                    <label for="new-category">Category</label>
+                    <select id="new-category" name="category">
+                        <option value="">Uncategorised</option>
+                        {%- for c in source_categories %}
+                        <option value="{{ c }}">{{ c }}</option>
+                        {%- endfor %}
+                    </select>
+                </div>
+                <div class="admin-form__group admin-form__group--wide">
+                    <label for="new-feed">Feed URL *</label>
+                    <input type="url" id="new-feed" name="feed_url" required
+                           placeholder="https://example.com/feed">
+                </div>
+                <div class="admin-form__group admin-form__group--wide">
+                    <label for="new-site">Website</label>
+                    <input type="url" id="new-site" name="website_url" placeholder="https://example.com">
+                </div>
+            </div>
+            <div class="admin-form__actions">
+                <button type="submit" class="admin-btn admin-btn--primary">Add source</button>
+            </div>
+        </form>
+    </div>
+
+    {# ---------- Configured sources ---------- #}
+    <div class="admin-card">
+        <div class="admin-card__head">
+            <h2 class="admin-card__title">Configured sources ({{ sources|length }})</h2>
+        </div>
+        <div class="admin-table-wrap">
+            <table class="admin-table jr-table">
+                <thead>
+                    <tr>
+                        <th>Source</th>
+                        <th>Category</th>
+                        <th>Health</th>
+                        <th>Last fetch</th>
+                        <th>Drafts</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {%- for s in sources %}
+                    <tr class="jr-row{% if not s.is_active %} jr-row--inactive{% endif %}">
+                        <td data-label="Source" class="jr-headline">
+                            <div>
+                                <strong>{{ s.name }}</strong>
+                                {%- if s.is_active %}
+                                <span class="jr-status jr-status--ok">active</span>
+                                {%- else %}
+                                <span class="jr-status jr-status--archived">disabled</span>
+                                {%- endif %}
+                                <a href="{{ s.feed_url }}" target="_blank" rel="noopener noreferrer"
+                                   class="jr-source jr-source--feed">{{ s.feed_url }}</a>
+                                {%- if s.website_url %}
+                                <a href="{{ s.website_url }}" target="_blank" rel="noopener noreferrer"
+                                   class="jr-source">{{ s.website_url }}</a>
+                                {%- endif %}
+                                {%- if s.last_error %}
+                                <span class="jr-error">{{ s.last_error }}</span>
+                                {%- endif %}
+                            </div>
+                        </td>
+                        <td data-label="Category">{{ s.category or '—' }}</td>
+                        <td data-label="Health"><span class="jr-health jr-health--{{ s.health }}">{{ s.health }}</span></td>
+                        <td data-label="Last fetch">
+                            {%- if s.last_fetched_at %}
+                            {{ s.last_fetched_at.strftime('%Y-%m-%d %H:%M') }}
+                            <span class="jr-muted">{{ s.fetch_ago }}</span>
+                            {%- else %}never{% endif %}
+                        </td>
+                        <td data-label="Drafts">{{ s.articles_created }}</td>
+                        <td data-label="Actions" class="jr-actions">
+                            <div class="jr-actions__row">
+                                <button type="button" class="admin-btn admin-btn--sm jr-btn--edit-source"
+                                        data-id="{{ s.id }}"
+                                        data-name="{{ s.name }}"
+                                        data-feed="{{ s.feed_url }}"
+                                        data-site="{{ s.website_url or '' }}"
+                                        data-category="{{ s.category or '' }}"
+                                        data-active="{{ 1 if s.is_active else 0 }}">Edit</button>
+                                <form method="POST" action="{{ url_for('admin_blog_source_toggle', id=s.id) }}" style="display:inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="admin-btn admin-btn--sm">
+                                        {{ 'Disable' if s.is_active else 'Enable' }}
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('admin_blog_source_delete', id=s.id) }}"
+                                      style="display:inline"
+                                      onsubmit="return confirm('Remove {{ s.name }}? Existing Briefs keep their attribution.')">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="admin-btn admin-btn--sm admin-btn--danger">Remove</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                {%- else %}
+                    <tr><td colspan="6" class="admin-empty">No sources configured yet.</td></tr>
+                {%- endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {# ---------- Ingestion log ---------- #}
+    <div class="admin-card">
+        <div class="admin-card__head">
+            <h2 class="admin-card__title">Recent fetches</h2>
+            {%- if draft_counts %}
+            <span class="jr-muted">
+                {%- for type, count in draft_counts.items() -%}
+                    {{ count }} {{ content_type_labels.get(type, type) }}
+                    {%- if not loop.last %}, {% endif %}
+                {%- endfor %}
+            </span>
+            {%- endif %}
+        </div>
+        <div class="admin-table-wrap">
+            <table class="admin-table jr-table jr-table--compact">
+                <thead>
+                    <tr>
+                        <th>When</th>
+                        <th>Source</th>
+                        <th>Trigger</th>
+                        <th>Seen</th>
+                        <th>Drafts</th>
+                        <th>Skipped</th>
+                        <th>AI</th>
+                        <th>Result</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {%- for r in recent_runs %}
+                    <tr class="jr-row{% if not r.ok %} jr-row--inactive{% endif %}">
+                        <td data-label="When">{{ r.started_at.strftime('%Y-%m-%d %H:%M') if r.started_at else '—' }}</td>
+                        <td data-label="Source">{{ r.source.name if r.source else 'All sources' }}</td>
+                        <td data-label="Trigger">{{ r.trigger }}</td>
+                        <td data-label="Seen">{{ r.entries_seen }}</td>
+                        <td data-label="Drafts">{{ r.drafts_created }}</td>
+                        <td data-label="Skipped">{{ r.duplicates_skipped }}</td>
+                        <td data-label="AI">{{ r.drafts_generated }}</td>
+                        <td data-label="Result">
+                            {%- if r.ok %}
+                            <span class="jr-status jr-status--published">ok</span>
+                            {%- else %}
+                            <span class="jr-status jr-status--rejected">error</span>
+                            <span class="jr-error">{{ r.error }}</span>
+                            {%- endif %}
+                        </td>
+                    </tr>
+                {%- else %}
+                    <tr><td colspan="8" class="admin-empty">No fetches recorded yet.</td></tr>
+                {%- endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{# ---------- Edit drawer ---------- #}
+<div class="jr-drawer" id="jrSourceDrawer" hidden>
+    <div class="jr-drawer__scrim" data-close></div>
+    <div class="jr-drawer__panel" role="dialog" aria-modal="true" aria-label="Edit source">
+        <div class="jr-drawer__head">
+            <h2>Edit source</h2>
+            <button type="button" class="jr-drawer__close" data-close aria-label="Close">&times;</button>
+        </div>
+        <form method="POST" id="jrSourceEditForm" class="admin-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="admin-form__group">
+                <label for="edit-name">Name *</label>
+                <input type="text" id="edit-name" name="name" required maxlength="160">
+            </div>
+            <div class="admin-form__group">
+                <label for="edit-category">Category</label>
+                <select id="edit-category" name="category">
+                    <option value="">Uncategorised</option>
+                    {%- for c in source_categories %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="admin-form__group">
+                <label for="edit-feed">Feed URL *</label>
+                <input type="url" id="edit-feed" name="feed_url" required>
+            </div>
+            <div class="admin-form__group">
+                <label for="edit-site">Website</label>
+                <input type="url" id="edit-site" name="website_url">
+            </div>
+            <div class="admin-form__group admin-form__group--checkbox">
+                <label>
+                    <input type="checkbox" name="is_active" value="1" id="edit-active" checked>
+                    Active &mdash; include this source when fetching
+                </label>
+            </div>
+            <div class="admin-form__actions">
+                <button type="submit" class="admin-btn admin-btn--primary">Save source</button>
+                <button type="button" class="admin-btn" data-close>Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    var drawer = document.getElementById('jrSourceDrawer');
+    var form = document.getElementById('jrSourceEditForm');
+    if (!drawer || !form) return;
+
+    function open(btn) {
+        form.action = '/admin/blog/sources/edit/' + btn.dataset.id;
+        document.getElementById('edit-name').value = btn.dataset.name;
+        document.getElementById('edit-feed').value = btn.dataset.feed;
+        document.getElementById('edit-site').value = btn.dataset.site;
+        document.getElementById('edit-category').value = btn.dataset.category;
+        document.getElementById('edit-active').checked = btn.dataset.active === '1';
+        drawer.hidden = false;
+        document.body.classList.add('jr-drawer-open');
+    }
+    function close() {
+        drawer.hidden = true;
+        document.body.classList.remove('jr-drawer-open');
+    }
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('.jr-btn--edit-source');
+        if (btn) { open(btn); return; }
+        if (e.target.closest('[data-close]')) close();
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !drawer.hidden) close();
+    });
+})();
+</script>
+{% endblock %}

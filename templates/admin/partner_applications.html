@@ -1,0 +1,112 @@
+{% extends "admin/base.html" %}
+{% block title %}Partner Applications{% endblock %}
+{% set active = "partner_applications" %}
+{% block content %}
+<div class="admin-page">
+    <div class="admin-page__head">
+        <div>
+            <h1 class="admin-page__title">Partner Applications</h1>
+            <p class="admin-page__sub">
+                {% for value, label in status_labels %}
+                <span class="partner-app__count partner-app__count--{{ value }}">{{ label }}: {{ counts.get(value, 0) }}</span>
+                {% endfor %}
+            </p>
+        </div>
+        <a href="{{ url_for('admin_partner_applications_export') }}" class="admin-btn admin-btn--secondary">
+            <i class="fa-solid fa-download"></i> Export CSV
+        </a>
+    </div>
+
+    <div class="admin-card">
+        <div class="admin-table-wrap">
+        <table class="admin-table admin-table--cards">
+            <thead>
+                <tr>
+                    <th>Received</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Role</th>
+                    <th>Portfolio</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in applications.items %}
+                <tr>
+                    <td class="admin-card__label" data-label="Received">{{ a.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td class="admin-card__primary" data-label="">
+                        {{ a.name }}
+                        <span class="partner-app__email">{{ a.email }}</span>
+                        {% if a.company %}<span class="partner-app__meta">{{ a.company }}</span>{% endif %}
+                    </td>
+                    <td class="admin-card__label" data-label="Type">{{ a.collaboration_type or '-' }}</td>
+                    <td class="admin-card__label" data-label="Role">{{ a.role or '-' }}</td>
+                    <td class="admin-card__label" data-label="Portfolio">
+                        {% if a.portfolio %}
+                        <a href="{{ a.portfolio }}" target="_blank" rel="noopener noreferrer">{{ a.portfolio|truncate(38, true, '…') }}</a>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td class="admin-card__label" data-label="Status">
+                        <form method="POST" action="{{ url_for('admin_partner_application_status', id=a.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <select name="status" onchange="this.form.submit()" class="admin-select">
+                                {% for value, label in status_labels %}
+                                <option value="{{ value }}" {% if a.status == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </td>
+                    <td data-label="Actions">
+                        <div class="admin-actions">
+                            <button type="button" class="admin-btn admin-btn--sm" data-partner-toggle="{{ a.id }}">Details</button>
+                            <form method="POST" action="{{ url_for('admin_partner_application_delete', id=a.id) }}" onsubmit="return confirm('Delete this partner application? This cannot be undone.')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="admin-btn admin-btn--sm admin-btn--danger">Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                <tr class="partner-app__detail" id="partner-app-{{ a.id }}" hidden>
+                    <td colspan="7">
+                        <p class="partner-app__detail-label">Areas of expertise</p>
+                        <p>{{ a.expertise or '-' }}</p>
+                        <p class="partner-app__detail-label">About them</p>
+                        <p class="partner-app__detail-message">{{ a.message }}</p>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted)">No partner applications yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    {% if applications.pages > 1 %}
+    <div class="admin-pagination">
+        {% if applications.has_prev %}
+        <a href="{{ url_for('admin_partner_applications', page=applications.prev_num) }}" class="admin-btn admin-btn--sm">&laquo; Prev</a>
+        {% endif %}
+        <span class="admin-pagination__info">Page {{ applications.page }} of {{ applications.pages }}</span>
+        {% if applications.has_next %}
+        <a href="{{ url_for('admin_partner_applications', page=applications.next_num) }}" class="admin-btn admin-btn--sm">Next &raquo;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+    document.querySelectorAll('[data-partner-toggle]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var row = document.getElementById('partner-app-' + btn.getAttribute('data-partner-toggle'));
+            if (row) row.hidden = !row.hidden;
+        });
+    });
+})();
+</script>
+{% endblock %}

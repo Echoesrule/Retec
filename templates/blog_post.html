@@ -1,146 +1,193 @@
 {% extends "base.html" %}
-{% block content %}
+{% from "_journal_cards.html" import journal_related_card, meta_strip %}
 
-<div class="reading-progress" id="readingProgress"><div class="reading-progress__bar" id="readingProgressBar"></div></div>
+{% block extra_head %}
+{% if not is_preview %}
+<script type="application/ld+json">{{ structured_data|tojson }}</script>
+{% if post.display_date %}<meta property="article:published_time" content="{{ post.display_date.isoformat() }}">{% endif %}
+{% if post.updated_at %}<meta property="article:modified_time" content="{{ post.updated_at.isoformat() }}">{% endif %}
+{% if post.category %}<meta property="article:section" content="{{ post.category }}">{% endif %}
+{% if post.author %}<meta property="article:author" content="{{ post.author }}">{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="reading-progress" id="readingProgress">
+    <div class="reading-progress__bar" id="readingProgressBar"></div>
+</div>
 
 <article class="editorial" id="editorialArticle">
-
+    {# ---------- Hero ---------- #}
     <header class="editorial__hero">
-        {% if post.image_filename %}
-        <div class="editorial__hero-img" data-motion="image" data-parallax>
-            <img src="{{ get_image_url(post.image_filename) }}" alt="{{ post.title }}" loading="eager">
-        </div>
-        {% endif %}
         <div class="editorial__hero-text" data-motion="reveal" data-motion-slow>
             <div class="editorial__hero-inner">
                 <a href="{{ url_for('blog') }}" class="editorial__back">
-                    <i class="fa-solid fa-arrow-left"></i> Back to Blog
+                    <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Back to Journal
                 </a>
-                <div class="editorial__meta">
-                    <span class="editorial__tag">ARTICLE</span>
-                    <span class="editorial__dot">&middot;</span>
-                    <span>{{ ((post.content|length) / 1000)|int + 1 }} min read</span>
-                </div>
+
+                {{ meta_strip(post) }}
+
                 <h1 class="editorial__title">{{ post.title }}</h1>
-                {% if post.summary %}
+                {%- if post.summary %}
                 <p class="editorial__subtitle">{{ post.summary }}</p>
-                {% endif %}
-                <div class="editorial__byline">
-                    <div class="editorial__author-avatar">
-                    <svg viewBox="0 0 16 22" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="0" y1="6" x2="14" y2="6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="7" y1="6" x2="7" y2="20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M 7 8 A 5 5 0 0 1 7 17" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="16" y2="20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </div>
-                    <div class="editorial__author-info">
-                        <span class="editorial__author-name">RETEC</span>
-                        <span class="editorial__date">{{ post.created_at.strftime('%B %d, %Y') }} &middot; {{ ((post.content|length) / 1000)|int + 1 }} min read</span>
-                    </div>
+                {%- endif %}
+
+                <div class="editorial__publication">
+                    {%- if post.author %}<span>By {{ post.author }}</span>{% endif %}
+                    <time datetime="{{ post.display_date.strftime('%Y-%m-%d') if post.display_date else '' }}">
+                        Published {{ post.display_date.strftime('%B %d, %Y') if post.display_date else '' }}
+                    </time>
+                    {%- if post.updated_at %}
+                    <time datetime="{{ post.updated_at.strftime('%Y-%m-%d') }}">
+                        Updated {{ post.updated_at.strftime('%B %d, %Y') }}
+                    </time>
+                    {%- endif %}
+                    {%- if post.estimated_reading_time %}
+                    <span>{{ post.estimated_reading_time }} min read</span>
+                    {%- endif %}
+                    {%- if is_preview %}
+                    <span class="editorial__preview-badge">Preview</span>
+                    {%- endif %}
                 </div>
             </div>
         </div>
+
+        {%- if post.hero_image %}
+        <div class="editorial__hero-img" data-motion="image">
+            <img src="{{ post.hero_image }}" alt="{{ post.title }}" loading="eager"
+                 onerror="this.parentNode.classList.add('editorial__hero-img--broken');this.remove();">
+        </div>
+        {%- endif %}
     </header>
 
+    {# ---------- Body ---------- #}
     <div class="editorial__body">
         <div class="editorial__content" id="editorialContent" data-motion="reveal">
-            {{ post.content | safe }}
+            {{ post.content|journal_content|safe }}
         </div>
 
+        {# ---------- Source attribution (Briefs) ---------- #}
+        {%- if post.content_type == 'brief' and (post.source_url or post.source_name) %}
+        <aside class="editorial__source" role="note" aria-label="Source attribution">
+            <p class="journal__kicker">Source</p>
+            {%- if post.source_url %}
+            <a href="{{ post.source_url }}" target="_blank" rel="noopener noreferrer"
+               class="editorial__source-link">
+                {{ post.source_name or post.source_url }}
+                <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+            </a>
+            {%- elif post.source_name %}
+            <p class="editorial__source-name">{{ post.source_name }}</p>
+            {%- endif %}
+            {%- if post.source_published_at %}
+            <time class="editorial__source-date"
+                  datetime="{{ post.source_published_at.strftime('%Y-%m-%d') }}">
+                Originally published {{ post.source_published_at.strftime('%B %d, %Y') }}
+            </time>
+            {%- endif %}
+            <p class="editorial__source-note">
+                RETEC retains complete editorial control. This Brief is RETEC&rsquo;s
+                analysis of the original story, not a reproduction of it.
+            </p>
+        </aside>
+        {%- endif %}
+
+        {# ---------- Share ---------- #}
         <div class="editorial__end">
             <div class="editorial__share">
                 <span class="editorial__share-label">Share this article</span>
                 <div class="editorial__share-btns">
-                    <a href="https://twitter.com/intent/tweet?text={{ post.title|urlencode }}&url={{ request.url|urlencode }}" target="_blank" rel="noopener" class="editorial__share-btn" aria-label="Share on X">
+                    <a href="https://twitter.com/intent/tweet?text={{ post.title|urlencode }}&url={{ canonical_url|urlencode }}"
+                       target="_blank" rel="noopener noreferrer"
+                       class="editorial__share-btn" aria-label="Share on X">
                         <i class="fa-brands fa-x-twitter"></i>
                     </a>
-                    <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ request.url|urlencode }}" target="_blank" rel="noopener" class="editorial__share-btn" aria-label="Share on LinkedIn">
+                    <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ canonical_url|urlencode }}"
+                       target="_blank" rel="noopener noreferrer"
+                       class="editorial__share-btn" aria-label="Share on LinkedIn">
                         <i class="fa-brands fa-linkedin-in"></i>
                     </a>
-                    <a href="https://wa.me/?text={{ (post.title ~ ' ' ~ request.url)|urlencode }}" target="_blank" rel="noopener" class="editorial__share-btn" aria-label="Share on WhatsApp">
-                        <i class="fa-brands fa-whatsapp"></i>
-                    </a>
-                    <button class="editorial__share-btn editorial__share-btn--copy" onclick="navigator.clipboard.writeText(window.location.href).then(()=>{this.classList.add('copied');setTimeout(()=>this.classList.remove('copied'),2000)})" aria-label="Copy link">
+                    <button class="editorial__share-btn editorial__share-btn--copy"
+                            data-copy-url="{{ canonical_url or request.url }}"
+                            type="button" aria-label="Copy link">
                         <i class="fa-solid fa-link"></i>
                     </button>
                 </div>
             </div>
-
-            <div class="editorial__author-card">
-                <div class="editorial__author-card-avatar">
-                    <svg viewBox="0 0 16 22" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="0" y1="6" x2="14" y2="6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="7" y1="6" x2="7" y2="20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M 7 8 A 5 5 0 0 1 7 17" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="16" y2="20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </div>
-                <div class="editorial__author-card-info">
-                    <span class="editorial__author-card-label">Written by</span>
-                    <span class="editorial__author-card-name">RETEC</span>
-                    <p class="editorial__author-card-bio">Biz Yako. Tech Yetu. Building practical digital experiences with care and craft.</p>
-                </div>
-            </div>
         </div>
     </div>
 
-    <nav class="editorial__nav">
-        {% if prev_post %}
-        <a href="{{ url_for('blog_post', slug=prev_post.slug) }}" class="editorial__nav-link editorial__nav-link--prev">
-            <span class="editorial__nav-direction"><i class="fa-solid fa-arrow-left"></i> Previous</span>
+    {# ---------- Prev/Next ---------- #}
+    {%- if prev_post or next_post %}
+    <nav class="editorial__nav" aria-label="Article navigation">
+        {%- if prev_post %}
+        <a href="{{ url_for('blog_post', slug=prev_post.slug) }}"
+           class="editorial__nav-link editorial__nav-link--prev">
+            <span class="editorial__nav-direction">
+                <i class="fa-solid fa-arrow-left"></i> Previous article
+            </span>
             <span class="editorial__nav-title">{{ prev_post.title }}</span>
         </a>
-        {% else %}
+        {%- else %}
         <span></span>
-        {% endif %}
-        {% if next_post %}
-        <a href="{{ url_for('blog_post', slug=next_post.slug) }}" class="editorial__nav-link editorial__nav-link--next">
-            <span class="editorial__nav-direction">Next <i class="fa-solid fa-arrow-right"></i></span>
+        {%- endif %}
+        {%- if next_post %}
+        <a href="{{ url_for('blog_post', slug=next_post.slug) }}"
+           class="editorial__nav-link editorial__nav-link--next">
+            <span class="editorial__nav-direction">
+                Next article <i class="fa-solid fa-arrow-right"></i>
+            </span>
             <span class="editorial__nav-title">{{ next_post.title }}</span>
         </a>
-        {% endif %}
+        {%- endif %}
     </nav>
+    {%- endif %}
 
-    {% if related %}
-    <div class="editorial__related">
-        <h2 class="editorial__related-title">Continue Reading</h2>
+    {# ---------- Related ---------- #}
+    {%- if related %}
+    <section class="editorial__related" aria-labelledby="related-title">
+        <p class="journal__kicker">Keep exploring</p>
+        <h2 id="related-title" class="editorial__related-title">Related Stories</h2>
         <div class="editorial__related-grid">
-            {% for r in related %}
-            <a href="{{ url_for('blog_post', slug=r.slug) }}" class="editorial__related-card">
-                {% if r.image_filename %}
-                <div class="editorial__related-img">
-                    <img src="{{ get_image_url(r.image_filename) }}" alt="{{ r.title }}" loading="lazy">
-                </div>
-                {% endif %}
-                <div class="editorial__related-body">
-                    <time class="editorial__related-date">{{ r.created_at.strftime('%b %d, %Y') }}</time>
-                    <h3 class="editorial__related-card-title">{{ r.title }}</h3>
-                    {% if r.summary %}
-                    <p class="editorial__related-summary">{{ r.summary }}</p>
-                    {% endif %}
-                </div>
-            </a>
-            {% endfor %}
+            {%- for r in related %}{{ journal_related_card(r) }}{% endfor %}
         </div>
-    </div>
-    {% endif %}
-
+    </section>
+    {%- endif %}
 </article>
 
 <script>
-(function(){
+(function () {
     var article = document.getElementById('editorialArticle');
     var bar = document.getElementById('readingProgressBar');
-    if (!article || !bar) return;
-    function updateProgress() {
-        var rect = article.getBoundingClientRect();
-        var total = article.scrollHeight - window.innerHeight;
-        var scrolled = -rect.top;
-        var pct = Math.min(Math.max(scrolled / total * 100, 0), 100);
-        bar.style.transform = 'scaleX(' + (pct / 100) + ')';
+    if (article && bar) {
+        function updateProgress() {
+            var total = article.scrollHeight - window.innerHeight;
+            var scrolled = -article.getBoundingClientRect().top;
+            var pct = total > 0 ? Math.min(Math.max(scrolled / total, 0), 1) : 0;
+            bar.style.transform = 'scaleX(' + pct + ')';
+        }
+        var ticking = false;
+        window.addEventListener('scroll', function () {
+            if (ticking) return;
+            ticking = true;
+            requestAnimationFrame(function () {
+                updateProgress();
+                ticking = false;
+            });
+        }, { passive: true });
+        updateProgress();
     }
-    var ticking = false;
-    window.addEventListener('scroll', function() {
-        if (ticking) return;
-        ticking = true;
-        requestAnimationFrame(function() {
-            updateProgress();
-            ticking = false;
+
+    var copyBtn = document.querySelector('.editorial__share-btn--copy');
+    if (copyBtn) {
+        copyBtn.addEventListener('click', function () {
+            var url = copyBtn.dataset.copyUrl || window.location.href;
+            navigator.clipboard.writeText(url).then(function () {
+                copyBtn.classList.add('copied');
+                setTimeout(function () { copyBtn.classList.remove('copied'); }, 2000);
+            });
         });
-    }, {passive:true});
-    updateProgress();
+    }
 })();
 </script>
-
 {% endblock %}

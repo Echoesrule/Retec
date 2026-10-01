@@ -1,39 +1,147 @@
 {% extends "base.html" %}
+{# `pagination` is also the name of the paging object the route passes in, so the
+   macro is imported under an alias to keep the two apart. #}
+{% from "_journal_cards.html" import journal_card, pagination as render_pagination %}
+
 {% block content %}
-<section class="section section--light blog-page">
-    <div class="container">
-        <div class="inner-page__intro" data-motion="reveal" data-motion-slow>
-            <div>
-                <p class="section__eyebrow">Insights</p>
-                <h1 class="section__title">Ideas Worth<br>Sharing</h1>
-            </div>
-            <p class="inner-page__intro-copy">Practical ideas on websites, technology, and building a stronger digital presence.</p>
+<main class="journal">
+    <div class="journal__utility-bar">
+        <div class="container journal__utility-inner">
+            <span class="journal__utility-pill">Breaking</span>
+            {% set utility_post = featured_post or (posts[0] if posts else none) %}
+            {% if utility_post %}
+            <span class="journal__utility-text">{{ utility_post.title }}</span>
+            {% endif %}
+            <a href="{{ url_for('subscribe') }}" class="journal__utility-action">Subscribe</a>
         </div>
-        {% if posts %}
-        <div class="blog__grid">
-            {% for post in posts %}
-            <article class="blog__card" data-motion="card">
-                {% if post.image_filename %}
-                <div class="blog__card-image" data-motion="image" data-cursor="view">
-                    <img src="{{ get_image_url(post.image_filename) }}" alt="{{ post.title }}" loading="lazy">
-                </div>
-                {% endif %}
-                <div class="blog__card-body">
-                    <time class="blog__date">{{ post.created_at.strftime('%B %d, %Y') }}</time>
-                    <h2 class="blog__card-title">{{ post.title }}</h2>
-                    {% if post.summary %}
-                    <p class="blog__card-summary">{{ post.summary }}</p>
-                    {% endif %}
-                    <a href="{{ url_for('blog_post', slug=post.slug) }}" class="blog__read-more">
-                        Read More <i class="fa-solid fa-arrow-right"></i>
-                    </a>
-                </div>
-            </article>
-            {% endfor %}
-        </div>
-        {% else %}
-        <p class="blog__empty">No posts yet. Check back soon.</p>
-        {% endif %}
     </div>
-</section>
+
+    <section class="journal__masthead">
+        <div class="container">
+            <div class="journal__intro" data-motion="reveal" data-motion-slow>
+                <p class="journal__kicker">RETEC Journal</p>
+                <h1>Your Gateway to Global News</h1>
+                <p class="journal__intro-subtitle">Breaking stories from every corner of the globe.</p>
+            </div>
+        </div>
+    </section>
+
+    {% set feature_cards = ([featured_post] if featured_post and featured_post.hero_image else []) + (posts | selectattr('hero_image') | list) %}
+    {% if feature_cards %}
+    <section class="journal__featured" aria-label="Featured stories">
+        <div class="container">
+            <div class="journal__feature-grid">
+                {% for post in feature_cards[:3] %}
+                    {{ journal_card(post, 'feature' if loop.first else 'feature-small', eager=True) }}
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    {% set feature_ids = feature_cards[:3] | map(attribute='id') | list %}
+    {% set remaining = namespace(posts=[]) %}
+    {% if featured_post and featured_post.id not in feature_ids %}
+        {% set remaining.posts = remaining.posts + [featured_post] %}
+    {% endif %}
+    {% for post in posts %}
+        {% if post.id not in feature_ids %}
+            {% set remaining.posts = remaining.posts + [post] %}
+        {% endif %}
+    {% endfor %}
+    {% set latest_posts = (remaining.posts | selectattr('hero_image') | list) + (remaining.posts | rejectattr('hero_image') | list) %}
+
+    <section class="journal__discover" aria-label="Browse the Journal">
+        <div class="container">
+            <div class="journal__filters" data-motion="reveal">
+                <div class="journal__filter-group" role="group" aria-label="Content type">
+                    <a href="{{ url_for('blog', category=active_category or None) }}"
+                       class="journal__filter{% if not active_content_type %} journal__filter--active{% endif %}"
+                       {% if not active_content_type %}aria-current="page"{% endif %}>All</a>
+                    {%- for value, label in journal_content_types %}
+                    {%- set plural = {'insight': 'Insights', 'brief': 'Briefs', 'case_study': 'Case Studies'}[value] %}
+                    <a href="{{ url_for('blog', type=value, category=active_category or None) }}"
+                       class="journal__filter{% if active_content_type == value %} journal__filter--active{% endif %}"
+                       {% if active_content_type == value %}aria-current="page"{% endif %}>{{ plural }}</a>
+                    {%- endfor %}
+                </div>
+                {%- if categories %}
+                <div class="journal__filter-group journal__filter-group--categories" role="group" aria-label="Category">
+                    <a href="{{ url_for('blog', type=active_content_type or None) }}"
+                       class="journal__filter{% if not active_category %} journal__filter--active{% endif %}"
+                       {% if not active_category %}aria-current="page"{% endif %}>All topics</a>
+                    {%- for item in categories %}
+                    <a href="{{ url_for('blog', type=active_content_type or None, category=item) }}"
+                       class="journal__filter{% if active_category == item %} journal__filter--active{% endif %}"
+                       {% if active_category == item %}aria-current="page"{% endif %}>{{ item }}</a>
+                    {%- endfor %}
+                </div>
+                {%- endif %}
+            </div>
+        </div>
+    </section>
+
+    <section class="journal__latest" aria-labelledby="latest-title">
+        <div class="container">
+            <div class="journal__section-heading journal__section-heading--split" data-motion="reveal">
+                <div class="journal__section-title">
+                    <h2 id="latest-title">Latest News</h2>
+                    <p>Real-time updates that matter.</p>
+                </div>
+                <a href="{{ url_for('blog') }}" class="journal__view-more">View More <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+            </div>
+
+            {% if latest_posts %}
+            <div class="journal__latest-layout">
+                {% set lead_post = latest_posts[0] %}
+                {{ journal_card(lead_post, 'feature-lead', eager=True) }}
+
+                <div class="journal__stacked">
+                    {% for post in latest_posts[1:3] %}
+                        {{ journal_card(post, 'feature-side', eager=False) }}
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% set grid_posts = latest_posts[3:5] %}
+            {% set visible_ids = latest_posts[:5] | map(attribute='id') | list %}
+            {% if featured_post and featured_post.id not in feature_ids and featured_post.id not in visible_ids %}
+                {% set grid_posts = grid_posts + [featured_post] %}
+            {% endif %}
+            {% if grid_posts %}
+            <div class="journal__story-grid">
+                {% for post in grid_posts %}
+                    {{ journal_card(post, 'story-grid-card', eager=False) }}
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {{ render_pagination(pagination) }}
+            {% else %}
+            <div class="journal__empty">
+                <p>No stories match this view yet.</p>
+                <a href="{{ url_for('blog') }}" class="journal-card__link">
+                    View everything <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="journal__newsletter">
+        <div class="container">
+            <div class="journal__newsletter-inner">
+                <div class="journal__newsletter-copy">
+                    <p class="journal__kicker">Newsletter</p>
+                    <h3>Subscribe to our newsletter and stay updated each week.</h3>
+                </div>
+                <form class="journal__newsletter-form" action="{{ url_for('subscribe') }}" method="post">
+                    <input type="hidden" name="website" value="">
+                    <input type="email" name="email" placeholder="Email address" aria-label="Email address" required>
+                    <button type="submit">Subscribe</button>
+                </form>
+            </div>
+        </div>
+    </section>
+</main>
 {% endblock %}

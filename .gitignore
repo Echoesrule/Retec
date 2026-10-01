@@ -23,3 +23,14 @@ new_key.pub
 todo.txt
 static/images/self-injection.cpp
 static/images/testimonialdesign inspo.jpg
+# Production credentials, kept out of local dev entirely
+.env.production
+backups/
+
+# Uploaded media. Admin uploads are user content that changes on every deploy,
+# so they are not source. (Earlier uploads are already tracked; this stops new
+# ones from being added.) `git rm -r --cached static/uploads` untracks the rest.
+static/uploads/
+
+# Stray upload that landed in the repo root
+/cfa43c5cb1d0cb7c04e255c77e73ca51.jpg

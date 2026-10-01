@@ -1,83 +1,189 @@
 {% extends "admin/base.html" %}
-{% block title %}Blog Posts{% endblock %}
+{% block title %}Journal{% endblock %}
 {% set active = "blog" %}
 {% block content %}
 <div class="admin-page">
+
     <div class="admin-page__head">
-        <h1 class="admin-page__title">Blog Posts</h1>
-        <a href="{{ url_for('admin_blog_add') }}" class="admin-btn admin-btn--primary">+ New Post</a>
-    </div>
-    <div class="admin-card">
-        <div class="admin-table-wrap">
-        <table class="admin-table admin-table--cards">
-            <thead>
-                <tr><th>Image</th><th>Title</th><th>Slug</th><th>Published</th><th>Date</th><th>Actions</th></tr>
-            </thead>
-            <tbody>
-                {% for p in posts %}
-                <tr>
-                    <td class="admin-thumb-cell">
-                        {% if p.image_filename %}
-                        <img src="{{ get_image_url(p.image_filename) }}" alt="{{ p.title }}" class="admin-thumb">
-                        {% else %}
-                        <span class="admin-thumb admin-thumb--empty">—</span>
-                        {% endif %}
-                    </td>
-                    <td class="admin-card__primary" data-label="">{{ p.title[:60] }}{% if p.title|length > 60 %}...{% endif %}</td>
-                    <td class="admin-card__label" data-label="Slug">{{ p.slug }}</td>
-                    <td class="admin-card__label" data-label="Published">{{ 'Yes' if p.published else 'No' }}</td>
-                    <td class="admin-card__label" data-label="Date">{{ p.created_at.strftime('%Y-%m-%d') }}</td>
-                    <td class="admin-actions admin-card__actions">
-                        <a href="{{ url_for('admin_blog_edit', id=p.id) }}" class="admin-btn admin-btn--sm">Edit</a>
-                        <div class="admin-share" data-url="{{ request.host_url }}blog/{{ p.slug }}" data-title="{{ p.title }}">
-                            <button type="button" class="admin-btn admin-btn--sm admin-btn--share" onclick="this.parentElement.classList.toggle('admin-share--open')">Share</button>
-                            <div class="admin-share__dropdown">
-                                <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ (request.host_url ~ 'blog/' ~ p.slug)|urlencode }}" target="_blank" rel="noopener" class="admin-share__link">
-                                    <i class="fa-brands fa-linkedin"></i> LinkedIn
-                                </a>
-                                <a href="https://www.facebook.com/sharer/sharer.php?u={{ (request.host_url ~ 'blog/' ~ p.slug)|urlencode }}" target="_blank" rel="noopener" class="admin-share__link">
-                                    <i class="fa-brands fa-facebook"></i> Facebook
-                                </a>
-                                <a href="https://api.whatsapp.com/send?text={{ (p.title ~ ' ' ~ request.host_url ~ 'blog/' ~ p.slug)|urlencode }}" target="_blank" rel="noopener" class="admin-share__link">
-                                    <i class="fa-brands fa-whatsapp"></i> WhatsApp
-                                </a>
-                                <button type="button" class="admin-share__link" onclick="navigator.clipboard.writeText('{{ request.host_url }}blog/{{ p.slug }}');this.innerHTML='<i class=\'fa-solid fa-check\'></i> Copied!';setTimeout(()=>this.innerHTML='<i class=\'fa-solid fa-link\'></i> Copy Link',1500)">
-                                    <i class="fa-solid fa-link"></i> Copy Link
-                                </button>
-                                <button type="button" class="admin-share__link admin-share__link--copytext" data-title="{{ p.title }}" data-summary="{{ p.summary }}" data-url="{{ request.host_url }}blog/{{ p.slug }}">
-                                    <i class="fa-regular fa-clone"></i> Copy as Text
-                                </button>
-                            </div>
-                        </div>
-                        <form method="POST" action="{{ url_for('admin_blog_delete', id=p.id) }}" style="display:inline" onsubmit="return confirm('Delete {{ p.title }}?')">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="admin-btn admin-btn--sm admin-btn--danger">Delete</button>
-                        </form>
-                    </td>
-                </tr>
+        <div>
+            <h1 class="admin-page__title">RETEC Journal</h1>
+            <p class="admin-page__sub">
+                {% if ai_ready %}
+                    AI drafting is configured. Generated copy always lands here as a draft.
                 {% else %}
-                <tr><td colspan="6" class="admin-empty">No blog posts yet. <a href="{{ url_for('admin_blog_add') }}">Create one</a>.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                    AI drafting is not configured, so fetched stories arrive as unedited drafts.
+                {% endif %}
+            </p>
+        </div>
+        <div class="admin-page__actions">
+            <a href="{{ url_for('admin_blog_add') }}" class="admin-btn admin-btn--primary">
+                <i class="fa-solid fa-plus"></i> Create Journal Article
+            </a>
+            <a href="{{ url_for('admin_blog_sources') }}" class="admin-btn">
+                <i class="fa-solid fa-rss"></i> Sources ({{ source_count }})
+            </a>
+            <form method="POST" action="{{ url_for('admin_blog_fetch') }}" style="display:inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="admin-btn">Fetch sources now</button>
+            </form>
         </div>
     </div>
+
+    {% if failed_sources %}
+    <div class="jr-alert jr-alert--warn">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        {{ failed_sources }} active source(s) reported an error on their last fetch.
+        <a href="{{ url_for('admin_blog_sources') }}">Review sources</a>.
+    </div>
+    {% endif %}
+    {% if status_counts.get('new') %}
+    <div class="jr-alert">
+        <i class="fa-solid fa-inbox"></i>
+        <strong>{{ status_counts['new'] }}</strong> new item(s) waiting for review.
+        Nothing fetched is ever published automatically &mdash; approve each one below.
+    </div>
+    {% endif %}
+
+    {# ---------- Status tabs ---------- #}
+    <nav class="jr-tabs" aria-label="Filter by status">
+        <a href="{{ url_for('admin_blog') }}"
+           class="jr-tab{% if not active_status %} jr-tab--active{% endif %}">
+            All <span class="jr-tab__count">{{ status_counts.get('all', 0) }}</span>
+        </a>
+        {%- for value, label in journal_statuses %}
+        <a href="{{ url_for('admin_blog', status=value) }}"
+           class="jr-tab{% if active_status == value %} jr-tab--active{% endif %}">
+            {{ label }} <span class="jr-tab__count">{{ status_counts.get(value, 0) }}</span>
+        </a>
+        {%- endfor %}
+    </nav>
+
+    <form method="GET" action="{{ url_for('admin_blog') }}" class="jr-filters">
+        {%- if active_status %}<input type="hidden" name="status" value="{{ active_status }}">{% endif %}
+        <label class="jr-filters__label" for="jr-type">Content type</label>
+        <select id="jr-type" name="type" onchange="this.form.submit()">
+            <option value="">All types</option>
+            {%- for value, label in journal_content_types %}
+            <option value="{{ value }}" {% if active_content_type == value %}selected{% endif %}>{{ label }}</option>
+            {%- endfor %}
+        </select>
+        <button type="submit" class="admin-btn admin-btn--sm">Apply</button>
+    </form>
+
+    <div class="admin-card">
+        <div class="admin-table-wrap">
+            <table class="admin-table jr-table jr-table--responsive">
+                <thead>
+                    <tr>
+                        <th>Headline</th>
+                        <th>Type</th>
+                        <th>Source</th>
+                        <th>Category</th>
+                        <th>Original</th>
+                        <th>Fetched</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {%- for a in articles %}
+                    <tr class="jr-row jr-row--{{ a.status }}">
+                        <td data-label="Headline" class="jr-headline">
+                            {%- if a.hero_image %}
+                            <img class="jr-thumb" src="{{ a.hero_image }}" alt="" loading="lazy"
+                                 onerror="this.remove();">
+                            {%- endif %}
+                            <div>
+                                <strong>{{ a.title }}</strong>
+                                {%- if a.summary %}<span class="jr-excerpt">{{ a.summary|truncate(110) }}</span>{% endif %}
+                                {%- if a.ai_generated %}<span class="jr-tag jr-tag--ai">AI draft</span>{% endif %}
+                            </div>
+                        </td>
+                        <td data-label="Type">{{ a.content_type_label }}</td>
+                        <td data-label="Source">
+                            {%- if a.source_url %}
+                            <a href="{{ a.source_url }}" target="_blank" rel="noopener noreferrer" class="jr-source">
+                                {{ a.source_name or 'link' }}
+                            </a>
+                            {%- else %}&mdash;{% endif %}
+                        </td>
+                        <td data-label="Category">{{ a.category or '—' }}</td>
+                        <td data-label="Original">
+                            {{ a.source_published_at.strftime('%Y-%m-%d') if a.source_published_at else '—' }}
+                        </td>
+                        <td data-label="Fetched">
+                            {{ a.fetched_at.strftime('%Y-%m-%d') if a.fetched_at else '—' }}
+                        </td>
+                        <td data-label="Status">
+                            <span class="jr-status jr-status--{{ a.status }}">{{ a.status_label }}</span>
+                        </td>
+                        <td data-label="Actions" class="jr-actions">
+                            <div class="jr-actions__row">
+                                <a href="{{ url_for('admin_blog_view', id=a.id) }}" class="admin-btn admin-btn--sm" target="_blank" rel="noopener">View</a>
+                                <a href="{{ url_for('admin_blog_edit', id=a.id) }}" class="admin-btn admin-btn--sm">Edit</a>
+
+                                {%- if a.status == 'published' %}
+                                <form method="POST" action="{{ url_for('admin_blog_archive', id=a.id) }}" style="display:inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="admin-btn admin-btn--sm">Archive</button>
+                                </form>
+                                <a href="{{ request.host_url }}blog/{{ a.slug }}" class="admin-btn admin-btn--sm" target="_blank" rel="noopener">Public</a>
+                                {%- else %}
+                                <form method="POST" action="{{ url_for('admin_blog_publish', id=a.id) }}" style="display:inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="admin-btn admin-btn--sm admin-btn--primary">Approve &amp; Publish</button>
+                                </form>
+                                {%- if a.status != 'rejected' and a.status != 'archived' %}
+                                <form method="POST" action="{{ url_for('admin_blog_reject', id=a.id) }}" style="display:inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="admin-btn admin-btn--sm">Reject</button>
+                                </form>
+                                {%- endif %}
+                                <form method="POST" action="{{ url_for('admin_blog_delete', id=a.id) }}"
+                                      style="display:inline" onsubmit="return confirm('Delete this draft permanently?')">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="admin-btn admin-btn--sm admin-btn--danger">Delete</button>
+                                </form>
+                                {%- endif %}
+                            </div>
+                            {%- if a.source_url and a.status not in ('published',) %}
+                            <form method="POST" action="{{ url_for('admin_blog_redraft', id=a.id) }}" style="display:inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="admin-btn admin-btn--sm jr-btn--ghost">Regenerate AI draft</button>
+                            </form>
+                            {%- endif %}
+                        </td>
+                    </tr>
+                {%- else %}
+                    <tr><td colspan="8" class="admin-empty">
+                        Nothing here yet.
+                        {%- if active_status == 'new' %}
+                            Fetched stories will appear as soon as a source runs.
+                        {%- else %}
+                            <a href="{{ url_for('admin_blog_add') }}">Create a Journal article</a>.
+                        {%- endif %}
+                    </td></tr>
+                {%- endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {%- if pagination and pagination.pages > 1 %}
+    <div class="admin-pagination">
+        {%- if pagination.has_prev %}<a href="{{ url_for('admin_blog', page=pagination.prev_num, status=active_status or None, type=active_content_type or None) }}" class="admin-btn admin-btn--sm">Previous</a>{% endif %}
+        <span class="admin-pagination__info">Page {{ pagination.page }} of {{ pagination.pages }} &middot; {{ pagination.total }} article(s)</span>
+        {%- if ai_ready and scheduler_on %}
+        <span class="admin-pagination__info">Fetching every {{ interval_minutes }} min &middot; AI drafting on</span>
+        {%- endif %}
+        {%- if pagination.has_next %}<a href="{{ url_for('admin_blog', page=pagination.next_num, status=active_status or None, type=active_content_type or None) }}" class="admin-btn admin-btn--sm">Next</a>{% endif %}
+    </div>
+    {%- endif %}
+
+    <p class="jr-footnote">
+                Ingestion runs {{ 'every ' ~ interval_minutes ~ ' minutes' if scheduler_on else 'manually only' }} and creates drafts, never publications.
+                {{ active_sources }} of {{ source_count }} source(s) active.
+                {%- if scheduler_on %} Trigger it now with <strong>Fetch sources now</strong>.{% endif %}
+            </p>
 </div>
-{% endblock %}
-{% block scripts %}
-<script>
-document.querySelectorAll('.admin-share__link--copytext').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-        var title = this.dataset.title || '';
-        var summary = this.dataset.summary || '';
-        var url = this.dataset.url || '';
-        var text = title + '\n\n' + summary + '\n\nRead more: ' + url;
-        var el = this;
-        navigator.clipboard.writeText(text).then(function() {
-            el.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
-            setTimeout(function() { el.innerHTML = '<i class="fa-regular fa-clone"></i> Copy as Text'; }, 2000);
-        });
-    });
-});
-</script>
 {% endblock %}

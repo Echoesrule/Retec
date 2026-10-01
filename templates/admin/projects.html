@@ -52,6 +52,7 @@
                 <tr>
                     <th>Image</th>
                     <th>Title</th>
+                    <th>Status</th>
                     <th>Tags</th>
                     <th>Featured</th>
                     <th>Visible</th>
@@ -75,6 +76,13 @@
                     <td class="admin-card__primary" data-label="">
                         {{ p.title }}
                     </td>
+                    <td class="admin-card__label" data-label="Status">
+                        {% if p.status in project_status_values %}
+                        <span class="admin-status admin-status--{{ p.status }}">{{ project_status_labels[p.status] }}</span>
+                        {% else %}
+                        <span style="color:#999;">Not set</span>
+                        {% endif %}
+                    </td>
                     <td class="admin-card__label" data-label="Tags">{{ p.tags[:60] }}{% if p.tags|length > 60 %}...{% endif %}</td>
                     <td class="admin-card__label" data-label="Featured">{{ 'Yes' if p.featured else 'No' }}</td>
                     <td class="admin-card__label" data-label="Visible">
@@ -94,7 +102,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="7" class="admin-empty">No projects yet. <a href="{{ url_for('admin_project_add') }}">Add one</a>.</td>
+                    <td colspan="8" class="admin-empty">No projects yet. <a href="{{ url_for('admin_project_add') }}">Add one</a>.</td>
                 </tr>
                 {% endfor %}
             </tbody>
