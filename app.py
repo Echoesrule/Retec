@@ -1830,7 +1830,7 @@ def inject_globals():
         'get_image_url': get_image_url,
         'hero_bg_type': SiteSetting.query.filter_by(key='hero_bg_type').first().value if SiteSetting.query.filter_by(key='hero_bg_type').first() else 'video',
         'hero_video_url': get_image_url(SiteSetting.query.filter_by(key='hero_video').first().value) if SiteSetting.query.filter_by(key='hero_video').first() else url_for('static', filename='hero-bg.mp4'),
-        'hero_image_url': get_image_url(SiteSetting.query.filter_by(key='hero_image').first().value) if SiteSetting.query.filter_by(key='hero_image').first() else url_for('static', filename='images/hero-bg.svg'),
+        'hero_image_url': get_image_url(SiteSetting.query.filter_by(key='hero_image').first().value) if SiteSetting.query.filter_by(key='hero_image').first() else 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=2670&auto=format&fit=crop',
         'hero_poster_url': get_image_url(SiteSetting.query.filter_by(key='hero_poster').first().value) if SiteSetting.query.filter_by(key='hero_poster').first() else url_for('static', filename='images/hero-bg.svg'),
         'hero_quote_interval': SiteSetting.query.filter_by(key='hero_quote_interval').first().value if SiteSetting.query.filter_by(key='hero_quote_interval').first() else '6000',
         'cube_positioner_enabled': _get_setting('cube_positioner_enabled') == '1' and 'admin_id' in session,

@@ -1,130 +1,66 @@
 {% extends "base.html" %}
+{% from "_journal_cards.html" import journal_card %}
 
 {% block content %}
 
 <!-- ===== HERO ===== -->
-<section class="hero-editorial" id="hero">
-    <div class="container hero-editorial__container">
-
-        <div class="hero-editorial__canvas">
-
-            <div class="hero-editorial__grid">
-
-                    <!-- ===== Left column ===== -->
-                    <div class="hero-editorial__content">
-                        <p class="hero-editorial__pill hero-editorial__reveal">
-                            <span class="hero-editorial__pill-icon" aria-hidden="true">
-                                <i class="fa-solid fa-check"></i>
-                            </span>
-                            Trusted by growing businesses
-                        </p>
-
-                        <h1 class="hero-editorial__title hero-editorial__reveal">
-                            Bring <span class="hero-editorial__title-word">Yourself</span> To<span class="hero-editorial__title-lite">The &nbsp;Top.</span>
-                        </h1>
-
-                        <p class="hero-editorial__desc hero-editorial__reveal">
-                            We design and build websites, web applications and digital systems that help businesses work better and reach further.
-                        </p>
-
-                        <div class="hero-editorial__social hero-editorial__reveal">
-                            <div class="hero-editorial__social-row">
-                                <span class="hero-editorial__stars" aria-hidden="true">
-                                    <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
-                                </span>
-                                <span class="hero-editorial__social-title">Loved by our clients</span>
-                                <span class="hero-editorial__social-value">5.0 rating</span>
-                            </div>
-                            <div class="hero-editorial__social-rule" aria-hidden="true"></div>
-                            <div class="hero-editorial__social-row">
-                                <span class="hero-editorial__social-value--main">Design · Development · Support</span>
-                                <span class="hero-editorial__social-meta">Kenya · Worldwide</span>
-                            </div>
-                        </div>
-
-                        <div class="hero-editorial__actions hero-editorial__reveal">
-                            <a href="#contact" class="hero-editorial__btn" data-liquid data-magnetic data-cursor="arrow">
-                                <span class="hero-editorial__liquid" aria-hidden="true">
-                                    <svg class="hero-editorial__liquid-wave hero-editorial__liquid-wave--back" viewBox="0 0 120 120" preserveAspectRatio="none" focusable="false"><path d="M0 16 C18 5 28 26 44 16 S70 5 86 16 S108 26 120 16 V120 H0 Z"/></svg>
-                                    <svg class="hero-editorial__liquid-wave" viewBox="0 0 120 120" preserveAspectRatio="none" focusable="false"><path d="M0 12 C15 2 25 22 40 12 S65 2 80 12 S105 22 120 12 V120 H0 Z"/></svg>
-                                </span>
-                                <span class="hero-editorial__btn-content">Start a Project <span class="hero-editorial__btn-note">— Free consultation</span><span class="hero-editorial__btn-arrow" data-liquid-arrow aria-hidden="true">↗</span></span>
-                            </a>
-                            <a href="#work" class="hero-editorial__btn hero-editorial__btn--ghost" data-cursor="arrow">
-                                Our Work <span class="hero-editorial__btn-arrow" aria-hidden="true">↗</span>
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- ===== Right visual ===== -->
-                    <div class="hero-editorial__visual hero-editorial__reveal">
-                        <div class="hero-editorial__panel">
-
-                            <img class="hero-editorial__img"
-                                 src="{{ hero_image_url }}"
-                                 alt="Exemplary work by RETEC"
-                                 loading="eager" decoding="async">
-
-                            <a href="#work" class="hero-editorial__play" aria-label="See our work">
-                                <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-                            </a>
-                        </div>
-
-                        <div class="hero-editorial__stat" aria-hidden="true">
-                            <p class="hero-editorial__stat-label">— End to end</p>
-                            <p class="hero-editorial__stat-number">{{ (projects|length) if projects else '5' }}+</p>
-                            <p class="hero-editorial__stat-caption">Projects shipped</p>
-                        </div>
-
-                        {% set featured = projects[0] if projects else none %}
-                        <a href="{{ featured.demo_url or featured.github or '#work' }}"
-                           class="hero-editorial__card"
-                           {% if featured and (featured.demo_url or featured.github) %}target="_blank" rel="noopener noreferrer"{% endif %}
-                           aria-label="Featured project: {{ featured.title if featured else 'Kabura Adventures' }}">
-                            <span class="hero-editorial__card-thumb" aria-hidden="true">
-                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                            </span>
-                            <span class="hero-editorial__card-body">
-                                <span class="hero-editorial__card-label">Recent Project</span>
-                                <span class="hero-editorial__card-title">{{ featured.title if featured else 'Kabura Adventures' }}</span>
-                                <span class="hero-editorial__card-meta">{{ featured.category or 'Web Experience' }} · Selected Work</span>
-                            </span>
-                        </a>
-
-                        <div class="hero-editorial__chip hero-editorial__chip--top" aria-hidden="true">
-                            <span class="hero-editorial__chip-icon"><i class="fa-solid fa-check"></i></span>
-                            How can we help you grow?
-                        </div>
-                        <div class="hero-editorial__chip hero-editorial__chip--bottom" aria-hidden="true">
-                            <span class="hero-editorial__chip-icon"><i class="fa-solid fa-check"></i></span>
-                            Let's build your digital system
-                        </div>
-                    </div>
-
-                </div>
-
-                <!-- ===== Client / trust bar ===== -->
-                <div class="hero-editorial__logos">
-                    <span class="hero-editorial__logos-label">Selected work</span>
-                    <div class="hero-editorial__logos-track">
-                        <div class="hero-editorial__logos-list" id="selectedWorkList">
-                            {% for n in range(2) %}
-                                {% if projects %}
-                                    {% for p in projects[:5] %}
-                                        <span class="hero-editorial__logo">{{ p.title }}</span>
-                                    {% endfor %}
-                                {% else %}
-                                    <span class="hero-editorial__logo">Web</span>
-                                    <span class="hero-editorial__logo">Apps</span>
-                                    <span class="hero-editorial__logo">Systems</span>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-
+<section class="hero-industrial" id="hero">
+    <div class="container hero-industrial__container">
+        <div class="hero-industrial__frame">
+            <div class="hero-industrial__masthead">
+                <a class="hero-industrial__tag" href="#about">Independent digital studio</a>
+                <span class="hero-industrial__wordmark" aria-label="RETEC">RETEC</span>
+                <a class="hero-industrial__menu" href="#services" aria-label="Explore our services">
+                    <span></span><span></span><span></span>
+                </a>
             </div>
 
+            <div class="hero-industrial__main">
+                <div class="hero-industrial__heading">
+                    <h1>Technology,<br class="hero-industrial__mobile-break"> made useful.</h1>
+                    <div class="hero-industrial__intro">
+                        <span class="hero-industrial__dash" aria-hidden="true"></span>
+                        <h2>Digital systems for<br>businesses moving forward.</h2>
+                        <a class="hero-industrial__cta" href="#contact" data-cursor="arrow">
+                            Start a project <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="hero-industrial__visual" data-motion="image">
+                    <img src="{{ hero_image_url }}" alt="A visual from RETEC's featured digital work" class="hero-industrial__image" loading="eager" decoding="async">
+                    <div class="hero-industrial__status" aria-hidden="true">
+                        <span>STATUS: READY</span>
+                        <span>MODE: BUILD / SHIP / SUPPORT</span>
+                    </div>
+                    <div class="hero-industrial__telemetry" aria-hidden="true">
+                        <span>01 — DISCOVER THE OPPORTUNITY</span>
+                        <span>02 — DESIGN A USEFUL SYSTEM</span>
+                        <span>03 — BUILD FOR WHAT'S NEXT</span>
+                    </div>
+                    <div class="hero-industrial__focus" aria-hidden="true"><span></span></div>
+                </div>
+            </div>
+
+            <footer class="hero-industrial__footer">
+                <span class="hero-industrial__footer-label">Selected RETEC projects</span>
+                <div class="hero-industrial__projects" role="group" aria-label="Selected RETEC projects">
+                    <div class="hero-industrial__projects-track" id="selectedWorkList">
+                        {% for repeat_index in range(2) %}
+                        <div class="hero-industrial__projects-group" {% if repeat_index %}aria-hidden="true"{% endif %}>
+                            {% if projects %}
+                                {% for project in projects[:5] %}
+                                <span>{{ project.title }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span>Websites</span><span>Applications</span><span>Digital systems</span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </footer>
+        </div>
     </div>
 </section>
 
@@ -389,35 +325,19 @@
 {% if blog_posts %}
 <section class="section blog-preview section--light" id="blog">
     <div class="container">
-        <div class="services__intro" data-motion="reveal">
-            <div class="services__intro-heading">
-                <p class="section__eyebrow">Journal</p>
-                <h2 class="section__title">Ideas Worth<br><span><img src="{{ url_for('static', filename='images/mind-share.png') }}" alt="" aria-hidden="true">Sharing</span></h2>
+        <div class="home-journal-preview__heading" data-motion="reveal">
+            <div>
+                <p class="section__eyebrow">RETEC Journal</p>
+                <h2>Latest News</h2>
             </div>
-            <div class="services__intro-copy">
-                <p>Practical ideas on websites, technology, and building a stronger digital presence.</p>
-                <a href="{{ url_for('blog') }}" class="section__cta">Visit The Journal <i class="fa-solid fa-arrow-right"></i></a>
-            </div>
+            <p>Ideas and updates for building what comes next.</p>
+            <a href="{{ url_for('blog') }}" class="home-journal-preview__more">
+                Visit the Journal <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            </a>
         </div>
-        <div class="blog__grid">
+        <div class="home-journal-preview__grid">
             {% for post in blog_posts %}
-            <article class="blog__card" data-motion="reveal" data-motion-delay="{{ loop.index0 * 100 }}">
-                {% if post.image_filename %}
-                <div class="blog__card-image" data-motion="image">
-                    <img src="{{ get_image_url(post.image_filename) }}" alt="{{ post.title }}" loading="lazy">
-                </div>
-                {% endif %}
-                <div class="blog__card-body">
-                    <time class="blog__date">{{ post.created_at.strftime('%B %d, %Y') }}</time>
-                    <h3 class="blog__card-title">{{ post.title }}</h3>
-                    {% if post.summary %}
-                    <p class="blog__card-summary">{{ post.summary }}</p>
-                    {% endif %}
-                    <a href="{{ url_for('blog_post', slug=post.slug) }}" class="blog__read-more">
-                        Read More <i class="fa-solid fa-arrow-right"></i>
-                    </a>
-                </div>
-            </article>
+                {{ journal_card(post, 'home-preview', eager=loop.first, show_footer=False) }}
             {% endfor %}
         </div>
     </div>
@@ -516,7 +436,7 @@
                 <button type="submit" class="form__submit">Send Inquiry <i class="fa-solid fa-arrow-right"></i></button>
             </form>
                 <div class="contact__image">
-                    <img src="{{ url_for('static', filename='images/phone.jpg') }}" alt="Replace this placeholder with your own image" loading="lazy">
+                    <img src="{{ url_for('static', filename='images/phone2.jpg') }}" alt="Replace this placeholder with your own image" loading="lazy">
                 </div>
             </div>
             <div class="contact__details" data-motion="reveal">
