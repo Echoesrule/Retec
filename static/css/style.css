@@ -8162,7 +8162,8 @@ body:has(.journal) .header .nav__link--active { color: var(--journal-ink); }
 
 /* Homepage hero: framed industrial composition */
 .hero-industrial {
-    background: var(--dark-1);
+    background: linear-gradient(145deg, var(--light-bg), var(--gray-light));
+
     color: var(--light-text);
     font-family: var(--font-body);
 }
@@ -8177,13 +8178,15 @@ body:has(.journal) .header .nav__link--active { color: var(--journal-ink); }
 }
 
 .hero-industrial__frame {
+    --hero-gutter: clamp(1.5rem, 5vw, 4rem);
+    --hero-bleed: clamp(3rem, 10vw, 8rem);
     position: relative;
     display: flex;
     flex-direction: column;
     min-height: clamp(680px, calc(100svh - 10rem), 900px);
     overflow: hidden;
     border-radius: 0;
-    padding: clamp(1.5rem, 4vw, 3rem) clamp(1.5rem, 5vw, 4rem) 1.5rem;
+    padding: clamp(1.5rem, 4vw, 3rem) var(--hero-gutter) 1.5rem;
     background: linear-gradient(145deg, var(--light-bg), var(--gray-light));
 }
 
@@ -8401,14 +8404,16 @@ body:has(.journal) .header .nav__link--active { color: var(--journal-ink); }
     position: relative;
     z-index: 2;
     display: grid;
-    grid-template-columns: 1fr 2fr;
-    align-items: center;
-    gap: 1.5rem;
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+    width: calc(100% + var(--hero-bleed));
+    margin-left: calc(0px - var(--hero-gutter));
     padding-top: 1.25rem;
     border-top: 1px solid var(--light-border);
 }
 
 .hero-industrial__footer-label {
+    padding-inline: var(--hero-gutter);
     color: var(--light-text-muted);
     font-size: 0.62rem;
     font-weight: 700;
@@ -8423,48 +8428,79 @@ body:has(.journal) .header .nav__link--active { color: var(--journal-ink); }
 
 .hero-industrial__projects-track {
     display: flex;
-    width: max-content;
+    width: 200%;
     animation: selected-work-marquee 30s linear infinite;
 }
 
-.hero-industrial__projects:hover .hero-industrial__projects-track {
-    animation-play-state: paused;
-}
-
 .hero-industrial__projects-group {
-    display: flex;
-    flex: 0 0 auto;
+    display: grid;
+    flex: 0 0 50%;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     align-items: center;
-    gap: clamp(1.5rem, 4vw, 3rem);
-    padding-right: clamp(1.5rem, 4vw, 3rem);
+    min-width: 0;
 }
 
-.hero-industrial__projects span {
-    flex: 0 0 auto;
+.hero-industrial__projects-group > span {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    color: var(--light-text);
+    font-size: 1rem;
+    font-weight: 400;
+    white-space: nowrap;
+}
+
+.hero-industrial__project-more {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
     color: var(--light-text);
     font-size: 1rem;
     font-weight: 700;
+    white-space: nowrap;
 }
 
-.hero-industrial__projects-group span {
-    display: inline-block;
+.hero-industrial__projects-group > span img,
+.hero-industrial__project-more img {
+    flex: 0 0 auto;
+    width: 1rem;
+    height: 1rem;
+    object-fit: contain;
+    filter: grayscale(1);
+    opacity: 0.72;
+}
+
+.hero-industrial__project-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hero-industrial__projects-group > span,
+.hero-industrial__project-more {
     transform-origin: center;
     transition: transform 260ms var(--ease-smooth);
 }
 
-.hero-industrial__projects-group span:hover {
+.hero-industrial__projects-group > span:hover,
+.hero-industrial__project-more:hover {
     position: relative;
     z-index: 1;
     transform: translateY(-4px) scale(1.16);
 }
 
-.hero-industrial__projects-group span:hover + span,
-.hero-industrial__projects-group span:has(+ span:hover) {
+.hero-industrial__projects-group > span:hover + span,
+.hero-industrial__projects-group > span:has(+ span:hover) {
     animation: hero-project-ripple 720ms var(--ease-smooth) both;
 }
 
-.hero-industrial__projects-group span:hover + span + span,
-.hero-industrial__projects-group span:has(+ span + span:hover) {
+.hero-industrial__projects-group > span:hover + span + span,
+.hero-industrial__projects-group > span:has(+ span + span:hover) {
     animation: hero-project-ripple 720ms var(--ease-smooth) 90ms both;
 }
 
@@ -8497,9 +8533,11 @@ body:has(.journal) .header .nav__link--active { color: var(--journal-ink); }
 @media (max-width: 600px) {
     .hero-industrial__container { padding: 5.5rem 0 1.5rem; }
     .hero-industrial__frame {
+        --hero-gutter: 1rem;
+        --hero-bleed: 2rem;
         min-height: 720px;
         border-radius: 0;
-        padding: 1.25rem 1rem 1rem;
+        padding: 1.25rem var(--hero-gutter) 1rem;
     }
     .hero-industrial__masthead { grid-template-columns: 1fr auto; }
     .hero-industrial__tag { max-width: 100%; padding: 0.4rem 0.65rem; font-size: 0.52rem; }
@@ -8517,20 +8555,113 @@ body:has(.journal) .header .nav__link--active { color: var(--journal-ink); }
     .hero-industrial__telemetry { right: 0; bottom: 10%; max-width: 48%; }
     .hero-industrial__focus { top: 7%; right: 12%; width: 82px; }
     .hero-industrial__footer { grid-template-columns: 1fr; gap: 0.75rem; }
-    .hero-industrial__projects-group { gap: 1.25rem; padding-right: 1.25rem; }
+    .hero-industrial__projects-group > span,
+    .hero-industrial__project-more { gap: 0.25rem; font-size: 0.72rem; }
+    .hero-industrial__projects-group > span img,
+    .hero-industrial__project-more img { width: 0.85rem; height: 0.85rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .hero-industrial__cta { transition: none; }
     .hero-industrial__projects-track { animation: none; }
-    .hero-industrial__projects-group span,
-    .hero-industrial__projects-group span:hover,
-    .hero-industrial__projects-group span:hover + span,
-    .hero-industrial__projects-group span:has(+ span:hover),
-    .hero-industrial__projects-group span:hover + span + span,
-    .hero-industrial__projects-group span:has(+ span + span:hover) {
+    .hero-industrial__project-more,
+    .hero-industrial__project-more:hover,
+    .hero-industrial__projects-group > span,
+    .hero-industrial__projects-group > span:hover,
+    .hero-industrial__projects-group > span:hover + span,
+    .hero-industrial__projects-group > span:has(+ span:hover),
+    .hero-industrial__projects-group > span:hover + span + span,
+    .hero-industrial__projects-group > span:has(+ span + span:hover) {
         transition: none;
         animation: none;
         transform: none;
+    }
+}
+
+/* Homepage desktop navigation: shared active and hover indicators */
+@media (min-width: 769px) {
+    .home-page .nav__list {
+        position: relative;
+    }
+
+    .home-page .nav__indicator-host {
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 0;
+        width: 0;
+        height: 0;
+        list-style: none;
+        pointer-events: none;
+    }
+
+    .home-page .nav__active-indicator,
+    .home-page .nav__hover-indicator {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 1px;
+        height: 40px;
+        border-radius: 999px;
+        transform: translateY(-50%) scaleX(0);
+        transform-origin: left center;
+        opacity: 0;
+        pointer-events: none;
+        will-change: transform, opacity;
+    }
+
+    .home-page .nav__active-indicator {
+        z-index: 0;
+        background: var(--accent-dark);
+    }
+
+    .home-page .nav__hover-indicator {
+        z-index: 1;
+        background: transparent;
+    }
+
+    .home-page .nav__link {
+        z-index: 2;
+        transition: color 220ms var(--ease-smooth), scale 220ms var(--ease-smooth);
+    }
+
+    .home-page .nav__link:hover {
+        color: var(--white);
+        background: transparent;
+        scale: 1.045;
+    }
+
+    .home-page .nav__link:focus-visible {
+        color: var(--white);
+        scale: 1.045;
+    }
+
+    .home-page .nav__link--active {
+        color: var(--white) !important;
+        background: transparent;
+    }
+
+    .home-page .nav__link--active::before,
+    .home-page .nav__link--active::after,
+    .home-page .nav__link:hover::after {
+        display: none;
+    }
+
+    .home-page .nav__link:hover::before {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .home-page .nav__indicator-host {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .home-page .nav__active-indicator,
+    .home-page .nav__hover-indicator {
+        transition: opacity 220ms var(--ease-standard);
+        will-change: auto;
     }
 }

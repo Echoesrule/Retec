@@ -46,14 +46,20 @@
                 <span class="hero-industrial__footer-label">Selected RETEC projects</span>
                 <div class="hero-industrial__projects" role="group" aria-label="Selected RETEC projects">
                     <div class="hero-industrial__projects-track" id="selectedWorkList">
+                        {% set project_logos = ['github', 'python', 'flask', 'html5', 'css3', 'javascript'] %}
                         {% for repeat_index in range(2) %}
                         <div class="hero-industrial__projects-group" {% if repeat_index %}aria-hidden="true"{% endif %}>
                             {% if projects %}
-                                {% for project in projects[:5] %}
-                                <span>{{ project.title }}</span>
+                                {% for project in projects[:6] %}
+                                <span><img src="https://cdn.simpleicons.org/{{ project_logos[loop.index0 % project_logos|length] }}" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="hero-industrial__project-name">{{ project.title }}</span></span>
+                                {% endfor %}
+                                {% for missing_slot in range(6 - (projects[:6]|length)) %}
+                                <a href="#work" class="hero-industrial__project-more"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i><span class="hero-industrial__project-name">Explore all work</span></a>
                                 {% endfor %}
                             {% else %}
-                                <span>Websites</span><span>Applications</span><span>Digital systems</span>
+                                {% for project_name in ['Websites', 'Applications', 'Digital systems', 'Mobile apps', 'Data tools', 'Custom software'] %}
+                                <span><img src="https://cdn.simpleicons.org/{{ project_logos[loop.index0] }}" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="hero-industrial__project-name">{{ project_name }}</span></span>
+                                {% endfor %}
                             {% endif %}
                         </div>
                         {% endfor %}
