@@ -35,6 +35,16 @@
                 var node = document.getElementById(id);
                 return node ? { id: id, node: node, link: link, intersecting: false } : null;
             }).filter(Boolean);
+            var pageSections = Array.prototype.slice.call(document.querySelectorAll('section[id]')).map(function (node) {
+                var linkedSection = null;
+                for (var i = 0; i < sections.length; i += 1) {
+                    if (sections[i].id === node.id) {
+                        linkedSection = sections[i];
+                        break;
+                    }
+                }
+                return { id: node.id, node: node, link: linkedSection && linkedSection.link, intersecting: false };
+            });
 
             if (navList && sections.length && window.IntersectionObserver) {
                 var desktopQuery = window.matchMedia('(min-width: 769px)');
@@ -81,10 +91,9 @@
                                 x: x,
                                 y: y,
                                 yPercent: -50,
-                                scaleX: width,
+                                width: width,
                                 scaleY: scaleY,
-                                autoAlpha: visible ? 1 : 0,
-                                transformOrigin: 'left center'
+                                autoAlpha: visible ? 1 : 0
                             });
                             return;
                         }
@@ -92,7 +101,7 @@
                         indicatorGsap.to(indicator, {
                             x: x,
                             y: y,
-                            scaleX: width,
+                            width: width,
                             scaleY: scaleY,
                             autoAlpha: visible ? 1 : 0,
                             duration: visible ? 0.44 : 0.26,
@@ -129,6 +138,22 @@
                     }
                 }
 
+                function clearActiveSection(animate) {
+                    sections.forEach(function (section) {
+                        section.link.classList.remove('nav__link--active');
+                        section.link.removeAttribute('aria-current');
+                    });
+                    activeSection = null;
+
+                    if (indicatorGsap) {
+                        if (animate) indicatorGsap.to(activeIndicator, { autoAlpha: 0, duration: 0.26, ease: 'power2.out' });
+                        else indicatorGsap.set(activeIndicator, { autoAlpha: 0 });
+                    } else {
+                        activeIndicator.style.opacity = '0';
+                        activeIndicator.style.visibility = 'hidden';
+                    }
+                }
+
                 function showHover(link) {
                     var section = null;
                     for (var i = 0; i < sections.length; i += 1) {
@@ -150,7 +175,7 @@
                 }
 
                 function sectionAtReadingLine(candidates) {
-                    var line = window.innerHeight * 0.35;
+                    var line = window.innerHeight * 0.13;
                     var nearest = null;
                     var nearestDistance = Infinity;
 
@@ -166,8 +191,10 @@
                 }
 
                 function syncFromViewport(animate) {
-                    var section = sectionAtReadingLine(sections);
-                    if (section) setActiveSection(section.id, animate);
+                    var section = sectionAtReadingLine(pageSections);
+                    if (!section) return;
+                    if (section.link) setActiveSection(section.id, animate);
+                    else clearActiveSection(animate);
                 }
 
                 function clearPending() {
@@ -232,33 +259,34 @@
 
                 function onSectionsIntersect(entries) {
                     entries.forEach(function (entry) {
-                        for (var i = 0; i < sections.length; i += 1) {
-                            if (sections[i].node === entry.target) {
-                                sections[i].intersecting = entry.isIntersecting;
+                        for (var i = 0; i < pageSections.length; i += 1) {
+                            if (pageSections[i].node === entry.target) {
+                                pageSections[i].intersecting = entry.isIntersecting;
                                 break;
                             }
                         }
                     });
 
-                    var intersecting = sections.filter(function (section) { return section.intersecting; });
+                    var intersecting = pageSections.filter(function (section) { return section.intersecting; });
                     if (!intersecting.length) return;
 
                     var current = sectionAtReadingLine(intersecting);
-                    if (pendingSectionId && current.id !== pendingSectionId) return;
+                    if (pendingSectionId && current.link && current.id !== pendingSectionId) return;
                     if (pendingSectionId === current.id) clearPending();
-                    setActiveSection(current.id, true);
+                    if (current.link) setActiveSection(current.id, true);
+                    else clearActiveSection(true);
                 }
 
                 function observeSections() {
                     if (sectionObserver) sectionObserver.disconnect();
-                    sections.forEach(function (section) { section.intersecting = false; });
-                    var topMargin = Math.round(window.innerHeight * 0.28);
-                    var bottomMargin = Math.round(window.innerHeight * 0.58);
+                    pageSections.forEach(function (section) { section.intersecting = false; });
+                    var topMargin = Math.round(window.innerHeight * 0.08);
+                    var bottomMargin = Math.round(window.innerHeight * 0.82);
                     sectionObserver = new IntersectionObserver(onSectionsIntersect, {
                         rootMargin: '-' + topMargin + 'px 0px -' + bottomMargin + 'px 0px',
                         threshold: 0
                     });
-                    sections.forEach(function (section) { sectionObserver.observe(section.node); });
+                    pageSections.forEach(function (section) { sectionObserver.observe(section.node); });
                 }
 
                 observeSections();
@@ -269,8 +297,7 @@
                 navList.addEventListener('focusout', onFocusOut);
                 window.addEventListener('resize', onResize, { passive: true });
 
-                var initialSection = sectionAtReadingLine(sections);
-                setActiveSection(initialSection ? initialSection.id : sections[0].id, window.pageYOffset > 16);
+                syncFromViewport(window.pageYOffset > 16);
 
                 motion.onCleanup(function () {
                     sectionObserver.disconnect();

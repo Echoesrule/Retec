@@ -13,7 +13,9 @@ img { max-width: 100%; display: block; }
     margin-bottom: 1rem;
     border: 1px solid;
     font-size: 0.88rem;
+    transition: opacity 280ms ease, transform 280ms ease;
 }
+.admin-flash.is-dismissing { opacity: 0; transform: translateY(-6px); }
 .admin-flash--success { background: #e8f5e9; border-color: #c8e6c9; color: #2e7d32; }
 .admin-flash--error { background: #fbe9e7; border-color: #ffccbc; color: #c62828; }
 

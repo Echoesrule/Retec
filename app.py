@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, Response, make_response
 from datetime import datetime, timezone, timedelta
 import os, requests, csv, io, re, time, secrets, json, socket, threading
+from pathlib import Path
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_wtf.csrf import CSRFProtect
@@ -13,6 +14,7 @@ from dotenv import load_dotenv
 from forms import (ContactForm, PartnerForm, PROJECT_TYPES, BUDGET_OPTIONS,
                    COLLABORATION_TYPES)
 import journal
+import legal
 
 import cloudinary
 import cloudinary.uploader
@@ -500,245 +502,11 @@ class SiteSetting(db.Model):
     value = db.Column(db.Text, default='')
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-DISPOSABLE_DOMAINS = {
-    'mailinator.com', 'guerrillamail.com', 'tempmail.com', 'temp-mail.org',
-    'throwaway.com', 'yopmail.com', 'sharklasers.com', '10minutemail.com',
-    'trashmail.com', 'maildrop.cc', 'getairmail.com', 'emailondeck.com',
-    'dispostable.com', 'mailnesia.com', 'mintemail.com', 'spambox.us',
-    'tempmail.net', 'fakeinbox.com', 'throwaway.email', 'mailcatch.com',
-    'mailexpire.com', 'tempinbox.com', 'spamgourmet.com', 'mytrashmail.com',
-    'thankyou2010.com', 'trash2009.com', 'trashymail.com', 'tyldd.com',
-    'uggsrock.com', 'wegwerfmail.de', 'wegwerfmail.net', 'wegwerfmail.org',
-    'wh4f.org', 'whyspam.me', 'willselfdestruct.com', 'winemaven.info',
-    'wronghead.com', 'wuzup.net', 'xagloo.com', 'xemaps.com',
-    'xents.com', 'xmaily.com', 'xoxy.net', 'yep.it', 'yogamaven.com',
-    'yopmail.fr', 'yopmail.net', 'ypmail.webarnak.com', 'yuurok.com',
-    'zehnminutenmail.de', 'zippymail.info', 'zoaxe.com', 'zoemail.org',
-    'spam4.me', 'filzmail.com', 'mailmetrash.com', 'rcpt.at',
-    'trashinbox.net', 'spam.la', 'spam.cr', 'spam.od.ua',
-    '0-mail.com', '0wnd.net', '0wnd.org', '1-8.biz', '1ce.us',
-    '1chuy.com', '1mail.ml', '1pad.de', '1st-forms.com',
-    '2ch.com.au', '2prong.com', '3d-painting.com', '4mail.cf',
-    '4warding.com', '4warding.net', '4warding.org', '5mail.cf',
-    '5ymail.com', '6qoz.com', '6paq.com', '7pcc.com',
-    '7tags.com', '9mail.cf', 'a-bc.net', 'afrobacon.com',
-    'amelijk.com', 'anonymail.dk', 'anonymbox.com', 'antichef.com',
-    'antireg.com', 'antispam24.de', 'apinmail.com', 'armyspy.com',
-    'autowb.com', 'azmeil.com', 'baxomale.ht.cx', 'beddly.com',
-    'bigprofessor.so', 'bigstring.com', 'binkmail.com', 'bio-muesli.net',
-    'bobmail.info', 'bombderfull.com', 'brennendesreich.de', 'broadbandninja.com',
-    'bsnow.net', 'buffemail.com', 'buymoreplays.com', 'byebyemail.com',
-    'card.zapto.org', 'casualdx.com', 'chacuo.net', 'choicemail1.com',
-    'clixser.com', 'cmail.com', 'cool.fr.nf', 'correo.blogos.net',
-    'cosmorph.com', 'courriel.fr.nf', 'courrieltemporaire.com', 'crapmail.org',
-    'cubiclink.com', 'curryworld.de', 'cust.in', 'dacoolest.com',
-    'dandikmail.com', 'dayrep.com', 'deadaddress.com', 'deadspam.com',
-    'delikkt.de', 'despam.it', 'devnullmail.com', 'digitalsanctuary.com',
-    'discard.email', 'discardmail.com', 'discardmail.de', 'dispose.it',
-    'disposeamail.com', 'disposemail.com', 'dm.w3internet.co.uk',
-    'dodgeit.com', 'dodgit.com', 'dodgit.org', 'donemail.ru',
-    'dontreg.com', 'dontsendmespam.de', 'drdrb.com', 'dump-email.info',
-    'dumpedmail.com', 'dumpmail.de', 'dumpyemail.com', 'e-mail.com',
-    'e-mail.org', 'e4ward.com', 'easytrashmail.com', 'elitemail.org',
-    'email-fake.com', 'email.cbes.net', 'email.net', 'emailgo.de',
-    'emailias.com', 'emailigo.de', 'emailinfive.com', 'emailisvalid.com',
-    'emaillime.com', 'emailmenow.de', 'emailmiser.com', 'emailna.co',
-    'emails.ga', 'emails.tf', 'emailsensei.com', 'emailtech.info',
-    'emailtemporanea.com', 'emailtemporanea.net', 'emailtemporar.ro',
-    'emailtemps.com', 'ephemeral.email', 'etranquil.com', 'etranquil.net',
-    'etranquil.org', 'exdonuts.com', 'explodemail.com', 'fake-email.com',
-    'fakeinbox.info', 'fakeinformation.com', 'fakemail.fr', 'fakemailgenerator.com',
-    'fakemailz.com', 'fammix.com', 'fansworldwide.de', 'fantasymail.de',
-    'fdfdsfds.com', 'fightallspam.com', 'fivemail.de', 'fixmail.tk',
-    'fizmail.com', 'flurred.com', 'forgetmail.com', 'freakmail.de',
-    'free-email.ga', 'freebabysittercam.com', 'freemail.ms', 'freemail.tweakly.net',
-    'freemails.cf', 'freemails.ga', 'friendlymail.co.uk', 'fuckingduh.com',
-    'fudgerub.com', 'funnymail.de', 'gafy.net', 'garliclife.com',
-    'gehensiemirnichtaufdensack.de', 'gelitik.in', 'get1mail.com', 'get2mail.fr',
-    'getonemail.com', 'getonemail.net', 'ghosttexter.de', 'girlsindetention.com',
-    'gitmail.ooo', 'goemailgo.com', 'gotmail.com', 'gotmail.org',
-    'gotti.mobi', 'grr.la', 'gsrv.co.uk', 'guerrillamail.biz',
-    'guerrillamail.net', 'guerrillamail.org', 'h7mail.com', 'haltospam.com',
-    'hatespam.org', 'hiddencorner.xyz', 'hiddentragedy.com', 'hidemail.de',
-    'hidemail.pro', 'hix.kr', 'hmail.us', 'hochsitze.com',
-    'hotpop.com', 'hulapla.de', 'ieatspam.eu', 'ieatspam.info',
-    'ignoremail.com', 'ihateyoualot.info', 'ik7gz5.com', 'imails.info',
-    'inbax.tk', 'inbox.si', 'inboxalias.com', 'inboxbear.com',
-    'inboxclean.com', 'inboxclean.org', 'inboxed.pw', 'inboxproxy.com',
-    'incognitomail.com', 'incognitomail.net', 'incognitomail.org',
-    'insorg-mail.info', 'ip6.li', 'irish2me.com', 'iwi.net',
-    'jamieq.com', 'jet-renovation.fr', 'jkalucka.com', 'jourrapide.com',
-    'jsrsolutions.com', 'kaitang.com', 'kasmail.com', 'kaspop.com',
-    'killmail.com', 'killmail.net', 'kingsq.ga', 'kir.ch.tc',
-    'klassmaster.com', 'klassmaster.net', 'kloap.com', 'knolpower.com',
-    'kulturbetrieb.info', 'kurzepost.de', 'l33r.eu', 'laafd.com',
-    'lackmail.net', 'lackmail.ru', 'lags.us', 'landmail.co',
-    'lastmail.co', 'legitmail.club', 'letmymail.com', 'letterboxes.org',
-    'linuxmail.so', 'litedrop.com', 'lobbyist.com', 'locatowa.com',
-    'lol.com', 'lolfreak.net', 'lolmail.biz', 'lookugly.com',
-    'lopl.co.cc', 'loremipsummail.com', 'lotsmail.biz', 'lovescomputers.com',
-    'lr7.us', 'lroid.com', 'lukecarriere.com', 'm4ilweb.info',
-    'maboard.com', 'mail.by', 'mail.mezimages.net', 'mail.om',
-    'mail.wtf', 'mail0.ga', 'mail1.ga', 'mail114.net',
-    'mail2.ga', 'mail2rss.org', 'mail333.com', 'mail4.ga',
-    'mail4trash.com', 'mail666.ru', 'mail707.com', 'mailas.com',
-    'mailbidon.com', 'mailbiz.biz', 'mailbucket.org', 'mailcat.biz',
-    'mailde.de', 'mailde.info', 'maildrop.biz', 'maildrop.gq',
-    'maildu.de', 'maildx.com', 'maileater.com', 'mailed.in',
-    'mailed.ro', 'maileme101.com', 'mailexpire.com', 'mailf5.com',
-    'mailfa.tk', 'mailforspam.com', 'mailfree.ga', 'mailfree.gq',
-    'mailfree.ml', 'mailfs.com', 'mailguard.me', 'mailgutter.com',
-    'mailhang.com', 'mailhazard.com', 'mailhazard.us', 'mailhex.com',
-    'mailimate.com', 'mailin8r.com', 'mailinater.com', 'mailinator.co.uk',
-    'mailinator.net', 'mailinator.org', 'mailinator2.com', 'mailinbox.co',
-    'mailincubator.com', 'mailismagic.com', 'mailjunk.org', 'mailmate.com',
-    'mailme.ga', 'mailme.gq', 'mailmenot.de', 'mailmetrash.com',
-    'mailmoat.com', 'mailms.com', 'mailnator.com', 'mailnull.com',
-    'mailpickup.com', 'mailpooch.com', 'mailproxsy.com', 'mailquack.com',
-    'mailrc.biz', 'mailrock.biz', 'mailsac.com', 'mailscrap.com',
-    'mailseal.de', 'mailshiv.com', 'mailslap.ga', 'mailsmachine.com',
-    'mailspam.xyz', 'mailtemp.info', 'mailtome.de', 'mailtothis.com',
-    'mailtrash.net', 'mailtrix.net', 'mailtv.net', 'mailtv.tv',
-    'mailzi.com', 'mailzilla.com', 'mailzilla.org', 'makemetheking.com',
-    'manybrain.com', 'mbx.cc', 'mciek.com', 'mega.zik.dj',
-    'meinspamschutz.de', 'messagebeamer.de', 'messwiththebestdielikethe.rest',
-    'mhmm.xyz', 'midcoastcustoms.com', 'midcoastcustoms.net', 'midlertidig.com',
-    'midlertidig.net', 'midlertidig.org', 'mierdamail.com', 'mighty.co.za',
-    'migmail.net', 'migmail.pl', 'migumail.com', 'mildin.org.ua',
-    'mindless.com', 'mintemail.com', 'misterpinball.com', 'mmlki.be',
-    'moakt.com', 'moakt.ws', 'mobilemail.ga', 'mobileninja.co.uk',
-    'moncourrier.fr.nf', 'monemail.fr.nf', 'monmail.fr.nf', 'monumentmail.com',
-    'moonwake.com', 'mountainregionallibrary.net', 'mrdrain.com', 'msgos.com',
-    'muellemail.com', 'muell.icu', 'muellmail.com', 'mundodigital.net',
-    'mwarner.org', 'my.bimi.ne', 'my.opendesktop.org', 'my10minutemail.com',
-    'mycard.net.ua', 'mycleaninbox.net', 'mycorneroftheinter.net', 'mydeadaddress.com',
-    'myemailboxy.com', 'myfavemail.com', 'myinterserver.ml', 'mymail-in.net',
-    'mymail90.com', 'mymailoasis.com', 'mynetstore.de', 'myopang.com',
-    'mypacks.net', 'mypartyclip.de', 'mytrashmail.com', 'mywarnet.net',
-    'nabuma.com', 'neomailbox.com', 'nepwk.com', 'nervmich.net',
-    'nervtmich.net', 'net.bitcoin.ph', 'netmails.com', 'netmails.net',
-    'nevermail.de', 'nforget.com', 'nice-ix.com', 'nincsmail.com',
-    'nincsmail.hu', 'nnh.com', 'nnot.net', 'no-spam.ws',
-    'nobulk.com', 'noclickemail.com', 'nogmailspam.info', 'nomail.cf',
-    'nomail.ga', 'nomail.pw', 'nomail.xl.cx', 'nomail2me.com',
-    'nomorespamemails.com', 'nonspam.eu', 'nonspammer.de', 'noref.fr',
-    'nothingtoseehere.ca', 'nowhere.org', 'nowmymail.com', 'ntlhelp.net',
-    'nwldx.com', 'objectmail.com', 'obobbo.com', 'odnorazovoe.ru',
-    'oemail.de', 'oida.icu', 'oil.gov.my', 'oiizz.com',
-    'ok-bodycare.info', 'okmoney.net', 'oldiesmann.com', 'oneironaut.com',
-    'onkwerks.com', 'online.ms', 'onmail.ws', 'onquebec.com',
-    'oneuk.com', 'opayq.com', 'opp24.de', 'ordinaryamerican.net',
-    'otherinbox.com', 'outlawspam.com', 'oxfarm1.com', 'ozyl.de',
-    'pa9e.com', 'pancakemail.com', 'paplease.com', 'pcusers.otherinbox.com',
-    'penisgoes.in', 'petrzilka.net', 'pfui.ru', 'pinknboobies.com',
-    'pjqcn.com', 'plexolan.de', 'poczta.onet.pl', 'politikerclub.de',
-    'poqbox.com', 'politikerclub.de', 'pookmail.com', 'poopiebutt.club',
-    'popesodomy.com', 'popgx.com', 'postonline.cc', 'poutine.autresmouettes.net',
-    'predatorrat.cf', 'prin.be', 'privacy.net', 'privy-mail.de',
-    'privymail.de', 'proxymail.eu', 'prtnx.com', 'prtz.eu',
-    'punkass.com', 'putthisinyourspamdatabase.com', 'pwp.lv', 'qiaua.com',
-    'qisdo.com', 'qisoa.com', 'quickinbox.com', 'quickmail.nl',
-    'ququb.com', 'qvy.me', 'r0.xxx', 'r3t.xxx',
-    'raakkes.com', 'radiku.ye.vc', 'rancidhome.net', 'rbb.org',
-    'rcpt.at', 'reality-concept.club', 'reallymymail.com', 'receiveee.com',
-    'recipeforfailure.com', 'reconmail.com', 'recyclemail.dk', 'redditmail.com',
-    'regbypass.com', 'regspaces.tk', 'rejectmail.com', 'remail.cf',
-    'remail.ga', 'renmail.com', 'rengmail.com', 'resistore.net',
-    'rhyta.com', 'rklips.com', 'rm2rf.com', 'rppkn.com',
-    'rq1.in', 'ruggedinbox.com', 's0ny.net', 'safe-mail.net',
-    'safersignup.com', 'safetymail.info', 'safetypost.de', 'sandelf.de',
-    'sanstr.com', 'saynotospams.com', 'scattermail.com', 'schafmail.de',
-    'schrott-email.de', 'secretemail.de', 'securehost.com.es', 'selfdestructingmail.com',
-    'selfdestructingmail.org', 'sendfree.org', 'sendingspecialflyers.com', 'sendspamhere.com',
-    'senseless-entertainment.com', 'server.ms', 'sexmagnet.com', 'shhmail.com',
-    'shhuut.org', 'shieldedmail.com', 'shipfromto.com', 'shiphazmat.org',
-    'shippingterms.org', 'shortmail.net', 'shotmail.ru', 'showslow.de',
-    'sibmail.com', 'sinnlos-mail.de', 'siteposter.net', 'skarminko.com',
-    'skeefmail.com', 'slaskmail.se', 'slipry.net', 'sly.io',
-    'smap.4next.net', 'smapfree24.com', 'smapfree24.de', 'smapfree24.eu',
-    'smapfree24.info', 'smapfree24.org', 'smapxsmap.net', 'smashmail.de',
-    'smellfear.com', 'smellrear.com', 'snakemail.com', 'snapwet.com',
-    'sneakemail.com', 'sneakerbunko.com', 'snkmail.com', 'snowdayonline.ca',
-    'sofimail.com', 'solar-impact.pro', 'solvemail.info', 'songjoy.net',
-    'soniamail.com', 'spam.2012-2016.ru', 'spam.la', 'spam.su',
-    'spam4.me', 'spamail.de', 'spamarrest.com', 'spamavert.com',
-    'spambob.com', 'spambob.net', 'spambob.org', 'spambog.com',
-    'spambog.de', 'spambog.net', 'spambog.ru', 'spambox.info',
-    'spambox.me', 'spambox.org', 'spambox.us', 'spamcannon.com',
-    'spamcannon.net', 'spamcero.com', 'spamcon.org', 'spamcorptastic.com',
-    'spamcowboy.com', 'spamcowboy.net', 'spamcowboy.org', 'spamday.com',
-    'spamdecoy.net', 'spamex.com', 'spamfree24.com', 'spamfree24.de',
-    'spamfree24.eu', 'spamfree24.info', 'spamfree24.net', 'spamfree24.org',
-    'spamgoes.in', 'spamgourmet.com', 'spamgourmet.net', 'spamgourmet.org',
-    'spamherelots.com', 'spamhereplease.com', 'spamhole.com', 'spamify.com',
-    'spaminator.de', 'spamkill.info', 'spaml.com', 'spamlot.net',
-    'spammotel.com', 'spamobox.com', 'spamoff.de', 'spamsalad.in',
-    'spamserver.de', 'spamslicer.com', 'spamspame.com', 'spamspot.com',
-    'spamstack.net', 'spamthis.co.uk', 'spamthisplease.com', 'spamtrail.com',
-    'spamtroll.net', 'speed.1s.fr', 'spoofmail.de', 'squizzy.com',
-    'ssoia.com', 'startfu.com', 'steambot.net', 'stexsy.com',
-    'stinkysugar.net', 'suburbanthug.com', 'suckmyd.com', 'sudolife.me',
-    'suioe.com', 'supergreatmail.com', 'supermailer.jp', 'superplatyna.com',
-    'superrito.com', 'superstachel.de', 'surfmail.tk', 'susi.ml',
-    'svxr.org', 'sweetxxx.de', 'tafmail.com', 'taginvolve.com',
-    'talkmises.com', 'tanukis.org', 'tapchicuoihoi.com', 'tarzanmail.cf',
-    'techemail.com', 'techgroup.me', 'teleosaurs.xyz', 'teewars.org',
-    'temp-mail.com', 'temp-mail.de', 'temp-mail.org', 'temp.e mail',
-    'temp.emeraldwebmail.com', 'temp.headstrong.de', 'tempail.com',
-    'tempalias.com', 'tempe-mail.com', 'tempemail.biz', 'tempemail.co.za',
-    'tempemail.co', 'tempemail.com', 'tempemail.net', 'tempemail.org',
-    'tempinbox.co.za', 'tempinbox.com', 'tempmail.co', 'tempmail.it',
-    'tempmail4you.com', 'tempmaildemo.com', 'tempmailer.com', 'tempmailer.de',
-    'tempomail.fr', 'temporarily.de', 'temporarioemail.com.br', 'temporaryemail.net',
-    'temporaryemail.us', 'temporaryforwarding.com', 'temporaryinbox.com',
-    'temporarymail.org', 'tempthe.net', 'tempymail.com', 'ternak.com',
-    'testisite.org', 'thankyou2010.com', 'theaviors.com', 'thebearshark.com',
-    'thelightningmail.com', 'thembones.com.au', 'themostemail.com', 'thediamants.com',
-    'thescrapp.us', 'theteastory.com', 'thraml.com', 'throwamail.com',
-    'throwaway.email', 'throwaway.xyz', 'throwawayemail.com', 'throya.com',
-    'thrubay.com', 'tittibit.net', 'tizi.com', 'tmail.com',
-    'tmail.ws', 'tmailinator.com', 'toiea.com', 'toitag.com',
-    'tokem.co', 'tonymanso.com', 'toomail.biz', 'top101.de',
-    'topaddress.net', 'topranklist.de', 'tormail.net', 'tormail.org',
-    'tradermail.info', 'trash-amil.com', 'trash-me.com', 'trash2009.com',
-    'trash2010.com', 'trash2011.com', 'trashdevil.com', 'trashemail.de',
-    'trashemails.de', 'trashinbox.com', 'trashmail.at', 'trashmail.com',
-    'trashmail.de', 'trashmail.me', 'trashmail.net', 'trashmail.org',
-    'trashmail.ws', 'trashmailer.com', 'trashmails.com', 'trashspam.com',
-    'trashymail.net', 'trbvm.com', 'trialmail.de', 'trillianpro.com',
-    'tryalert.com', 'turoid.com', 'turual.com', 'tvchd.com',
-    'twkly.ml', 'two.pw', 'ty.ceed.se', 'tyldd.com',
-    'uacro.com', 'uber-mail.com', 'uggsrock.com', 'uk.to',
-    'umail.net', 'undo.it', 'unimark.org', 'unit7lahaina.com',
-    'upliftnow.com', 'uplipht.com', 'upozowas.info', 'urfunny.net',
-    'uroid.com', 'us.af', 'ux.dob.jp', 'uyhip.com',
-    'valemail.net', 'veanlo.com', 'venompen.com', 'vgtmail.com',
-    'vipmail.name', 'vipmail.pw', 'vixletdev.com', 'vjtimail.com',
-    'vmailing.info', 'vmani.com', 'vnedu.me', 'voidbay.com',
-    'vomoto.com', 'vsimcard.com', 'vubby.com', 'vzw.com',
-    'w3internet.co.uk', 'wakingupesther.com', 'walala.org', 'walkmail.net',
-    'walkmail.ru', 'wasteland.rfc822.org', 'watchandiron.com', 'webm4il.info',
-    'webmail.xyz', 'webuser.in', 'wee.my', 'wefjo.grn.cc',
-    'wegwerfmail.de', 'wegwerfmail.net', 'wegwerfmail.org', 'wetrainbayarea.com',
-    'wetrainbayarea.org', 'wh4f.org', 'whatiaas.com', 'whatpaas.com',
-    'whitemail.org', 'whoever.com', 'wifflemail.com', 'wimsemail.com',
-    'winemaven.info', 'wins.com.br', 'wlist.e', 'wmik.ro',
-    'wmsnorris.com', 'wokcy.com', 'woodlandsummer.com', 'wopr.com',
-    'workmail24.com', 'wovz.cf', 'wralawfirm.com', 'wronghead.com',
-    'wuzup.net', 'xagloo.com', 'xemaps.com', 'xents.com',
-    'xmail.com', 'xmaily.com', 'xoxy.net', 'xweb.dk',
-    'xww.ro', 'yabai-oppai.org', 'yahmail.top', 'yamha.info',
-    'yapped.net', 'yarnpedia.net', 'yep.it', 'yopmail.com',
-    'yopmail.fr', 'yopmail.net', 'yopmail.org', 'youmail.ga',
-    'youmailr.com', 'youneedmore.info', 'yourdomain.com', 'yourewronghereswhy.com',
-    'yoursuccessfulincome.com', 'yourtrap.com', 'youzoko.net', 'ypmail.webarnak.com',
-    'yuurok.com', 'z0d.eu', 'z1p.biz', 'za.com',
-    'zain.site', 'zainmax.net', 'zarabotai.site', 'zehnminutenmail.de',
-    'zehnminutenmail.net', 'zep-hyr.com', 'zhcne.com', 'zhorachu.com',
-    'zipcad.com', 'zippymail.info', 'zoaxe.com', 'zoemail.org',
-    'zomg.info', 'zonedetravail.com', 'zsero.com', 'zumpat.com',
-    'zxcv.com', 'zxcvbnm.com', 'zzz.com'
-}
+DISPOSABLE_DOMAINS = frozenset(
+    line.strip().lower()
+    for line in Path(__file__).resolve().with_name("disposable_domains.txt").read_text(encoding="utf-8").splitlines()
+    if line.strip()
+)
 
 class Subscriber(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -1176,9 +944,23 @@ def admin_broadcast():
     subscriber_count = Subscriber.query.filter_by(active=True).count()
     return render_template('admin/broadcast.html', subscriber_count=subscriber_count)
 
-def is_disposable_email(email):
-    domain = (email or '').split('@')[-1].strip().lower()
-    return domain in DISPOSABLE_DOMAINS
+def get_email_domain(email: str) -> str | None:
+    email = email.strip().lower()
+
+    if not email or "@" not in email:
+        return None
+
+    local, domain = email.rsplit("@", 1)
+
+    if not local or not domain:
+        return None
+
+    return domain.rstrip(".")
+
+
+def is_disposable_email(email: str) -> bool:
+    domain = get_email_domain(email)
+    return domain is not None and domain in DISPOSABLE_DOMAINS
 
 def check_mx_record(domain):
     try:
@@ -1191,7 +973,9 @@ def check_mx_record(domain):
 BIG_PROVIDERS = {'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'aol.com', 'icloud.com', 'protonmail.com', 'mail.com'}
 
 def smtp_verify(email, timeout=5):
-    domain = email.split('@')[-1]
+    domain = get_email_domain(email)
+    if domain is None:
+        return None
     if domain in BIG_PROVIDERS:
         return None
     try:
@@ -1297,8 +1081,8 @@ def save_subscriber(email, name='', source='website'):
             if smtp_result is True:
                 subscriber.validated = True
             elif smtp_result is None:
-                domain = email.split('@')[-1]
-                if check_mx_record(domain):
+                domain = get_email_domain(email)
+                if domain and check_mx_record(domain):
                     subscriber.validated = True
 
     synced = sync_brevo_contact(email, name or subscriber.name)
@@ -1991,8 +1775,8 @@ def verify_email():
         return jsonify({'valid': True, 'message': 'Email exists.'})
     if smtp_result is False:
         return jsonify({'valid': False, 'message': 'Email does not appear to exist.'})
-    domain = email.split('@')[-1]
-    if check_mx_record(domain):
+    domain = get_email_domain(email)
+    if domain and check_mx_record(domain):
         return jsonify({'valid': True, 'message': 'Email looks good.'})
     return jsonify({'valid': False, 'message': 'Could not verify this email.'})
 
@@ -2053,6 +1837,82 @@ def _partner_context(form):
 @app.route('/cv')
 def cv():
     return render_template('cv.html', active='cv')
+
+# ===== LEGAL PAGES =====
+#
+# /privacy, /terms, /security. All three render templates/legal_base.html and
+# differ only in which descriptor from legal.py they pass plus their metadata.
+# The wording is in legal.py rather than in the routes or the templates so a
+# legal review never means touching a view.
+#
+# Nothing here invents a fact. Every claim on these pages is traceable to this
+# module or to legal.py, and the handful of values that genuinely are unknown —
+# retention periods, the backup schedule, a dedicated security mailbox — are
+# rendered as visible [TODO: ...] markers rather than plausible fiction.
+
+LEGAL_LAST_UPDATED = legal.LAST_UPDATED
+LEGAL_LAST_UPDATED_ISO = '2026-02-02'
+
+# Mailboxes are configuration, never copy. `contact_email` is the address this
+# application actually sends from, which is also the one published in the
+# structured data in base.html. `security_email` prefers a dedicated
+# SECURITY_CONTACT_EMAIL when one exists and otherwise falls back to MAIL_TO --
+# the inbox this studio's own notifications are delivered to, so a report always
+# reaches a monitored mailbox. The Security page says exactly that.
+LEGAL_EMAILS = {
+    'contact_email': app.config['MAIL_FROM'],
+    'security_email': os.environ.get('SECURITY_CONTACT_EMAIL') or app.config['MAIL_TO'],
+}
+
+
+def _legal_page(slug, meta_desc):
+    """Shared render for the three legal pages.
+
+    The canonical URL is built from url_for rather than left to the context
+    processor's `request.url`, so a stray query string can never end up in the
+    canonical link for a page that has no query string.
+    """
+    page = legal.PAGES[slug]
+    return render_template(
+        '%s.html' % slug,
+        legal_page=page,
+        legal_emails=LEGAL_EMAILS,
+        legal_updated=LEGAL_LAST_UPDATED,
+        legal_updated_iso=LEGAL_LAST_UPDATED_ISO,
+        active='legal',
+        meta_title='%s — RETEC' % page['title'],
+        meta_desc=meta_desc,
+        meta_url=url_for(slug, _external=True),
+    )
+
+
+@app.route('/privacy')
+def privacy():
+    return _legal_page(
+        'privacy',
+        'How RETEC collects, uses, protects and manages information when you use '
+        'our website and services — forms, analytics, cookies, retention and '
+        'your rights.'
+    )
+
+
+@app.route('/terms')
+def terms():
+    return _legal_page(
+        'terms',
+        'The terms for using RETEC’s public website: what you may and may not '
+        'do with it, and how it relates to actual client engagements.'
+    )
+
+
+@app.route('/security')
+def security():
+    return _legal_page(
+        'security',
+        'The security practices RETEC actually implements on its website and the '
+        'applications it builds — and, just as importantly, the ones it does not '
+        'claim.'
+    )
 
 # ===== RETEC JOURNAL (PUBLIC) =====
 #

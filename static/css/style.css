@@ -3755,7 +3755,7 @@ body {
     top: 50%;
     transform: translate(-50%, -50%) scale(1);
     width: calc(100% + 18px);
-    height: 40px;
+    height: 44px;
     border-radius: 999px;
     background: var(--white);
     z-index: -1;
@@ -3941,7 +3941,7 @@ body {
     padding: 3rem;
     border: 1px solid var(--line);
     border-radius: 8px;
-    background: var(--paper-strong);
+    background: var(--light-bg);
     box-shadow: var(--shadow);
 }
 .about__title {
@@ -3970,7 +3970,7 @@ body {
 .service__item {
     border: 1px solid var(--line);
     border-radius: 8px;
-    background: var(--paper-strong);
+    background: var(--white);
     box-shadow: var(--shadow);
 }
 
@@ -5177,7 +5177,7 @@ select.form__input {
 .journal__intro {
     max-width: 1080px;
     margin: 0 auto;
-    text-align: center;
+    text-align: left;
 }
 
 .journal__kicker {
@@ -6785,8 +6785,8 @@ select.form__input {
     max-width: 620px;
     margin: 0 0 2.25rem;
     color: var(--muted);
-    font-size: clamp(1rem, 1.5vw, 1.18rem);
-    line-height: 1.7;
+    font-size: clamp(0.2rem, 1.5vw, 0.9rem);
+    line-height: 1.2;
 }
 .partner__actions { display: flex; flex-wrap: wrap; gap: 0.85rem; }
 
@@ -6847,7 +6847,58 @@ select.form__input {
 
 /* The four collaboration steps reuse the homepage .process__item, which is
    tiled for five columns. Re-tile rather than fork the component. */
-.partner__process-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.partner__process-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.5rem 1.25rem;
+}
+
+.partner__process-grid .process__item {
+    position: relative;
+    z-index: 0;
+    isolation: isolate;
+    min-height: 270px;
+    padding: 1.5rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: transparent;
+    box-shadow: none;
+    transition: transform var(--duration-medium) var(--ease-expressive), box-shadow var(--duration-medium) var(--ease-standard);
+}
+
+.partner__process-grid .process__item::before {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--card-bg-light);
+    content: "";
+    transform: translate(7px, -7px) rotate(1.5deg);
+    transition: transform var(--duration-medium) var(--ease-expressive);
+}
+
+.partner__process-grid .process__item:nth-child(even)::before {
+    transform: translate(7px, -7px) rotate(-1.5deg);
+}
+
+.partner__process-grid .process__item:hover {
+    z-index: 2;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.07);
+    transform: translateY(-4px);
+}
+
+.partner__process-grid .process__item:hover::before {
+    transform: translate(10px, -10px) rotate(2deg);
+}
+
+.partner__process-grid .process__number,
+.partner__process-grid .process__title { color: var(--ink); }
+.partner__process-grid .process__desc { color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+    .partner__process-grid .process__item,
+    .partner__process-grid .process__item::before { transition: none; }
+}
 
 /* "Why collaborate" reads as a definition list, not a card grid — quieter than
    the collaborator cards above it, so the two sections do not compete. */
@@ -8600,11 +8651,10 @@ body:has(.journal) .header .nav__link--active { color: var(--journal-ink); }
         position: absolute;
         top: 0;
         left: 0;
-        width: 1px;
-        height: 40px;
+        width: 0;
+        height: 44px;
         border-radius: 999px;
-        transform: translateY(-50%) scaleX(0);
-        transform-origin: left center;
+        transform: translateY(-50%);
         opacity: 0;
         pointer-events: none;
         will-change: transform, opacity;
@@ -8663,5 +8713,1252 @@ body:has(.journal) .header .nav__link--active { color: var(--journal-ink); }
     .home-page .nav__hover-indicator {
         transition: opacity 220ms var(--ease-standard);
         will-change: auto;
+    }
+}
+
+.flash {
+    transition: opacity 280ms ease, transform 280ms ease;
+}
+
+.flash.is-dismissing {
+    opacity: 0;
+    transform: translateY(-6px);
+    pointer-events: none;
+}
+
+.home-page .section__cta,
+.home-page .hero-industrial__cta,
+.home-page .form__submit,
+.home-page .subscribe__btn {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+}
+
+.home-page .cta-liquid-fill {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    padding: inherit;
+    gap: inherit;
+    border-radius: inherit;
+    background: var(--gray-medium);
+    color: var(--ink);
+    clip-path: inset(0 100% 0 0);
+    font: inherit;
+    letter-spacing: inherit;
+    line-height: inherit;
+    text-transform: inherit;
+    white-space: nowrap;
+    pointer-events: none;
+    transition: clip-path 620ms var(--ease-smooth);
+}
+
+.home-page .cta-liquid-fill__content {
+    display: inline-flex;
+    align-items: center;
+    gap: inherit;
+}
+
+.home-page .section__cta:hover .cta-liquid-fill,
+.home-page .section__cta:focus-visible .cta-liquid-fill,
+.home-page .hero-industrial__cta:hover .cta-liquid-fill,
+.home-page .hero-industrial__cta:focus-visible .cta-liquid-fill,
+.home-page .form__submit:hover .cta-liquid-fill,
+.home-page .form__submit:focus-visible .cta-liquid-fill,
+.home-page .subscribe__btn:hover .cta-liquid-fill,
+.home-page .subscribe__btn:focus-visible .cta-liquid-fill {
+    clip-path: inset(0 0 0 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .flash,
+    .home-page .cta-liquid-fill {
+        transition: none;
+    }
+}
+
+/* ===== LEGAL PAGES =====
+   /privacy, /terms, /security.
+
+   Scoped under `.legal` and appended last so it wins over the generations of
+   rules above it without touching any of them. Reuses the existing paper/ink
+   palette from the UI REFRESH block and the existing --motion-* tokens; no new
+   palette, no new font, no new breakpoint scale.
+
+   Layout: a sticky TOC aside at >= 1024px, a single reading column from 0 to
+   1023px where the aside is replaced by a horizontally scrollable rail. The
+   reading measure is capped well below the container so the eye never has to
+   travel the full 1180px.
+   ========================================================================== */
+
+.legal {
+    background: var(--paper);
+    color: var(--ink);
+    overflow-x: clip;
+    /* The hanging number column. Both the section heading and the prose beneath
+       it derive their indent from these two values, so the body text lines up
+       under the title instead of under the number, at every width, without a
+       magic pixel value that can drift when the number style changes. */
+    --legal-col: 1.05rem;
+    --legal-gap: 0.85rem;
+}
+
+/* ------------------------------------------------------------------ hero -- */
+.legal__hero {
+    padding: clamp(4rem, 8vw, 7rem) 0 clamp(2rem, 4vw, 3rem);
+    border-bottom: 1px solid var(--line);
+}
+
+.legal__hero-inner {
+    max-width: 780px;
+}
+
+.legal__eyebrow {
+    margin-bottom: 1.25rem;
+}
+
+.legal__title {
+    margin: 0 0 1.5rem;
+    color: var(--ink);
+    font-family: var(--font-heading);
+    font-size: clamp(2.9rem, 8vw, 6rem);
+    font-weight: 400;
+    letter-spacing: -0.045em !important;
+    line-height: 1;
+}
+
+.legal__lede {
+    max-width: 62ch;
+    margin: 0 0 1.75rem;
+    color: var(--ink);
+    font-size: clamp(1.02rem, 1.5vw, 1.2rem);
+    line-height: 1.65;
+    text-wrap: pretty;
+}
+
+.legal__intro {
+    max-width: 66ch;
+    margin: 0 0 2rem;
+    padding-left: 1.15rem;
+    border-left: 2px solid var(--line);
+    color: var(--muted);
+    font-size: 0.97rem;
+    line-height: 1.7;
+    text-wrap: pretty;
+}
+
+.legal__intro p {
+    margin: 0 0 0.85rem;
+}
+
+.legal__intro p:last-child {
+    margin-bottom: 0;
+}
+
+/* "Last updated" as a definition pair rather than a badge: it is a fact a reader
+   may need to quote, so it gets real text at a real size. */
+.legal__stamp {
+    margin: 0;
+}
+
+.legal__stamp-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem 0.9rem;
+    padding-top: 1.15rem;
+    border-top: 1px solid var(--line);
+}
+
+.legal__stamp dt {
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.legal__stamp dd {
+    margin: 0;
+    color: var(--ink);
+    font-size: 0.92rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ body -- */
+.legal__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    padding-bottom: clamp(4rem, 9vw, 8rem);
+}
+
+.legal__aside {
+    display: none;
+}
+
+.legal__article {
+    min-width: 0;
+}
+
+/* --------------------------------------------------------------- rail (mobile) -- */
+/* Sticky directly beneath the site header, which is itself `position: sticky`
+   at z-index 100. The header's height is not knowable in CSS, so legal.js
+   publishes it as --legal-header-h; the fallback is only what shows for the one
+   frame before that runs. Without this the rail would slide up behind the
+   header and be invisible for the whole read. */
+.legal__rail-wrap {
+    position: sticky;
+    top: var(--legal-header-h, 64px);
+    z-index: 20;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--line);
+    background: rgba(247, 243, 237, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.legal__rail-list {
+    display: flex;
+    gap: 0.4rem;
+    margin: 0;
+    padding: 0 0 0.25rem;
+    list-style: none;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+.legal__rail-list::-webkit-scrollbar {
+    display: none;
+}
+
+.legal__rail-item {
+    flex: 0 0 auto;
+}
+
+.legal__rail-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.42rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--paper-strong);
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: border-color var(--duration-fast) var(--ease-standard),
+                color var(--duration-fast) var(--ease-standard),
+                background-color var(--duration-fast) var(--ease-standard);
+}
+
+.legal__rail-num {
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.65;
+}
+
+/* Active state is carried by fill + weight + a rule, not by colour alone: the
+   chip gains a solid ink background, so it reads as "current" in greyscale. */
+.legal__rail-link:hover {
+    border-color: var(--ink);
+    color: var(--ink);
+}
+
+.legal__rail-link.is-active {
+    border-color: var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+}
+
+.legal__rail-link.is-active .legal__rail-num {
+    opacity: 0.7;
+}
+
+/* --------------------------------------------------------------- toc (desktop) -- */
+.legal__toc {
+    padding-top: 0.4rem;
+}
+
+.legal__toc-title {
+    margin: 0 0 1.1rem;
+    color: var(--muted);
+    font-family: var(--font-body);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.legal__toc-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-left: 1px solid var(--line);
+}
+
+.legal__toc-item {
+    margin: 0;
+}
+
+.legal__toc-link {
+    position: relative;
+    display: flex;
+    align-items: baseline;
+    gap: 0.7rem;
+    padding: 0.42rem 0.9rem 0.42rem 1rem;
+    color: var(--muted);
+    font-size: 0.87rem;
+    line-height: 1.4;
+    text-decoration: none;
+    transition: color var(--duration-fast) var(--ease-standard),
+                background-color var(--duration-fast) var(--ease-standard);
+}
+
+.legal__toc-link:hover {
+    background: rgba(26, 26, 26, 0.035);
+    color: var(--ink);
+}
+
+/* The rail is drawn on the item, not the list, so it only spans the height of
+   the link actually being read. */
+.legal__toc-link::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -1px;
+    width: 2px;
+    height: 100%;
+    background: var(--ink);
+    opacity: 0;
+    transform: scaleY(0.3);
+    transform-origin: center;
+    transition: opacity var(--duration-fast) var(--ease-standard),
+                transform var(--duration-fast) var(--ease-standard);
+}
+
+.legal__toc-link.is-active::before {
+    opacity: 1;
+    transform: scaleY(1);
+}
+
+.legal__toc-link.is-active {
+    background: rgba(26, 26, 26, 0.05);
+    color: var(--ink);
+    font-weight: 600;
+}
+
+.legal__toc-num {
+    flex: 0 0 auto;
+    min-width: 1.5em;
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Active index goes solid — a fill change, readable without colour vision. */
+.legal__toc-link.is-active .legal__toc-num {
+    color: var(--ink);
+}
+
+.legal__toc-label {
+    min-width: 0;
+}
+
+/* --------------------------------------------------------------- sections -- */
+.legal__section {
+    padding: clamp(2.5rem, 5vw, 3.75rem) 0 0;
+    /* Anchor targets must clear the sticky nav on a hash jump. The exact value
+       is enforced by motion.scrollTo() when the motion system is live; this is
+       the no-JS and reduced-motion path. */
+    scroll-margin-top: 7.5rem;
+}
+
+.legal__section + .legal__section {
+    margin-top: clamp(2.5rem, 5vw, 3.75rem);
+    border-top: 1px solid var(--line);
+}
+
+.legal__section:focus {
+    outline: none;
+}
+
+.legal__section-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--legal-gap);
+    margin-bottom: 1.5rem;
+}
+
+.legal__section-num {
+    flex: 0 0 var(--legal-col);
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    font-variant-numeric: tabular-nums;
+    transform: translateY(-0.15em);
+}
+
+.legal__section-title {
+    margin: 0;
+    color: var(--ink);
+    font-family: var(--font-heading);
+    font-size: clamp(1.5rem, 3.2vw, 2.15rem);
+    font-weight: 400;
+    letter-spacing: -0.03em !important;
+    line-height: 1.1;
+}
+
+/* ---------------------------------------------------------------- prose -- */
+/* 48rem including the hanging indent leaves roughly 738px of text at the base
+   size — inside the 720–820px reading measure this page is designed for. rem
+   rather than ch because the measure then does not change with font size
+   mid-page, and because the indent has to be inside the same box. */
+.legal__prose {
+    max-width: 48rem;
+    padding-left: calc(var(--legal-col) + var(--legal-gap));
+    color: var(--ink);
+    font-size: 1rem;
+    line-height: 1.75;
+    text-wrap: pretty;
+}
+
+.legal__prose > * {
+    margin: 0 0 1.15rem;
+}
+
+.legal__prose > *:last-child {
+    margin-bottom: 0;
+}
+
+.legal__prose h3 {
+    margin: 2rem 0 0.75rem;
+    color: var(--ink);
+    font-family: var(--font-heading);
+    font-size: 1.18rem;
+    font-weight: 500;
+    letter-spacing: -0.015em !important;
+    line-height: 1.25;
+}
+
+.legal__prose h3:first-child {
+    margin-top: 0;
+}
+
+.legal__prose strong {
+    font-weight: 600;
+}
+
+.legal__prose ul,
+.legal__prose ol {
+    margin: 0 0 1.15rem;
+    padding-left: 1.15rem;
+}
+
+.legal__prose li {
+    margin-bottom: 0.6rem;
+    padding-left: 0.2rem;
+}
+
+.legal__prose li::marker {
+    color: var(--muted);
+}
+
+.legal__prose a {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: rgba(26, 26, 26, 0.3);
+    text-underline-offset: 0.18em;
+    transition: text-decoration-color var(--duration-fast) var(--ease-standard);
+}
+
+.legal__prose a:hover {
+    text-decoration-color: currentColor;
+}
+
+/* Field-by-field tables: a hairline between rows, no zebra striping. Keeps the
+   eye on the term and lets the definitions read as one block. */
+.legal__defs {
+    margin: 0 0 1.35rem;
+    border-top: 1px solid var(--line);
+}
+
+.legal__defs dt {
+    margin: 0;
+    padding: 0.85rem 0 0.25rem;
+    color: var(--ink);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+}
+
+.legal__defs dd {
+    margin: 0;
+    padding: 0 0 0.9rem;
+    color: var(--muted);
+    font-size: 0.97rem;
+    line-height: 1.65;
+}
+
+/* A caveat is content, not decoration: this carries the "we do not do X" lines
+   and the marked placeholders, so it is a quiet rule rather than a callout box. */
+.legal__note {
+    padding-left: 1rem;
+    border-left: 2px solid var(--line);
+    color: var(--muted);
+    font-size: 0.93rem;
+    line-height: 1.65;
+}
+
+/* Contact block. Deliberately the most prominent element on any legal page:
+   the whole point of section 15 / 18 / 13 is that the address is reachable. */
+.legal__mail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin: 1.5rem 0 1.65rem;
+    padding: 1.15rem 1.25rem;
+    border: 1px solid var(--ink);
+    border-radius: 8px;
+    background: var(--paper-strong);
+    text-decoration: none;
+    transition: background-color var(--duration-fast) var(--ease-standard),
+                color var(--duration-fast) var(--ease-standard);
+}
+
+.legal__mail:hover {
+    background: var(--ink);
+    color: var(--paper);
+}
+
+.legal__mail-label {
+    color: var(--muted);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.legal__mail:hover .legal__mail-label {
+    color: rgba(247, 243, 237, 0.7);
+}
+
+.legal__mail-address {
+    color: var(--ink);
+    font-size: clamp(0.98rem, 2.2vw, 1.12rem);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+    transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.legal__mail:hover .legal__mail-address {
+    color: var(--paper);
+}
+
+/* ------------------------------------------------------------- colophon -- */
+.legal__colophon {
+    margin-top: clamp(3rem, 7vw, 5rem);
+    padding-top: 1.75rem;
+    border-top: 1px solid var(--ink);
+}
+
+.legal__colophon p {
+    max-width: 48rem;
+    padding-left: calc(var(--legal-col) + var(--legal-gap));
+    margin: 0 0 0.9rem;
+    color: var(--muted);
+    font-size: 0.88rem;
+    line-height: 1.7;
+}
+
+.legal__colophon-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem;
+    padding-left: calc(var(--legal-col) + var(--legal-gap));
+    font-size: 0.82rem !important;
+}
+
+/* ===== CV + PARTNER EDITORIAL PASS ===== */
+.inner-page .cv {
+    padding: clamp(3rem, 6vw, 5rem) 0 7rem;
+    border-top: 1px solid var(--line);
+    background: var(--paper);
+}
+
+.inner-page .cv .container { max-width: 1220px; }
+
+.cv__toolbar { margin-bottom: 1.25rem; }
+
+.inner-page .cv__print-btn {
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: 0;
+    background: transparent;
+    color: var(--ink);
+    box-shadow: none;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+.inner-page .cv__print-btn:hover {
+    border-color: var(--ink);
+    background: var(--paper-strong);
+    color: var(--ink);
+    transform: none;
+}
+
+.inner-page .cv__paper {
+    max-width: none;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.inner-page .cv__hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(230px, 0.62fr);
+    gap: 2rem;
+    align-items: end;
+    padding: clamp(2rem, 5vw, 4rem) 0 2rem;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+}
+
+.inner-page .cv__name-title {
+    margin: 0;
+    color: var(--ink);
+}
+
+.cv__name-title-inner {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.85rem, 2vw, 1.6rem);
+}
+
+.inner-page .cv__avatar {
+    flex: 0 0 auto;
+    width: clamp(2.75rem, 5vw, 4rem);
+    height: clamp(2.75rem, 5vw, 4rem);
+    border-radius: 0;
+    filter: grayscale(1);
+}
+
+.inner-page .cv__name-title h1 {
+    color: var(--ink);
+    font-size: clamp(4.25rem, 10vw, 8rem);
+    font-weight: 400;
+    letter-spacing: 0 !important;
+    line-height: 0.9;
+    text-transform: none !important;
+}
+
+.inner-page .cv__badge {
+    display: block;
+    margin-top: 1.1rem;
+    padding: 0;
+    color: var(--muted);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em !important;
+    text-transform: uppercase;
+}
+
+.inner-page .cv__contacts {
+    display: grid;
+    justify-items: start;
+    gap: 0.65rem;
+    padding-bottom: 0.25rem;
+    color: var(--muted);
+    font-size: 0.78rem;
+}
+
+.inner-page .cv__contacts a {
+    color: var(--ink);
+    text-decoration: none;
+    text-underline-offset: 3px;
+}
+
+.inner-page .cv__contacts a:hover { text-decoration: underline; }
+.inner-page .cv__contacts i { width: 1rem; color: var(--muted); }
+
+.inner-page .cv__body {
+    grid-template-columns: minmax(210px, 0.72fr) minmax(0, 1.8fr);
+    background: transparent;
+}
+
+.inner-page .cv__sidebar {
+    padding: 2.2rem 2rem 2rem 0;
+    border-right: 1px solid var(--line);
+    background: transparent;
+}
+
+.inner-page .cv__sidebar-section {
+    margin-bottom: 1.8rem;
+    padding-bottom: 1.6rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.inner-page .cv__sidebar-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+.inner-page .cv__sidebar-title,
+.inner-page .cv__section h3 {
+    margin: 0 0 1rem;
+    padding-bottom: 0.65rem;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink);
+    font-family: var(--font-body) !important;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em !important;
+    line-height: 1.4;
+}
+
+.inner-page .cv__sidebar-title i,
+.inner-page .cv__section h3 i { display: none; }
+
+.inner-page .cv__text,
+.inner-page .cv__skill-list li,
+.inner-page .cv__lang,
+.inner-page .cv__work-desc li,
+.inner-page .cv__project-item {
+    color: var(--light-text-muted);
+    font-size: 0.86rem;
+    line-height: 1.7;
+}
+
+.inner-page .cv__skill-list { margin: 0; }
+
+.inner-page .cv__skill-list li {
+    padding: 0.45rem 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.inner-page .cv__skill-list i { color: var(--muted); }
+
+.inner-page .cv__tags { gap: 0.45rem; }
+
+.inner-page .cv__tag {
+    margin: 0;
+    padding: 0.3rem 0.5rem;
+    border: 1px solid var(--line);
+    border-radius: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 500;
+}
+
+.inner-page .cv__gh-stat {
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    background: transparent;
+}
+
+.inner-page .cv__gh-stat-value { color: var(--ink); }
+
+.inner-page .cv__lang { border-bottom-color: var(--line); }
+.inner-page .cv__lang-level { color: var(--muted); }
+
+.inner-page .cv__main {
+    padding: 2.2rem 0 2rem clamp(2rem, 5vw, 4.5rem);
+    background: transparent;
+}
+
+.inner-page .cv__section { margin-bottom: 2.5rem; }
+
+.inner-page .cv__section h3 {
+    display: block;
+    font-size: 0.7rem;
+}
+
+.inner-page .cv__work-entry {
+    margin-bottom: 1.8rem;
+    padding-bottom: 1.45rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.inner-page .cv__work-entry:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+.inner-page .cv__work-head-title {
+    color: var(--ink);
+    font-size: 1.08rem;
+    font-weight: 500;
+}
+
+.inner-page .cv__work-head-title .cv__company {
+    color: var(--ink);
+    font-weight: 700;
+}
+
+.inner-page .cv__work-head .cv__date {
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.inner-page .cv__work-desc { margin: 0.55rem 0 0; }
+.inner-page .cv__work-desc li { padding-top: 0.15rem; padding-bottom: 0.15rem; }
+.inner-page .cv__work-desc li::before { color: var(--muted); }
+.inner-page .cv__project-item strong { color: var(--ink); }
+
+.partner__hero { padding-top: clamp(5rem, 10vw, 8.5rem); }
+
+.partner__title {
+    max-width: 11ch;
+    font-size: clamp(3.25rem, 6vw, 5.25rem);
+    letter-spacing: 0 !important;
+    line-height: 0.98;
+}
+
+.partner__lede { max-width: 56ch; }
+
+.partner__hero .container {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+    align-items: center;
+    gap: clamp(2rem, 4vw, 3.5rem);
+}
+
+.partner__hero-image {
+    width: 100%;
+    max-width: 580px;
+    aspect-ratio: 5 / 4;
+    justify-self: end;
+    overflow: hidden;
+}
+
+.partner__hero-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 52% center;
+}
+
+.partner__section { border-top: 1px solid var(--line); }
+
+.partner__section.section { padding: clamp(2.75rem, 5vw, 4.25rem) 0; }
+.partner__section.section--light { background: var(--light-bg); }
+
+.partner__intro { margin-bottom: clamp(1.5rem, 3vw, 2.5rem); }
+
+.inner-page .partner__intro-title {
+    max-width: 15ch;
+    font-size: clamp(2rem, 4vw, 3.25rem);
+    line-height: 1.08;
+    text-align: left;
+}
+
+.partner__invite {
+    padding: clamp(2.5rem, 5vw, 4rem) 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: var(--paper-strong);
+}
+
+.partner__invite-inner {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+    gap: clamp(2rem, 7vw, 6rem);
+}
+
+.partner__invite-visual {
+    display: grid;
+    min-height: 260px;
+    aspect-ratio: 5 / 4;
+    place-items: center;
+    overflow: hidden;
+    background: transparent;
+}
+
+.partner__invite-visual img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(1);
+}
+
+.partner__invite-title {
+    max-width: 12ch;
+    margin: 0 0 1rem;
+    color: var(--ink);
+    font-family: var(--font-heading);
+    font-size: clamp(2.25rem, 4vw, 3.5rem);
+    font-weight: 400;
+    line-height: 1.08;
+}
+
+.partner__invite-copy > p:not(.section__eyebrow) {
+    max-width: 48ch;
+    margin: 0 0 1.5rem;
+    color: var(--muted);
+    font-size: 0.98rem;
+    line-height: 1.7;
+}
+
+.partner__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0;
+    border-top: 1px solid var(--line);
+}
+
+.partner-card {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 275px;
+    padding: 1.5rem clamp(1rem, 2vw, 1.5rem) 2rem;
+    border: 0;
+    border-right: 1px solid var(--line);
+    border-radius: 0;
+    background: transparent;
+}
+
+.partner-card::before {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    background: var(--ink);
+    content: "";
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform var(--duration-medium) var(--ease-standard);
+}
+
+.partner-card:nth-child(3n + 1) { padding-left: 0; }
+.partner-card:nth-child(3n) { padding-right: 0; border-right: 0; }
+.partner-card:nth-child(n + 4) { border-top: 1px solid var(--line); }
+
+.partner-card:hover::before { transform: scaleX(1); }
+
+.partner-card__number {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 2rem;
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0.05em !important;
+    transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.partner-card__visual {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    height: 60px;
+    margin-bottom: 40px;
+}
+
+.partner-card__visual svg {
+    width: 48px;
+    height: 48px;
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 1.5;
+    opacity: 0.72;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform var(--duration-medium) var(--ease-expressive), stroke var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard);
+}
+
+.partner-card:hover .partner-card__visual svg {
+    stroke: var(--white);
+    opacity: 1;
+    transform: scale(1.1) rotate(-5deg);
+}
+
+.partner-card__name {
+    margin: 0 0 0.75rem;
+    color: var(--ink);
+    font-size: 1.25rem;
+    font-weight: 500;
+    letter-spacing: 0 !important;
+    line-height: 1.2;
+    text-transform: none;
+    transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.partner-card__desc {
+    max-width: 28ch;
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.partner-card:hover .partner-card__number,
+.partner-card:hover .partner-card__name,
+.partner-card:hover .partner-card__desc {
+    color: var(--white);
+}
+
+@media screen and (max-width: 992px) {
+    .partner__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    .partner-card:nth-child(3n + 1) { padding-left: clamp(1rem, 2vw, 1.5rem); }
+    .partner-card:nth-child(3n) { padding-right: clamp(1rem, 2vw, 1.5rem); border-right: 1px solid var(--line); }
+    .partner-card:nth-child(2n + 1) { padding-left: 0; }
+    .partner-card:nth-child(2n) { padding-right: 0; border-right: 0; }
+    .partner-card:nth-child(n + 3) { border-top: 1px solid var(--line); }
+}
+
+.partner__final {
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+}
+
+.partner__final-panel {
+    min-height: 220px;
+    padding: clamp(1.75rem, 3.5vw, 2.75rem) 0;
+    background: transparent;
+}
+
+.partner__final-panel--alt {
+    padding-left: clamp(1.75rem, 4vw, 3.5rem);
+    border-left: 1px solid var(--line);
+    background: transparent;
+}
+
+.partner__final-title {
+    max-width: 18ch;
+    letter-spacing: 0 !important;
+}
+
+@media screen and (max-width: 768px) {
+    .inner-page .cv__hero {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    .inner-page .cv__contacts {
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    }
+
+    .inner-page .cv__body { grid-template-columns: 1fr; }
+
+    .inner-page .cv__sidebar {
+        padding: 1.8rem 0;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .inner-page .cv__main { padding: 1.8rem 0 0; }
+
+    .partner__title { font-size: clamp(3.5rem, 12vw, 6rem); }
+
+    .partner__hero .container { grid-template-columns: minmax(0, 1fr) minmax(220px, 0.8fr); gap: 1.5rem; }
+
+    .partner__hero-image { max-width: 360px; }
+
+    .inner-page .partner__intro-title { font-size: clamp(2rem, 6vw, 2.8rem); }
+
+    .partner__invite-inner { grid-template-columns: 1fr; gap: 1.75rem; }
+
+    .partner__invite-visual { width: min(100%, 460px); min-height: 220px; }
+
+    .partner__invite-title { font-size: clamp(2.15rem, 7vw, 3rem); }
+
+    .partner__final-panel { min-height: 190px; }
+
+    .partner__final-panel--alt {
+        padding-left: 0;
+        border-top: 1px solid var(--line);
+        border-left: 0;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .inner-page .cv__name-title h1 { font-size: clamp(3.75rem, 18vw, 5rem); }
+    .inner-page .cv__work-head { gap: 0.4rem 1rem; }
+    .partner__title { font-size: clamp(3.25rem, 15vw, 4.5rem); }
+    .partner__grid { grid-template-columns: 1fr; }
+    .partner-card {
+        min-height: 0;
+        padding: 1.5rem 0 1.75rem;
+        border-right: 0;
+    }
+    .partner-card:nth-child(2n) { padding-left: 0; }
+    .partner-card:nth-child(n + 2) { border-top: 1px solid var(--line); }
+
+    .partner__hero .container { grid-template-columns: 1fr; }
+
+    .partner__hero-image {
+        width: 100%;
+        max-width: 420px;
+        aspect-ratio: 4 / 3;
+        justify-self: stretch;
+        margin-top: -0.5rem;
+    }
+
+    .partner__title { font-size: clamp(2.75rem, 13vw, 3.75rem); }
+}
+
+@media print {
+    .inner-page .cv { padding: 0; }
+    .inner-page .cv__hero { background: transparent !important; }
+    .inner-page .cv__paper { border: 0; box-shadow: none; }
+    .inner-page .cv__sidebar,
+    .inner-page .cv__main { background: transparent !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .partner-card::before,
+    .partner-card__number,
+    .partner-card__visual svg,
+    .partner-card__name,
+    .partner-card__desc { transition: none; }
+}
+
+.legal__colophon-meta a {
+    color: var(--ink);
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: rgba(26, 26, 26, 0.3);
+    text-underline-offset: 0.18em;
+    transition: text-decoration-color var(--duration-fast) var(--ease-standard);
+}
+
+.legal__colophon-meta a:hover {
+    text-decoration-color: currentColor;
+}
+
+/* ============================================================ responsive == */
+
+/* Tablet: the aside can hold from 1024px, but the reading column still gets the
+   larger share of the grid. */
+@media (min-width: 768px) {
+    .legal__prose {
+        font-size: 1.03rem;
+    }
+
+    .legal__rail-link {
+        padding: 0.45rem 0.85rem;
+        font-size: 0.8rem;
+    }
+}
+
+/* Desktop: two columns. `1fr` on the reading side rather than a fixed px so the
+   measure stays at 78ch on wide monitors instead of drifting to 900px+. */
+@media (min-width: 1024px) {
+    .legal__body {
+        grid-template-columns: 236px minmax(0, 1fr);
+        gap: clamp(2.5rem, 5vw, 5rem);
+        padding-top: clamp(2.5rem, 5vw, 4rem);
+    }
+
+    /* The rail is redundant once the aside is visible, and two sticky navs for
+       the same list is one too many. */
+    .legal__rail-wrap {
+        display: none;
+    }
+
+    .legal__aside {
+        display: block;
+    }
+
+    .legal__toc {
+        position: sticky;
+        top: calc(var(--legal-header-h, 64px) + 2rem);
+        max-height: calc(100vh - var(--legal-header-h, 64px) - 4rem);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+    }
+}
+
+@media (min-width: 1280px) {
+    .legal__body {
+        grid-template-columns: 264px minmax(0, 1fr);
+    }
+}
+
+/* Mobile: one column, and the content is never allowed to go cramped. The
+   hanging indent is narrowed rather than removed — dropping it to zero would
+   put the body text under the section number instead of under its title. */
+@media (max-width: 480px) {
+    .legal {
+        --legal-col: 0.75rem;
+        --legal-gap: 0.6rem;
+    }
+
+    .legal__hero {
+        padding-top: 2.75rem;
+    }
+
+    .legal__prose {
+        font-size: 0.97rem;
+        line-height: 1.72;
+    }
+
+    .legal__rail-wrap {
+        padding: 0.5rem 0;
+    }
+
+    .legal__rail-link {
+        padding: 0.4rem 0.68rem;
+        font-size: 0.76rem;
+    }
+
+    .legal__mail {
+        padding: 1rem 1.05rem;
+    }
+}
+
+/* The design already renders correctly without the motion system; this only
+   removes the transitions so a reduced-motion visitor gets no easing at all. */
+@media (prefers-reduced-motion: reduce) {
+    .legal__toc-link,
+    .legal__toc-link::before,
+    .legal__rail-link,
+    .legal__prose a,
+    .legal__mail,
+    .legal__mail-label,
+    .legal__mail-address,
+    .legal__colophon-meta a {
+        transition: none;
     }
 }

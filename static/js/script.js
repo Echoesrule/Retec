@@ -4,6 +4,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const navMenu = document.getElementById('nav-menu');
     const motion = window.RETEC_MOTION || null;
 
+    document.querySelectorAll('.home-page .section__cta, .home-page .hero-industrial__cta, .home-page .form__submit, .home-page .subscribe__btn').forEach((button) => {
+        const fill = document.createElement('span');
+        fill.className = 'cta-liquid-fill';
+        fill.setAttribute('aria-hidden', 'true');
+
+        const content = document.createElement('span');
+        content.className = 'cta-liquid-fill__content';
+        button.childNodes.forEach((node) => content.appendChild(node.cloneNode(true)));
+        fill.appendChild(content);
+        button.appendChild(fill);
+    });
+
     /* ===== MOBILE MENU =====
        State only. Scrolling, transitions and the reveal of the items themselves
        are owned by the motion system (core.js / navigation.js). */

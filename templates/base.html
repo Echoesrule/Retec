@@ -238,10 +238,10 @@
                     <a href="/#contact" class="footer__btn footer__btn--primary">Start for free</a>
                     <a href="/#contact" class="footer__btn footer__btn--secondary">Book a demo</a>
                     <ul class="footer__meta-links">
-                        <li><a href="/#contact">Terms of use</a></li>
-                        <li><a href="/#contact">Privacy policy</a></li>
-                        <li><a href="/#contact">Security</a></li>
-                        <li><a href="/admin">Admin</a></li>
+                        <li><a href="{{ url_for('privacy') }}">Privacy policy</a></li>
+                        <li><a href="{{ url_for('terms') }}">Terms of use</a></li>
+                        <li><a href="{{ url_for('security') }}">Security</a></li>
+                        <li><a href="{{ url_for('admin_dashboard') }}">Admin</a></li>
                     </ul>
                     <div class="footer__copyright"><span class="footer__dot">●</span> RETEC {{ year }}</div>
                 </div>
@@ -263,49 +263,7 @@
 
     {% block page_scripts %}{% endblock %}
     <script src="{{ url_for('static', filename='js/script.js') }}?v={{ css_version }}"></script>
+    <script src="{{ url_for('static', filename='js/flash-messages.js') }}?v={{ css_version }}"></script>
     <script src="{{ url_for('static', filename='js/analytics.js') }}?v={{ css_version }}"></script>
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const navLinks = document.querySelectorAll('.nav__link, .nav__btn');
-
-        function clearActive() {
-            navLinks.forEach(l => l.classList.remove('nav__link--active', 'nav__active'));
-        }
-
-        // If on the blog route, mark blog link active
-        if (location.pathname && location.pathname.indexOf('/blog') === 0) {
-            clearActive();
-            const blogLink = document.querySelector('.nav__link[href="/blog"]');
-            if (blogLink) blogLink.classList.add('nav__link--active');
-            return;
-        }
-
-        const sections = Array.from(document.querySelectorAll('section[id]'));
-        if (sections.length === 0) return;
-
-        const obs = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (!entry.isIntersecting) return;
-                const id = entry.target.id;
-                clearActive();
-                // Home should be active for hero and about sections
-                if (id === 'hero' || id === 'about') {
-                    const homeLink = document.querySelector('.nav__link[href="/"]');
-                    if (homeLink) homeLink.classList.add('nav__link--active');
-                    return;
-                }
-                // Prefer links matching '/#id' or '#id'
-                const selector = `.nav__link[href="/#${id}"], .nav__link[href="#${id}"], .nav__btn[href="/#${id}"], .nav__btn[href="#${id}"]`;
-                const link = document.querySelector(selector);
-                if (link) {
-                    if (link.classList.contains('nav__btn')) link.classList.add('nav__active');
-                    else link.classList.add('nav__link--active');
-                }
-            });
-        }, { root: null, threshold: 0.55 });
-
-        sections.forEach(s => obs.observe(s));
-    });
-    </script>
 </body>
 </html>
