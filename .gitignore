@@ -13,8 +13,7 @@ cookies.txt
 nul
 .venv/
 venv/
-.env.example
-node modules/
+node_modules/
 
 # Local secrets and scratch files
 Overpswd.txt

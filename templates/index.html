@@ -484,6 +484,7 @@
                 </div>
             </div>
             <form class="subscribe__form" method="POST" action="{{ url_for('subscribe') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="text" name="website" tabindex="-1" autocomplete="off" class="form__honeypot" aria-hidden="true">
                 <label for="subscribe-email" class="subscribe__label">Email</label>
                 <div class="subscribe__fields">

@@ -36,7 +36,24 @@ import db_guard
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
-app.secret_key = os.environ.get('SECRET_KEY', 'retec-dev-key-2026')
+_is_production = (
+    os.environ.get('APP_ENV', '').lower() == 'production'
+    or os.environ.get('FLASK_ENV', '').lower() == 'production'
+    or os.environ.get('RENDER', '').lower() in ('1', 'true')
+    or os.environ.get('VERCEL') == '1'
+)
+_secret_key = os.environ.get('SECRET_KEY')
+if not _secret_key:
+    if _is_production:
+        raise RuntimeError('SECRET_KEY must be configured in production.')
+    _secret_key = secrets.token_hex(32)
+    app.logger.warning('SECRET_KEY is unset; using an ephemeral development key.')
+app.secret_key = _secret_key
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get(
+    'SESSION_COOKIE_SECURE', 'true' if _is_production else 'false'
+).lower() in ('1', 'true', 'yes')
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 _db_url = os.environ.get('DATABASE_URL', 'sqlite:///portfolio.db')
 if _db_url and _db_url.startswith('postgres://'):
@@ -62,7 +79,7 @@ app.config['CLOUDINARY_URL'] = os.environ.get('CLOUDINARY_URL', '')
 app.config['SMS_NOTIFY_TO'] = os.environ.get('SMS_NOTIFY_TO', '')
 app.config['SMS_SENDER'] = os.environ.get('SMS_SENDER', 'RETEC')
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600
-app.config['WTF_CSRF_SSL_STRICT'] = False
+app.config['WTF_CSRF_SSL_STRICT'] = True
 
 # ===== JOURNAL CONFIGURATION =====
 # Everything here is optional: with no scheduler, no interval and no AI key
@@ -91,7 +108,15 @@ else:
     print('[STARTUP] CLOUDINARY_URL not set, using local file storage')
 
 csrf = CSRFProtect(app)
-limiter = Limiter(get_remote_address, app=app, default_limits=['200 per day', '50 per hour'])
+_rate_limit_storage_uri = os.environ.get('RATELIMIT_STORAGE_URI', 'memory://').strip() or 'memory://'
+if _is_production and _rate_limit_storage_uri.startswith('memory://'):
+    app.logger.warning('RATELIMIT_STORAGE_URI uses per-process memory in production; configure shared Redis storage.')
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    storage_uri=_rate_limit_storage_uri,
+    default_limits=['200 per day', '50 per hour'],
+)
 
 db = SQLAlchemy(app)
 # Second lock: even on a real production deploy, drop_all()/drop_table() are
@@ -554,9 +579,6 @@ PARTNER_APPLICATION_STATUS_VALUES = {value for value, _ in PARTNER_APPLICATION_S
 _geo_cache = {}
 
 def get_client_ip():
-    forwarded = request.headers.get('X-Forwarded-For', '')
-    if forwarded:
-        return forwarded.split(',')[0].strip()
     return request.remote_addr
 
 def lookup_location(ip):
@@ -925,7 +947,6 @@ def unsubscribe():
 
 @app.route('/admin/broadcast', methods=['GET', 'POST'])
 @admin_required
-@csrf.exempt
 def admin_broadcast():
     result = None
     if request.method == 'POST':
@@ -1594,7 +1615,13 @@ partner_reasons = [
 @app.context_processor
 def inject_globals():
     fun_facts = FunFact.query.filter_by(active=True).order_by(FunFact.sort_order).all()
-    github_stats = get_github_stats()
+    settings = {
+        setting.key: setting.value
+        for setting in SiteSetting.query.filter(SiteSetting.key.in_([
+            'hero_bg_type', 'hero_video', 'hero_image', 'hero_poster',
+            'hero_quote_interval', 'cube_positioner_enabled', 'cube_positions',
+        ])).all()
+    }
     try:
         meta_url = request.url
         meta_image = url_for('static', filename='uploads/default-og.png', _external=True)
@@ -1606,25 +1633,27 @@ def inject_globals():
         'css_version': int(datetime.now().timestamp()),
         'fun_facts': fun_facts,
         'fun_fact': fun_facts[0].text if fun_facts else None,
-        'github_stats': github_stats,
         'meta_title': 'Retec-Biz Yako.Tech Yetu',
         'meta_desc': 'RETEC builds modern websites, web applications, custom software, and digital solutions for businesses, creators, and organizations.',
         'meta_url': meta_url,
         'meta_image': meta_image,
         'get_image_url': get_image_url,
-        'hero_bg_type': SiteSetting.query.filter_by(key='hero_bg_type').first().value if SiteSetting.query.filter_by(key='hero_bg_type').first() else 'video',
-        'hero_video_url': get_image_url(SiteSetting.query.filter_by(key='hero_video').first().value) if SiteSetting.query.filter_by(key='hero_video').first() else url_for('static', filename='hero-bg.mp4'),
-        'hero_image_url': get_image_url(SiteSetting.query.filter_by(key='hero_image').first().value) if SiteSetting.query.filter_by(key='hero_image').first() else 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=2670&auto=format&fit=crop',
-        'hero_poster_url': get_image_url(SiteSetting.query.filter_by(key='hero_poster').first().value) if SiteSetting.query.filter_by(key='hero_poster').first() else url_for('static', filename='images/hero-bg.svg'),
-        'hero_quote_interval': SiteSetting.query.filter_by(key='hero_quote_interval').first().value if SiteSetting.query.filter_by(key='hero_quote_interval').first() else '6000',
-        'cube_positioner_enabled': _get_setting('cube_positioner_enabled') == '1' and 'admin_id' in session,
-        'cube_positions': json.loads(_get_setting('cube_positions') or 'null') or None
+        'hero_bg_type': settings.get('hero_bg_type', 'video'),
+        'hero_video_url': get_image_url(settings['hero_video']) if 'hero_video' in settings else url_for('static', filename='hero-bg.mp4'),
+        'hero_image_url': get_image_url(settings['hero_image']) if 'hero_image' in settings else 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=2670&auto=format&fit=crop',
+        'hero_poster_url': get_image_url(settings['hero_poster']) if 'hero_poster' in settings else url_for('static', filename='images/hero-bg.svg'),
+        'hero_quote_interval': settings.get('hero_quote_interval', '6000'),
+        'cube_positioner_enabled': settings.get('cube_positioner_enabled') == '1' and 'admin_id' in session,
+        'cube_positions': json.loads(settings.get('cube_positions') or 'null') or None
     }
 
 # ===== AFTER REQUEST =====
 
 @app.after_request
 def no_cache(response):
+    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+    response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
     if request.path.startswith('/static/'):
         return response
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
@@ -1715,7 +1744,6 @@ def home():
 
 @app.route('/contact', methods=['GET', 'POST'])
 @limiter.limit("5 per hour")
-@csrf.exempt
 def contact():
     form = ContactForm()
     honeypot = request.form.get('website', '')
@@ -1734,7 +1762,6 @@ def contact():
     return render_template('index.html', **context)
 
 @app.route('/subscribe', methods=['POST'])
-@csrf.exempt
 def subscribe():
     honeypot = request.form.get('website', '')
     if honeypot:
@@ -1755,6 +1782,7 @@ def subscribe():
     return redirect(url_for('home') + '#contact')
 
 @app.route('/verify-email', methods=['POST'])
+@limiter.limit("10 per minute")
 @csrf.exempt
 def verify_email():
     data = request.get_json(silent=True) or {}
@@ -1836,7 +1864,7 @@ def _partner_context(form):
 
 @app.route('/cv')
 def cv():
-    return render_template('cv.html', active='cv')
+    return render_template('cv.html', active='cv', github_stats=get_github_stats())
 
 # ===== LEGAL PAGES =====
 #
@@ -2189,13 +2217,13 @@ def track_interest():
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 @limiter.limit("5 per minute", methods=["POST"])
-@csrf.exempt
 def admin_login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
         user = User.query.filter_by(username=username).first()
         if user and bcrypt.check_password_hash(user.password_hash, password):
+            session.clear()
             session['admin_id'] = user.id
             session['admin_username'] = user.username
             flash('Welcome back, admin.', 'success')
@@ -2304,6 +2332,7 @@ def admin_hero_settings():
 
 @app.route('/admin/change-password', methods=['GET', 'POST'])
 @admin_required
+@limiter.limit("10 per 10 minutes", methods=["POST"])
 def admin_change_password():
     user = db.session.get(User, session['admin_id'])
     if not user:
@@ -2334,8 +2363,8 @@ def admin_change_password():
             flash('Invalid verification code.', 'error')
             return render_template('admin/change_password.html', step=2)
 
-        if len(new_password) < 6:
-            flash('New password must be at least 6 characters.', 'error')
+        if len(new_password) < 12:
+            flash('New password must be at least 12 characters.', 'error')
             return render_template('admin/change_password.html', step=2)
 
         if new_password != confirm:
@@ -3229,7 +3258,6 @@ def admin_blog_fetch():
 
 
 @app.route('/admin/upload-image', methods=['POST'])
-@csrf.exempt
 @admin_required
 def admin_upload_image():
     file = request.files.get('image')
@@ -3544,12 +3572,18 @@ with app.app_context():
         db.session.rollback()
     try:
         if not User.query.first():
-            hashed = bcrypt.generate_password_hash('admin123').decode('utf-8')
-            db.session.add(User(username='admin', password_hash=hashed))
-            db.session.commit()
-            print('Default admin user created: admin / admin123')
-    except Exception:
-        pass
+            initial_username = os.environ.get('INITIAL_ADMIN_USERNAME', '').strip()
+            initial_password = os.environ.get('INITIAL_ADMIN_PASSWORD', '')
+            if initial_username and len(initial_password) >= 12:
+                hashed = bcrypt.generate_password_hash(initial_password).decode('utf-8')
+                db.session.add(User(username=initial_username, password_hash=hashed))
+                db.session.commit()
+                print('Initial admin user created from environment configuration.')
+            else:
+                print('No admin user created. Set INITIAL_ADMIN_USERNAME and a 12+ character INITIAL_ADMIN_PASSWORD before first startup.')
+    except Exception as e:
+        print('Startup note (admin bootstrap):', e)
+        db.session.rollback()
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=not _is_production, host='0.0.0.0', port=5000)

@@ -29,10 +29,12 @@ Personal portfolio website for RETEC, built with Flask. Features an admin dashbo
 
 ```bash
 pip install -r requirements.txt
+cp .env.example .env
+# Set SECRET_KEY, INITIAL_ADMIN_USERNAME, and a 12+ character INITIAL_ADMIN_PASSWORD in .env
 python app.py
 ```
 
-The app runs on `http://localhost:5000`. Admin credentials: `admin` / `admin123`.
+The app runs on `http://localhost:5000`. The first admin account is created only when `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD` are configured; existing admin accounts are not changed.
 
 ## Deploy (Render)
 
@@ -41,8 +43,9 @@ The app runs on `http://localhost:5000`. Admin credentials: `admin` / `admin123`
 3. **Build Command:** `pip install -r requirements.txt`
 4. **Start Command:** `gunicorn app:app`
 5. Add a Render PostgreSQL database and set `DATABASE_URL` env var
-6. Set `SECRET_KEY` env var
-7. Deploy
+6. Set `SECRET_KEY`, `INITIAL_ADMIN_USERNAME`, and `INITIAL_ADMIN_PASSWORD` env vars
+7. Set `RATELIMIT_STORAGE_URI` to a shared Redis URL for limits across workers
+8. Deploy
 
 ## Environment Variables
 
@@ -50,6 +53,9 @@ The app runs on `http://localhost:5000`. Admin credentials: `admin` / `admin123`
 |----------|-------------|
 | `DATABASE_URL` | PostgreSQL connection string (Render) |
 | `SECRET_KEY` | Flask session secret key |
+| `INITIAL_ADMIN_USERNAME` | Username for the first admin account on an empty database |
+| `INITIAL_ADMIN_PASSWORD` | First admin password; must be at least 12 characters |
+| `RATELIMIT_STORAGE_URI` | Flask-Limiter storage URL; use shared Redis in production |
 | `MAIL_SERVER` | SMTP server (optional) |
 | `MAIL_PORT` | SMTP port (default 587) |
 | `MAIL_USE_TLS` | Use STARTTLS, usually `true` for port 587 |

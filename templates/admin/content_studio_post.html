@@ -306,7 +306,11 @@
                 fd.append('image', file);
                 var uploadBtn = this.closest('.cs-slide-editor__upload');
                 uploadBtn.style.opacity = '0.5';
-                fetch('/admin/upload-image', { method: 'POST', body: fd })
+                fetch('/admin/upload-image', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': '{{ csrf_token() }}' },
+                    body: fd
+                })
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
                         uploadBtn.style.opacity = '1';
