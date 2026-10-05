@@ -1,0 +1,118 @@
+{#
+  Shared legal-page markup. Imported by legal_base.html only — never extended.
+
+  Three pieces, in the order a page uses them:
+
+    inline(text)      the tiny inline formatter used by every block type
+    legal_blocks()    renders a section's block list (see legal.py for the grammar)
+    legal_toc(sections, variant)
+                      the section navigation. `variant` is 'aside' for the sticky
+                      desktop column and 'rail' for the compact mobile nav.
+
+  Both TOC variants emit the same `data-legal-toc="<slug>"` hook, so static/js/legal.js
+  only has to know about one concept: a section id.
+#}
+
+{# ---------------------------------------------------------------- inline text
+   Bold only, via paired ** delimiters. Everything stays autoescaped: the split
+   happens before escaping, and each half is escaped on its own way out. #}
+{% macro inline(text) -%}
+    {%- set parts = (text or '').split('**') -%}
+    {%- for part in parts -%}
+        {%- if loop.index0 is odd -%}<strong>{{ part }}</strong>{%- else -%}{{ part }}{%- endif -%}
+    {%- endfor -%}
+{%- endmacro %}
+
+
+{# -------------------------------------------------------------------- blocks #}
+{% macro legal_blocks(blocks, emails) %}
+    {%- for block in blocks -%}
+        {%- set kind = block[0] -%}
+
+        {%- if kind == 'p' %}
+        <p>{{ inline(block[1]) }}</p>
+
+        {%- elif kind == 'h3' %}
+        <h3>{{ block[1] }}</h3>
+
+        {%- elif kind == 'ul' %}
+        <ul>
+            {%- for item in block[1] %}
+            <li>{{ inline(item) }}</li>
+            {%- endfor %}
+        </ul>
+
+        {%- elif kind == 'ol' %}
+        <ol>
+            {%- for item in block[1] %}
+            <li>{{ inline(item) }}</li>
+            {%- endfor %}
+        </ol>
+
+        {%- elif kind == 'dl' %}
+        <dl class="legal__defs">
+            {%- for term, definition in block[1] %}
+            <dt>{{ inline(term) }}</dt>
+            <dd>{{ inline(definition) }}</dd>
+            {%- endfor %}
+        </dl>
+
+        {%- elif kind == 'note' %}
+        {# A caveat is content here, not decoration: these carry the placeholders
+           and the "we do not do X" statements, which are the point of the page. #}
+        <p class="legal__note">{{ inline(block[1]) }}</p>
+
+        {%- elif kind == 'mail' %}
+        <a class="legal__mail" href="mailto:{{ emails.get(block[2], '') }}">
+            <span class="legal__mail-label">{{ block[1] }}</span>
+            <span class="legal__mail-address">{{ emails.get(block[2], '') }}</span>
+        </a>
+
+        {%- endif -%}
+    {%- endfor %}
+{%- endmacro %}
+
+
+{# ------------------------------------------------------------------------ toc
+   `variant` only changes the element classes; the list, the numbering and the
+   data hooks are identical so the JS stays variant-agnostic.
+
+   The first entry ships marked active. That is the honest default (a reader who
+   has not scrolled is in section 01) and it means the active treatment exists
+   before legal.js has run, rather than flashing in. #}
+{% macro legal_toc(sections, variant) %}
+    {%- if variant == 'aside' %}
+    <nav class="legal__toc" aria-labelledby="legal-toc-title" data-legal-nav>
+        <h2 class="legal__toc-title" id="legal-toc-title">On this page</h2>
+        <ol class="legal__toc-list">
+            {%- for section in sections %}
+            <li class="legal__toc-item">
+                <a class="legal__toc-link{% if loop.first %} is-active{% endif %}"
+                   href="#{{ section.slug }}"
+                   data-legal-toc="{{ section.slug }}"
+                   {% if loop.first %}aria-current="true"{% endif %}>
+                    <span class="legal__toc-num" aria-hidden="true">{{ section.num }}</span>
+                    <span class="legal__toc-label">{{ section.title }}</span>
+                </a>
+            </li>
+            {%- endfor %}
+        </ol>
+    </nav>
+    {%- else %}
+    <nav class="legal__rail" aria-label="Sections on this page" data-legal-nav>
+        <ol class="legal__rail-list">
+            {%- for section in sections %}
+            <li class="legal__rail-item">
+                <a class="legal__rail-link{% if loop.first %} is-active{% endif %}"
+                   href="#{{ section.slug }}"
+                   data-legal-toc="{{ section.slug }}"
+                   {% if loop.first %}aria-current="true"{% endif %}>
+                    <span class="legal__rail-num" aria-hidden="true">{{ section.num }}</span>
+                    <span class="legal__rail-label">{{ section.title }}</span>
+                </a>
+            </li>
+            {%- endfor %}
+        </ol>
+    </nav>
+    {%- endif %}
+{%- endmacro %}

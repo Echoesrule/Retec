@@ -144,12 +144,34 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/admin/api/analytics/cities').then(function(r){return r.json()}).then(function(d){
         var tbody = document.querySelector('#locationsTable tbody');
         if (!d.cities || d.cities.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" class="admin-empty">No location data yet.</td></tr>';
+            tbody.textContent = '';
+            var emptyRow = document.createElement('tr');
+            var emptyCell = document.createElement('td');
+            emptyCell.colSpan = 3;
+            emptyCell.className = 'admin-empty';
+            emptyCell.textContent = 'No location data yet.';
+            emptyRow.appendChild(emptyCell);
+            tbody.appendChild(emptyRow);
             return;
         }
-        tbody.innerHTML = d.cities.map(function(city, i){
-            return '<tr><td class="admin-card__primary" data-label="Country">' + d.countries[i] + '</td><td class="admin-card__label" data-label="City">' + city + '</td><td class="admin-card__label" data-label="Visitors">' + d.data[i] + '</td></tr>';
-        }).join('');
+        // Built with DOM nodes and textContent, not innerHTML. Country and city
+        // come from ip-api.com but are recorded per visitor IP, and the previous
+        // string concatenation interpolated them straight into markup, so a
+        // location value containing a tag ran in the admin's session.
+        tbody.textContent = '';
+        d.cities.forEach(function(city, i){
+            var row = document.createElement('tr');
+            [['admin-card__primary', 'Country', d.countries[i]],
+             ['admin-card__label', 'City', city],
+             ['admin-card__label', 'Visitors', d.data[i]]].forEach(function(col){
+                var cell = document.createElement('td');
+                cell.className = col[0];
+                cell.setAttribute('data-label', col[1]);
+                cell.textContent = String(col[2]);
+                row.appendChild(cell);
+            });
+            tbody.appendChild(row);
+        });
     });
 });
 </script>

@@ -32,6 +32,7 @@
                 {% endif %}
             {% endwith %}
             <form method="POST" class="admin-login__form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="admin-login__field">
                     <span class="admin-login__field-icon"><i class="fa-solid fa-user"></i></span>
                     <input type="text" id="username" name="username" placeholder="Username" required autofocus>
@@ -49,5 +50,6 @@
             </div>
         </div>
     </div>
+    <script src="{{ url_for('static', filename='js/flash-messages.js') }}?v={{ css_version }}"></script>
 </body>
 </html>

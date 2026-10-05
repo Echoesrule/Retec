@@ -1,22 +1,118 @@
 {% extends "admin/base.html" %}
-{% block title %}{{ 'Edit' if post else 'Add' }} Blog Post{% endblock %}
+{% block title %}{{ 'Edit' if article else 'Create' }} Journal Article{% endblock %}
 {% set active = "blog" %}
 {% block content %}
 <div class="admin-page">
-    <h1 class="admin-page__title">{{ 'Edit' if post else 'Add' }} Blog Post</h1>
+    <div class="admin-page__head">
+        <h1 class="admin-page__title">{{ 'Edit' if article else 'Create' }} Journal Article</h1>
+        <div class="admin-page__actions">
+            {%- if article %}
+            <a href="{{ url_for('admin_blog_view', id=article.id) }}" class="admin-btn" target="_blank" rel="noopener">Preview</a>
+            {%- endif %}
+            <a href="{{ url_for('admin_blog') }}" class="admin-btn">Back to Journal</a>
+        </div>
+    </div>
+
+    {%- if article and article.is_external %}
+    <div class="jr-alert">
+        <i class="fa-solid fa-link"></i>
+        Based on
+        {%- if article.source_url %}
+        <a href="{{ article.source_url }}" target="_blank" rel="noopener noreferrer">{{ article.source_name or article.source_url }}</a>
+        {%- else %}{{ article.source_name }}{% endif %}.
+        {%- if article.original_title %}
+        Original headline: &ldquo;{{ article.original_title }}&rdquo;
+        {%- endif %}
+        <br>
+        Rewrite freely &mdash; the attribution block is regenerated from the source fields below.
+    </div>
+    {%- endif %}
+
     <div class="admin-card">
         <form method="POST" enctype="multipart/form-data" class="admin-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            {# ---------- Content type drives which fields apply ---------- #}
             <div class="admin-form__group">
-                <label for="title">Title *</label>
-                <input type="text" id="title" name="title" value="{{ post.title if post else '' }}" required>
+                <label for="content_type">Content type *</label>
+                <select id="content_type" name="content_type">
+                    {%- for value, label in journal_content_types %}
+                    <option value="{{ value }}"
+                        {% if (article and article.content_type == value) or (not article and value == 'insight') %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {%- endfor %}
+                </select>
+                <p class="admin-form__hint" id="content_type_hint"></p>
             </div>
+
             <div class="admin-form__group">
-                <label for="summary">Summary</label>
-                <input type="text" id="summary" name="summary" value="{{ post.summary if post else '' }}" placeholder="Brief description for the blog listing">
+                <label for="title">Headline *</label>
+                <input type="text" id="title" name="title" value="{{ article.title if article else '' }}" required maxlength="200">
             </div>
+
             <div class="admin-form__group">
-                <label for="content">Content *</label>
+                <label for="summary">Excerpt</label>
+                <input type="text" id="summary" name="summary" maxlength="500"
+                       value="{{ article.summary if article else '' }}"
+                       placeholder="One or two sentences for cards, search results and social previews.">
+            </div>
+
+            <div class="admin-form__grid">
+                <div class="admin-form__group">
+                    <label for="category">Category</label>
+                    <input type="text" id="category" name="category" list="jr-categories"
+                           value="{{ article.category if article else '' }}" placeholder="e.g. Technology">
+                    <datalist id="jr-categories">
+                        {%- for c in categories %}<option value="{{ c }}">{% endfor %}
+                    </datalist>
+                </div>
+                <div class="admin-form__group">
+                    <label for="author">Author</label>
+                    <input type="text" id="author" name="author" maxlength="120"
+                           value="{{ article.author if article else '' }}" placeholder="Leave blank for RETEC">
+                </div>
+                <div class="admin-form__group">
+                    <label for="reading_time">Reading time (minutes)</label>
+                    <input type="number" min="1" max="120" id="reading_time" name="reading_time"
+                           value="{{ article.reading_time if article and article.reading_time else '' }}"
+                           placeholder="Calculated if blank">
+                </div>
+                <div class="admin-form__group">
+                    <label for="published_at">Publication date</label>
+                    <input type="date" id="published_at" name="published_at"
+                           value="{{ article.display_date.strftime('%Y-%m-%d') if article and article.display_date else '' }}">
+                </div>
+            </div>
+
+            {# ---------- Source fields: only meaningful for a Brief ---------- #}
+            <div class="admin-form__source" id="briefSourceFields" data-for="brief">
+                <p class="admin-form__hint">
+                    Source attribution. Required before a Brief can be published &mdash;
+                    third-party reporting is never presented as RETEC&rsquo;s own.
+                </p>
+                <div class="admin-form__grid">
+                    <div class="admin-form__group">
+                        <label for="source_name">Source name</label>
+                        <input type="text" id="source_name" name="source_name" maxlength="200"
+                               value="{{ article.source_name if article else '' }}">
+                    </div>
+                    <div class="admin-form__group">
+                        <label for="source_url">Source URL</label>
+                        <input type="url" id="source_url" name="source_url"
+                               value="{{ article.source_url if article else '' }}" placeholder="https://">
+                    </div>
+                    <div class="admin-form__group">
+                        <label for="source_published_at">Original publication date</label>
+                        <input type="date" id="source_published_at" name="source_published_at"
+                               value="{{ article.source_published_at.strftime('%Y-%m-%d') if article and article.source_published_at else '' }}">
+                    </div>
+                </div>
+            </div>
+
+            {# ---------- Body ---------- #}
+            <div class="admin-form__group">
+                <label for="content">Article body *</label>
                 <div class="editor-wrap">
                     <div class="editor-toolbar" id="editorToolbar">
                         <button type="button" data-tag="b" title="Bold"><i class="fa-solid fa-bold"></i></button>
@@ -46,36 +142,103 @@
                         <button type="button" data-component="callout" title="Callout"><i class="fa-solid fa-circle-info"></i></button>
                         <button type="button" data-component="divider" title="Section Divider"><i class="fa-solid fa-ellipsis"></i></button>
                     </div>
-                    <textarea id="content" name="content" rows="14" required>{{ post.content if post else '' }}</textarea>
+                    <textarea id="content" name="content" rows="16" required>{{ article.content if article else '' }}</textarea>
                 </div>
+                <p class="admin-form__hint">
+                    HTML is filtered on save. Scripts, event handlers, iframes and
+                    inline styles are removed; headings, lists, quotes, tables, links,
+                    images and the component blocks above are kept.
+                </p>
             </div>
+
+            {# ---------- Image ---------- #}
             <div class="admin-form__group">
-                <label for="image">Featured Image</label>
-                {% if post and post.image_filename %}
+                <label for="image">Featured image</label>
+                {%- if article and article.image_filename %}
                 <div class="admin-form__current-img">
-                    <img src="{{ get_image_url(post.image_filename) }}" alt="">
-                    <span>{{ post.image_filename }}</span>
+                    <img src="{{ article.hero_image }}" alt="">
+                    <span>{{ article.image_filename }}</span>
                 </div>
-                {% endif %}
+                <label class="admin-form__group--checkbox">
+                    <input type="checkbox" name="remove_image" value="1"> Remove the uploaded image
+                </label>
+                {%- elif article and article.image_url %}
+                <p class="admin-form__hint">
+                    Using the image from {{ article.source_name or 'the source' }}:
+                    <a href="{{ article.image_url }}" target="_blank" rel="noopener noreferrer">{{ article.image_url }}</a>.
+                    Upload your own to replace it.
+                </p>
+                {%- endif %}
                 <input type="file" id="image" name="image" accept="image/png,image/jpeg,image/gif,image/webp">
             </div>
+
+            {# ---------- Status ---------- #}
+            <div class="admin-form__group">
+                <label for="status">Editorial status</label>
+                <select id="status" name="status">
+                    {%- for value, label in journal_statuses %}
+                    <option value="{{ value }}"
+                        {% if article and article.status == value %}selected{% endif %}
+                        {% if not article and value == 'draft' %}selected{% endif %}
+                        {% if value == 'published' %}data-gate="1"{% endif %}>
+                        {{ label }}
+                    </option>
+                    {%- endfor %}
+                </select>
+                {%- if article %}
+                <p class="admin-form__hint">
+                    Currently <strong>{{ article.status_label }}</strong>.
+                    {%- if article.status == 'published' %}
+                        Publishing again keeps the original publication date.
+                    {%- endif %}
+                </p>
+                {%- else %}
+                <p class="admin-form__hint">
+                    New articles always start as a draft. Use
+                    <strong>Approve &amp; Publish</strong> from the Journal queue once the copy is right.
+                </p>
+                {%- endif %}
+            </div>
+
             <div class="admin-form__group admin-form__group--checkbox">
                 <label>
-                    <input type="checkbox" name="published" value="1" {% if post and post.published %}checked{% endif %}>
-                    Published
+                    <input type="checkbox" name="is_featured" value="1"
+                        {% if article and article.is_featured %}checked{% endif %}>
+                    Feature this article as the Journal lead story
                 </label>
             </div>
+
             <div class="admin-form__actions">
-                <button type="submit" class="admin-btn admin-btn--primary">{{ 'Update' if post else 'Create' }} Post</button>
+                <button type="submit" class="admin-btn admin-btn--primary">
+                    {{ 'Save changes' if article else 'Create draft' }}
+                </button>
                 <a href="{{ url_for('admin_blog') }}" class="admin-btn">Cancel</a>
             </div>
         </form>
     </div>
 </div>
 {% endblock %}
+
 {% block scripts %}
 <script>
-(function() {
+(function () {
+    /* Content type drives the form: Briefs show source fields, the others
+       hide them (the server clears those columns on save either way). */
+    var typeSelect = document.getElementById('content_type');
+    var hint = document.getElementById('content_type_hint');
+    var hints = {
+        insight: 'Original RETEC editorial. No external attribution needed.',
+        brief: 'A development discovered from a source. Attribution is required before publishing.',
+        case_study: 'A write-up of a project RETEC delivered.'
+    };
+    function applyType() {
+        var value = typeSelect ? typeSelect.value : 'insight';
+        var block = document.getElementById('briefSourceFields');
+        if (block) block.hidden = block.dataset.for !== value;
+        if (hint && hints[value]) hint.textContent = hints[value];
+    }
+    if (typeSelect) { typeSelect.addEventListener('change', applyType); applyType(); }
+
     var ta = document.getElementById('content');
     var toolbar = document.getElementById('editorToolbar');
     if (!ta || !toolbar) return;
@@ -101,7 +264,7 @@
         ta.selectionEnd = s + block.length - tag.length - 3;
     }
 
-    toolbar.addEventListener('click', function(e) {
+    toolbar.addEventListener('click', function (e) {
         var btn = e.target.closest('button');
         if (!btn) return;
         var tag = btn.getAttribute('data-tag');
@@ -119,29 +282,29 @@
     });
 
     var uploadInput = document.getElementById('inlineImageUpload');
+    function upload(file, done) {
+        var fd = new FormData();
+        fd.append('image', file);
+        fetch('{{ url_for("admin_upload_image") }}', { method: 'POST', body: fd })
+            .then(function (r) { return r.json(); })
+            .then(done)
+            .catch(function () { done({}); });
+    }
     if (uploadInput) {
-        uploadInput.addEventListener('change', function() {
+        uploadInput.addEventListener('change', function () {
             var file = this.files[0];
             if (!file) return;
-            var fd = new FormData();
-            fd.append('image', file);
             var btn = toolbar.querySelector('[data-action="image"]');
             if (btn) btn.style.opacity = '0.5';
-            fetch('/admin/upload-image', { method: 'POST', body: fd })
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if (btn) btn.style.opacity = '1';
-                    if (data.url) {
-                        var alt = prompt('Alt text:', file.name.replace(/\.[^.]+$/, ''));
-                        wrap('<img src="' + data.url + '" alt="' + (alt || '') + '">', '');
-                    } else {
-                        alert('Upload failed: ' + (data.error || 'Unknown error'));
-                    }
-                })
-                .catch(function(err) {
-                    if (btn) btn.style.opacity = '1';
-                    alert('Upload failed: ' + err.message);
-                });
+            upload(file, function (data) {
+                if (btn) btn.style.opacity = '1';
+                if (data.url) {
+                    var alt = prompt('Alt text:', file.name.replace(/\.[^.]+$/, ''));
+                    wrap('<img src="' + data.url + '" alt="' + (alt || '') + '">', '');
+                } else {
+                    alert('Upload failed: ' + (data.error || 'Unknown error'));
+                }
+            });
             uploadInput.value = '';
         });
     }
@@ -150,58 +313,52 @@
         'ed-row': '\n<div class="ed-row">\n    <div class="ed-row__media">\n        <img src="IMAGE_URL" alt="Alt text">\n    </div>\n    <div class="ed-row__text">\n        <h2>Section Title</h2>\n        <p>Paragraph text explaining this section...</p>\n    </div>\n</div>\n',
         'ed-row-reverse': '\n<div class="ed-row ed-row--reverse">\n    <div class="ed-row__media">\n        <img src="IMAGE_URL" alt="Alt text">\n    </div>\n    <div class="ed-row__text">\n        <h2>Section Title</h2>\n        <p>Paragraph text explaining this section...</p>\n    </div>\n</div>\n',
         'pull-quote': '\n<div class="pull-quote">\n    <p>Your compelling quote or highlighted statement goes here.</p>\n</div>\n',
-        'stats': '\n<div class="stats-row">\n    <div class="stat-card">\n        <div class="stat-card__number">76%</div>\n        <div class="stat-card__label">Description of this stat</div>\n    </div>\n    <div class="stat-card">\n        <div class="stat-card__number">88%</div>\n        <div class="stat-card__label">Description of this stat</div>\n    </div>\n    <div class="stat-card">\n        <div class="stat-card__number">53%</div>\n        <div class="stat-card__label">Description of this stat</div>\n    </div>\n</div>\n',
+        'stats': '\n<div class="stats-row">\n    <div class="stat-card">\n        <div class="stat-card__number">76%</div>\n        <div class="stat-card__label">Description of this stat</div>\n    </div>\n    <div class="stat-card">\n        <div class="stat-card__number">88%</div>\n        <div class="stat-card__label">Description of this stat</div>\n    </div>\n</div>\n',
         'highlight': '\n<div class="highlight-box">\n    <p><strong>Key insight:</strong> Your highlighted text goes here.</p>\n</div>\n',
-        'takeaways': '\n<div class="key-takeaways">\n    <h3>Key Takeaways</h3>\n    <ul>\n        <li>First takeaway point</li>\n        <li>Second takeaway point</li>\n        <li>Third takeaway point</li>\n    </ul>\n</div>\n',
-        'callout': '\n<div class="callout">\n    <span class="callout-icon">💡</span>\n    <div>\n        <p><strong>Important note:</strong> Your callout text goes here.</p>\n    </div>\n</div>\n',
+        'takeaways': '\n<div class="key-takeaways">\n    <h3>Key Takeaways</h3>\n    <ul>\n        <li>First takeaway point</li>\n        <li>Second takeaway point</li>\n    </ul>\n</div>\n',
+        'callout': '\n<div class="callout">\n    <div>\n        <p><strong>Important note:</strong> Your callout text goes here.</p>\n    </div>\n</div>\n',
         'divider': '\n<div class="ed-divider"><i class="fa-solid fa-star"></i></div>\n'
     };
 
-    toolbar.addEventListener('click', function(e) {
+    toolbar.addEventListener('click', function (e) {
         var btn = e.target.closest('button[data-component]');
         if (!btn) return;
         var key = btn.getAttribute('data-component');
         if (!components[key]) return;
+        var snippet = components[key];
         if (key === 'ed-row' || key === 'ed-row-reverse') {
             var f = document.createElement('input');
             f.type = 'file';
             f.accept = 'image/png,image/jpeg,image/gif,image/webp';
-            f.onchange = function() {
+            f.onchange = function () {
                 var file = f.files[0];
                 if (!file) return;
-                var fd = new FormData();
-                fd.append('image', file);
                 btn.style.opacity = '0.5';
-                fetch('/admin/upload-image', { method: 'POST', body: fd })
-                    .then(function(r) { return r.json(); })
-                    .then(function(data) {
-                        btn.style.opacity = '1';
-                        var url = data.url || 'IMAGE_URL';
-                        var snippet = components[key].replace('IMAGE_URL', url);
-                        var s = ta.selectionStart;
-                        ta.setRangeText(snippet, s, ta.selectionEnd, 'end');
-                        ta.focus();
-                    })
-                    .catch(function() {
-                        btn.style.opacity = '1';
-                        var s = ta.selectionStart;
-                        ta.setRangeText(components[key], s, ta.selectionEnd, 'end');
-                        ta.focus();
-                    });
+                upload(file, function (data) {
+                    btn.style.opacity = '1';
+                    var s = ta.selectionStart;
+                    ta.setRangeText(snippet.replace('IMAGE_URL', data.url || 'IMAGE_URL'),
+                        s, ta.selectionEnd, 'end');
+                    ta.focus();
+                });
             };
             f.click();
         } else {
             var s = ta.selectionStart;
-            ta.setRangeText(components[key], s, ta.selectionEnd, 'end');
+            ta.setRangeText(snippet, s, ta.selectionEnd, 'end');
             ta.focus();
         }
     });
 
-    ta.addEventListener('keydown', function(e) {
+    ta.addEventListener('keydown', function (e) {
         if (e.ctrlKey || e.metaKey) {
             if (e.key === 'b') { e.preventDefault(); wrap('<b>', '</b>'); }
             else if (e.key === 'i') { e.preventDefault(); wrap('<i>', '</i>'); }
-            else if (e.key === 'k') { e.preventDefault(); var url = prompt('Enter URL:', 'https://'); if (url) wrap('<a href="' + url + '">', '</a>'); }
+            else if (e.key === 'k') {
+                e.preventDefault();
+                var url = prompt('Enter URL:', 'https://');
+                if (url) wrap('<a href="' + url + '">', '</a>');
+            }
         }
         if (e.key === 'Tab') {
             e.preventDefault();

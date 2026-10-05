@@ -24,6 +24,297 @@
         var navMenu = document.getElementById('nav-menu');
         var navLinks = Array.prototype.slice.call(document.querySelectorAll('.nav__link, .nav__chat'));
 
+        /* -------------------------------------------- homepage section state */
+        if (document.body.classList.contains('home-page') && navMenu) {
+            var navList = navMenu.querySelector('.nav__list');
+            var sectionLinks = navLinks.filter(function (link) {
+                return link.hasAttribute('data-nav-section');
+            });
+            var sections = sectionLinks.map(function (link) {
+                var id = link.getAttribute('data-nav-section');
+                var node = document.getElementById(id);
+                return node ? { id: id, node: node, link: link, intersecting: false } : null;
+            }).filter(Boolean);
+            var pageSections = Array.prototype.slice.call(document.querySelectorAll('section[id]')).map(function (node) {
+                var linkedSection = null;
+                for (var i = 0; i < sections.length; i += 1) {
+                    if (sections[i].id === node.id) {
+                        linkedSection = sections[i];
+                        break;
+                    }
+                }
+                return { id: node.id, node: node, link: linkedSection && linkedSection.link, intersecting: false };
+            });
+
+            if (navList && sections.length && window.IntersectionObserver) {
+                var desktopQuery = window.matchMedia('(min-width: 769px)');
+                var indicatorHost = document.createElement('li');
+                indicatorHost.className = 'nav__indicator-host';
+                indicatorHost.setAttribute('aria-hidden', 'true');
+
+                var activeIndicator = document.createElement('span');
+                activeIndicator.className = 'nav__active-indicator';
+                var hoverIndicator = document.createElement('span');
+                hoverIndicator.className = 'nav__hover-indicator';
+                indicatorHost.appendChild(activeIndicator);
+                indicatorHost.appendChild(hoverIndicator);
+                navList.insertBefore(indicatorHost, navList.firstChild);
+
+                var sectionObserver;
+                var activeSection = null;
+                var hoveredLink = null;
+                var pendingSectionId = null;
+                var pendingTimer = null;
+                var resizeFrame = 0;
+                var indicatorGsap = motion.live() ? motion.gsap : null;
+
+                function findSection(id) {
+                    for (var i = 0; i < sections.length; i += 1) {
+                        if (sections[i].id === id) return sections[i];
+                    }
+                    return null;
+                }
+
+                function moveIndicator(indicator, link, visible, animate, padding) {
+                    if (!desktopQuery.matches || !link) return;
+
+                    var listRect = navList.getBoundingClientRect();
+                    var linkRect = link.getBoundingClientRect();
+                    var width = linkRect.width + padding * 2;
+                    var x = linkRect.left - listRect.left - padding;
+                    var y = linkRect.top - listRect.top + linkRect.height / 2;
+                    var scaleY = indicator === activeIndicator ? 1.04 : 1.02;
+
+                    if (indicatorGsap) {
+                        if (!animate) {
+                            indicatorGsap.set(indicator, {
+                                x: x,
+                                y: y,
+                                yPercent: -50,
+                                width: width,
+                                scaleY: scaleY,
+                                autoAlpha: visible ? 1 : 0
+                            });
+                            return;
+                        }
+
+                        indicatorGsap.to(indicator, {
+                            x: x,
+                            y: y,
+                            width: width,
+                            scaleY: scaleY,
+                            autoAlpha: visible ? 1 : 0,
+                            duration: visible ? 0.44 : 0.26,
+                            ease: visible ? 'back.out(1.16)' : 'power2.out',
+                            overwrite: 'auto'
+                        });
+                        return;
+                    }
+
+                    indicator.style.left = x + 'px';
+                    indicator.style.top = y + 'px';
+                    indicator.style.width = width + 'px';
+                    indicator.style.transform = 'translateY(-50%) scaleY(' + scaleY + ')';
+                    indicator.style.opacity = visible ? '1' : '0';
+                    indicator.style.visibility = visible ? 'visible' : 'hidden';
+                }
+
+                function setActiveSection(id, animate) {
+                    var next = findSection(id);
+                    if (!next) return;
+                    var changed = activeSection !== next;
+
+                    sections.forEach(function (section) {
+                        var active = section === next;
+                        section.link.classList.toggle('nav__link--active', active);
+                        if (active) section.link.setAttribute('aria-current', 'location');
+                        else section.link.removeAttribute('aria-current');
+                    });
+
+                    activeSection = next;
+                    if (changed || !animate) moveIndicator(activeIndicator, next.link, true, animate, 8);
+                    if (changed && hoveredLink === next.link) {
+                        moveIndicator(hoverIndicator, next.link, false, true, 7);
+                    }
+                }
+
+                function clearActiveSection(animate) {
+                    sections.forEach(function (section) {
+                        section.link.classList.remove('nav__link--active');
+                        section.link.removeAttribute('aria-current');
+                    });
+                    activeSection = null;
+
+                    if (indicatorGsap) {
+                        if (animate) indicatorGsap.to(activeIndicator, { autoAlpha: 0, duration: 0.26, ease: 'power2.out' });
+                        else indicatorGsap.set(activeIndicator, { autoAlpha: 0 });
+                    } else {
+                        activeIndicator.style.opacity = '0';
+                        activeIndicator.style.visibility = 'hidden';
+                    }
+                }
+
+                function showHover(link) {
+                    var section = null;
+                    for (var i = 0; i < sections.length; i += 1) {
+                        if (sections[i].link === link) {
+                            section = sections[i];
+                            break;
+                        }
+                    }
+                    if (!section || !desktopQuery.matches || hoveredLink === link) return;
+
+                    hoveredLink = link;
+                    moveIndicator(hoverIndicator, link, section !== activeSection, true, 7);
+                }
+
+                function restoreHover() {
+                    hoveredLink = null;
+                    if (activeSection) moveIndicator(hoverIndicator, activeSection.link, false, true, 7);
+                    else if (indicatorGsap) indicatorGsap.to(hoverIndicator, { autoAlpha: 0, duration: 0.26, ease: 'power2.out' });
+                }
+
+                function sectionAtReadingLine(candidates) {
+                    var line = window.innerHeight * 0.13;
+                    var nearest = null;
+                    var nearestDistance = Infinity;
+
+                    candidates.forEach(function (section) {
+                        var rect = section.node.getBoundingClientRect();
+                        var distance = line < rect.top ? rect.top - line : (line > rect.bottom ? line - rect.bottom : 0);
+                        if (distance < nearestDistance) {
+                            nearest = section;
+                            nearestDistance = distance;
+                        }
+                    });
+                    return nearest;
+                }
+
+                function syncFromViewport(animate) {
+                    var section = sectionAtReadingLine(pageSections);
+                    if (!section) return;
+                    if (section.link) setActiveSection(section.id, animate);
+                    else clearActiveSection(animate);
+                }
+
+                function clearPending() {
+                    pendingSectionId = null;
+                    if (pendingTimer) window.clearTimeout(pendingTimer);
+                    pendingTimer = null;
+                }
+
+                function onSectionClick(event) {
+                    var link = event.target.closest ? event.target.closest('a[data-nav-section]') : null;
+                    if (!link || !navList.contains(link)) return;
+
+                    var id = link.getAttribute('data-nav-section');
+                    var target = document.getElementById(id);
+                    var url;
+                    try { url = new URL(link.href, window.location.href); } catch (error) { return; }
+                    if (!target || url.pathname !== window.location.pathname || url.search !== window.location.search) return;
+
+                    pendingSectionId = id;
+                    setActiveSection(id, true);
+                    if (pendingTimer) window.clearTimeout(pendingTimer);
+                    pendingTimer = window.setTimeout(function () {
+                        clearPending();
+                        syncFromViewport(true);
+                    }, 2600);
+                }
+
+                function onPointerOver(event) {
+                    var link = event.target.closest ? event.target.closest('a[data-nav-section]') : null;
+                    if (link && navList.contains(link) && motion.fine()) showHover(link);
+                    else if (hoveredLink) restoreHover();
+                }
+
+                function onFocusIn(event) {
+                    var link = event.target.closest ? event.target.closest('a[data-nav-section]') : null;
+                    if (link && navList.contains(link)) showHover(link);
+                }
+
+                function onFocusOut(event) {
+                    var next = event.relatedTarget && event.relatedTarget.closest
+                        ? event.relatedTarget.closest('a[data-nav-section]') : null;
+                    if (next && navList.contains(next)) showHover(next);
+                    else restoreHover();
+                }
+
+                function onResize() {
+                    if (resizeFrame) window.cancelAnimationFrame(resizeFrame);
+                    resizeFrame = window.requestAnimationFrame(function () {
+                        resizeFrame = 0;
+                        observeSections();
+                        syncFromViewport(false);
+                        if (hoveredLink) {
+                            for (var i = 0; i < sections.length; i += 1) {
+                                if (sections[i].link === hoveredLink) {
+                                    moveIndicator(hoverIndicator, hoveredLink, sections[i] !== activeSection, false, 7);
+                                    break;
+                                }
+                            }
+                        }
+                    });
+                }
+
+                function onSectionsIntersect(entries) {
+                    entries.forEach(function (entry) {
+                        for (var i = 0; i < pageSections.length; i += 1) {
+                            if (pageSections[i].node === entry.target) {
+                                pageSections[i].intersecting = entry.isIntersecting;
+                                break;
+                            }
+                        }
+                    });
+
+                    var intersecting = pageSections.filter(function (section) { return section.intersecting; });
+                    if (!intersecting.length) return;
+
+                    var current = sectionAtReadingLine(intersecting);
+                    if (pendingSectionId && current.link && current.id !== pendingSectionId) return;
+                    if (pendingSectionId === current.id) clearPending();
+                    if (current.link) setActiveSection(current.id, true);
+                    else clearActiveSection(true);
+                }
+
+                function observeSections() {
+                    if (sectionObserver) sectionObserver.disconnect();
+                    pageSections.forEach(function (section) { section.intersecting = false; });
+                    var topMargin = Math.round(window.innerHeight * 0.08);
+                    var bottomMargin = Math.round(window.innerHeight * 0.82);
+                    sectionObserver = new IntersectionObserver(onSectionsIntersect, {
+                        rootMargin: '-' + topMargin + 'px 0px -' + bottomMargin + 'px 0px',
+                        threshold: 0
+                    });
+                    pageSections.forEach(function (section) { sectionObserver.observe(section.node); });
+                }
+
+                observeSections();
+                navList.addEventListener('click', onSectionClick);
+                navList.addEventListener('pointerover', onPointerOver);
+                navList.addEventListener('pointerleave', restoreHover);
+                navList.addEventListener('focusin', onFocusIn);
+                navList.addEventListener('focusout', onFocusOut);
+                window.addEventListener('resize', onResize, { passive: true });
+
+                syncFromViewport(window.pageYOffset > 16);
+
+                motion.onCleanup(function () {
+                    sectionObserver.disconnect();
+                    navList.removeEventListener('click', onSectionClick);
+                    navList.removeEventListener('pointerover', onPointerOver);
+                    navList.removeEventListener('pointerleave', restoreHover);
+                    navList.removeEventListener('focusin', onFocusIn);
+                    navList.removeEventListener('focusout', onFocusOut);
+                    window.removeEventListener('resize', onResize);
+                    if (pendingTimer) window.clearTimeout(pendingTimer);
+                    if (resizeFrame) window.cancelAnimationFrame(resizeFrame);
+                    if (indicatorGsap) indicatorGsap.killTweensOf([activeIndicator, hoverIndicator]);
+                    if (indicatorHost.parentNode) indicatorHost.parentNode.removeChild(indicatorHost);
+                });
+            }
+        }
+
         /* ------------------------------------------------- scroll progress */
         var bar = null;
         /* An article page ships its own, more precise reading-progress bar.

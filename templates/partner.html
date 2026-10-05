@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+
+{% block content %}
+{# Swap these URLs to change the partner-page stock photography. #}
+{% set partner_hero_photo = "https://images.unsplash.com/photo-1611955727536-b3799f3c4ab9?q=80&w=879&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" %}
+{% set partner_invite_photo = "https://images.unsplash.com/photo-1588856122867-363b0aa7f598?q=80&w=773&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" %}
+<main class="partner">
+
+    <!-- ===== HERO ===== -->
+        <!-- Deliberately lighter than the homepage hero: one quiet image detail,
+            simple type and a pair of CTAs. -->
+    <section class="partner__hero" id="top">
+        <div class="container">
+            <div class="partner__hero-inner">
+                <h1 class="partner__title" data-motion="reveal" data-motion-slow>Let&rsquo;s Build<br>Together.</h1>
+                <p class="partner__lede" data-motion="reveal" data-motion-delay="80">
+                    RETEC collaborates with designers, developers, agencies and specialists to bring
+                    ambitious digital projects to life. Some work needs more capability than one
+                    person or team holds &mdash; when that is true, we would rather build with people
+                    we trust than pretend otherwise.
+                </p>
+                <div class="partner__actions" data-motion="reveal" data-motion-delay="100">
+                    <a href="#apply" class="section__cta" data-magnetic data-cursor="arrow">
+                        Become a Partner <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                    </a>
+                    <a href="/#contact" class="section__cta section__cta--outline" data-cursor="arrow">
+                        Start a Project <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                    </a>
+                </div>
+            </div>
+            <figure class="partner__hero-image" aria-hidden="true">
+                <img src="{{ partner_hero_photo }}" alt="A creative team sharing ideas around a table" fetchpriority="high">
+            </figure>
+        </div>
+    </section>
+
+    <!-- ===== WHO WE WORK WITH ===== -->
+    <section class="section partner__section" id="who" aria-labelledby="who-title">
+        <div class="container">
+            <div class="partner__intro" data-motion="reveal">
+                <div>
+                    <h2 class="section__title partner__intro-title" id="who-title">The kinds of<br>people we build with</h2>
+                </div>
+                <p class="partner__intro-copy">
+                    We are interested in skilled individuals, freelancers, studios and agencies whose
+                    expertise complements ours. If your work makes a project better, there is a
+                    reasonable chance we can find a way to work together.
+                </p>
+            </div>
+
+            <div class="partner__grid">
+                {% for type in collaborator_types %}
+                <article class="partner-card" data-motion="card" data-motion-delay="{{ loop.index0 * 60 }}">
+                    <span class="partner-card__number">{{ '%02d'|format(loop.index) }}</span>
+                    <span class="partner-card__visual" aria-hidden="true">
+                        {% if loop.index == 1 %}
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+                            <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+                            <path d="M2 2l7.586 7.586"></path>
+                            <circle cx="11" cy="11" r="2"></circle>
+                        </svg>
+                        {% elif loop.index == 2 %}
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <polyline points="16 18 22 12 16 6"></polyline>
+                            <polyline points="8 6 2 12 8 18"></polyline>
+                            <circle cx="12" cy="12" r="2"></circle>
+                        </svg>
+                        {% elif loop.index == 3 %}
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                            <polyline points="2 17 12 22 22 17"></polyline>
+                            <polyline points="2 12 12 17 22 12"></polyline>
+                        </svg>
+                        {% elif loop.index == 4 %}
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M3 11l18-5v12L3 14v-3z"></path>
+                            <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"></path>
+                            <line x1="3" y1="11" x2="3" y2="14"></line>
+                        </svg>
+                        {% elif loop.index == 5 %}
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                            <circle cx="12" cy="13" r="4"></circle>
+                        </svg>
+                        {% else %}
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <circle cx="19" cy="5" r="3"></circle>
+                            <circle cx="5" cy="19" r="3"></circle>
+                            <line x1="12" y1="9" x2="12" y2="5"></line>
+                            <line x1="9" y1="12" x2="5" y2="12"></line>
+                            <line x1="15" y1="12" x2="19" y2="12"></line>
+                            <line x1="12" y1="15" x2="12" y2="19"></line>
+                        </svg>
+                        {% endif %}
+                    </span>
+                    <h3 class="partner-card__name">{{ type.name }}</h3>
+                    <p class="partner-card__desc">{{ type.desc }}</p>
+                </article>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== PARTNER INVITATION ===== -->
+    <section class="partner__invite" aria-labelledby="partner-invite-title">
+        <div class="container partner__invite-inner">
+            <figure class="partner__invite-visual" data-motion="image">
+                <img src="{{ partner_invite_photo }}" alt="Creative collaborators working together on a project">
+            </figure>
+            <div class="partner__invite-copy" data-motion="reveal">
+                <h2 class="partner__invite-title" id="partner-invite-title">Bring your best work to the table.</h2>
+                <p>Tell us what you do best and the kind of projects you want to help shape. When the right work comes along, we can start with a conversation.</p>
+                <a href="#apply" class="section__cta" data-cursor="arrow">
+                    Introduce Yourself <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== HOW COLLABORATION WORKS ===== -->
+    <!-- Reuses the homepage process component; the grid is re-tiled to four
+         columns for the four collaboration steps. -->
+    <section class="section section--light partner__section" id="how" aria-labelledby="how-title">
+        <div class="container">
+            <div class="partner__intro" data-motion="reveal">
+                <div>
+                    <h2 class="section__title partner__intro-title" id="how-title">How collaboration works</h2>
+                </div>
+                <p class="partner__intro-copy">
+                    No long partner programmes and no onboarding maze. Four steps, and we agree on
+                    what each side owns before anything is built.
+                </p>
+            </div>
+
+            <div class="process__grid partner__process-grid">
+                {% for step in partner_process %}
+                <div class="process__item" data-motion="reveal" data-motion-delay="{{ loop.index0 * 80 }}">
+                    <span class="process__number">{{ '%02d'|format(loop.index) }}</span>
+                    <h3 class="process__title">{{ step.title }}</h3>
+                    <p class="process__desc">{{ step.desc }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== WHY COLLABORATE ===== -->
+    <section class="section partner__section" id="why" aria-labelledby="why-title">
+        <div class="container">
+            <div class="partner__intro" data-motion="reveal">
+                <div>
+                    <h2 class="section__title partner__intro-title" id="why-title">Why collaborate with RETEC</h2>
+                </div>
+                <p class="partner__intro-copy">
+                    Every engagement is scoped individually. We cannot promise a fixed number of
+                    projects or guaranteed work &mdash; what we can offer is a clear process and a
+                    high bar for how the work gets done.
+                </p>
+            </div>
+
+            <ul class="partner__reasons">
+                {% for reason in partner_reasons %}
+                <li class="partner-reason" data-motion="reveal" data-motion-delay="{{ loop.index0 * 60 }}">
+                    <h3 class="partner-reason__title">{{ reason.title }}</h3>
+                    <p class="partner-reason__desc">{{ reason.desc }}</p>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </section>
+
+    <!-- ===== APPLICATION FORM ===== -->
+    <section class="section section--light partner__section" id="apply" aria-labelledby="apply-title">
+        <div class="container">
+            <div class="partner__apply">
+                <div class="partner__apply-intro" data-motion="reveal">
+                    <h2 class="section__title partner__intro-title" id="apply-title">Tell us about yourself</h2>
+                    <p class="partner__apply-copy">
+                        Whether you&rsquo;re an independent specialist, freelancer, studio or agency,
+                        tell us what you do and how you&rsquo;d like to collaborate. We read every
+                        application and reply when there is a fit &mdash; there is no guarantee of work,
+                        and that is deliberate.
+                    </p>
+                    <p class="partner__apply-note">
+                        Prefer email? Write to
+                        <a href="mailto:contact.retec@gmail.com">contact.retec@gmail.com</a>.
+                    </p>
+                </div>
+
+                <form class="partner__form" method="POST" action="{{ url_for('partner') }}">
+                    <input type="hidden" name="csrf_token" value="{{ form.csrf_token._value() if form else '' }}">
+                    <input type="text" name="website" tabindex="-1" autocomplete="off" class="form__honeypot" aria-hidden="true">
+
+                    <div class="form__row">
+                        <div class="form__group">
+                            <label for="partner-name" class="form__label">Full Name</label>
+                            <input type="text" id="partner-name" name="name" class="form__input" data-cursor="text" placeholder="Your name" value="{{ form.name.data if form and form.name.data else '' }}" required>
+                            {% if form and form.name.errors %}<span class="form__error">{{ form.name.errors[0] }}</span>{% endif %}
+                        </div>
+                        <div class="form__group">
+                            <label for="partner-email" class="form__label">Email</label>
+                            <input type="email" id="partner-email" name="email" class="form__input" data-cursor="text" placeholder="you@example.com" value="{{ form.email.data if form and form.email.data else '' }}" required>
+                            {% if form and form.email.errors %}<span class="form__error">{{ form.email.errors[0] }}</span>{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="form__row">
+                        <div class="form__group">
+                            <label for="partner-company" class="form__label">Company / Studio</label>
+                            <input type="text" id="partner-company" name="company" class="form__input" data-cursor="text" placeholder="Optional" value="{{ form.company.data if form and form.company.data else '' }}">
+                            {% if form and form.company.errors %}<span class="form__error">{{ form.company.errors[0] }}</span>{% endif %}
+                        </div>
+                        <div class="form__group">
+                            <label for="partner-role" class="form__label">Role / Specialty</label>
+                            <input type="text" id="partner-role" name="role" class="form__input" data-cursor="text" placeholder="e.g. Brand designer" value="{{ form.role.data if form and form.role.data else '' }}" required>
+                            {% if form and form.role.errors %}<span class="form__error">{{ form.role.errors[0] }}</span>{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="form__row">
+                        <div class="form__group">
+                            <label for="partner-type" class="form__label">Collaboration Type</label>
+                            <select id="partner-type" name="collaboration_type" class="form__input" required>
+                                {% for value, label in collaboration_types %}
+                                <option value="{{ value }}" {% if form and form.collaboration_type.data == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if form and form.collaboration_type.errors %}<span class="form__error">{{ form.collaboration_type.errors[0] }}</span>{% endif %}
+                        </div>
+                        <div class="form__group">
+                            <label for="partner-portfolio" class="form__label">Website / Portfolio</label>
+                            <input type="text" id="partner-portfolio" name="portfolio" class="form__input" data-cursor="text" placeholder="https://" value="{{ form.portfolio.data if form and form.portfolio.data else '' }}">
+                            {% if form and form.portfolio.errors %}<span class="form__error">{{ form.portfolio.errors[0] }}</span>{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="form__group">
+                        <label for="partner-expertise" class="form__label">Areas of Expertise</label>
+                        <input type="text" id="partner-expertise" name="expertise" class="form__input" data-cursor="text" placeholder="e.g. Brand identity, editorial design" value="{{ form.expertise.data if form and form.expertise.data else '' }}" required>
+                        {% if form and form.expertise.errors %}<span class="form__error">{{ form.expertise.errors[0] }}</span>{% endif %}
+                    </div>
+
+                    <div class="form__group">
+                        <label for="partner-message" class="form__label">Tell us about yourself</label>
+                        <textarea id="partner-message" name="message" class="form__textarea" rows="5" data-cursor="text" placeholder="What you do, the kind of projects you take on, and what you would want from a collaboration." required>{{ form.message.data if form and form.message.data else '' }}</textarea>
+                        {% if form and form.message.errors %}<span class="form__error">{{ form.message.errors[0] }}</span>{% endif %}
+                    </div>
+
+                    <button type="submit" class="form__submit">
+                        Submit Application <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== FINAL SPLIT CTA ===== -->
+    <section class="section partner__section" aria-labelledby="final-cta-title">
+        <div class="container">
+            <h2 class="sr-only" id="final-cta-title">Next step</h2>
+            <div class="partner__final">
+                <div class="partner__final-panel" data-motion="reveal">
+                    <p class="partner__final-kicker">For collaborators</p>
+                    <p class="partner__final-title">Have something to bring to the table?</p>
+                    <a href="#apply" class="section__cta" data-magnetic data-cursor="arrow">
+                        Become a Partner <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                    </a>
+                </div>
+                <div class="partner__final-panel partner__final-panel--alt" data-motion="reveal" data-motion-delay="80">
+                    <p class="partner__final-kicker">For clients</p>
+                    <p class="partner__final-title">Have a project in mind?</p>
+                    <a href="/#contact" class="section__cta section__cta--outline" data-cursor="arrow">
+                        Start a Project <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</main>
+{% endblock %}

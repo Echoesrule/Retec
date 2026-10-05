@@ -12,7 +12,8 @@
         } catch (e) {}
     }
 
-    send('/track/pageview', { page: window.location.pathname });
+    // Page views are recorded once on the server; this script only tracks
+    // section interest and outbound clicks.
 
     var sections = document.querySelectorAll('section[id]');
     if (sections.length && 'IntersectionObserver' in window) {

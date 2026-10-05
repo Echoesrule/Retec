@@ -61,7 +61,7 @@
                 </a>
                 <a href="{{ url_for('admin_blog') }}" class="admin-sidebar__link {% if active == 'blog' %}admin-sidebar__link--active{% endif %}">
                     <i class="fa-solid fa-newspaper"></i>
-                    Blog
+                    Journal
                 </a>
                 <a href="{{ url_for('admin_content_studio') }}" class="admin-sidebar__link {% if active == 'content_studio' %}admin-sidebar__link--active{% endif %}">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
@@ -74,6 +74,10 @@
                 <a href="{{ url_for('admin_subscribers') }}" class="admin-sidebar__link {% if active == 'subscribers' %}admin-sidebar__link--active{% endif %}">
                     <i class="fa-solid fa-envelope-open-text"></i>
                     Subscribers
+                </a>
+                <a href="{{ url_for('admin_partner_applications') }}" class="admin-sidebar__link {% if active == 'partner_applications' %}admin-sidebar__link--active{% endif %}">
+                    <i class="fa-solid fa-handshake"></i>
+                    Partner Applications
                 </a>
                 <a href="{{ url_for('admin_broadcast') }}" class="admin-sidebar__link {% if active == 'broadcast' %}admin-sidebar__link--active{% endif %}">
                     <i class="fa-solid fa-bullhorn"></i>
@@ -121,6 +125,7 @@
         });
     })();
     </script>
+    <script src="{{ url_for('static', filename='js/flash-messages.js') }}?v={{ css_version }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

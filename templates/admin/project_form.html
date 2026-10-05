@@ -42,6 +42,16 @@
                 <input type="url" id="demo_url" name="demo_url" value="{{ project.demo_url if project else '' }}" placeholder="https://myproject.com">
             </div>
             <div class="admin-form__group">
+                <label for="status">Status</label>
+                {% set selected_status = project.status if project else 'live' %}
+                <select id="status" name="status">
+                    <option value="" {% if not selected_status %}selected{% endif %}>Not set</option>
+                    {% for value, label in project_statuses %}
+                    <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="admin-form__group">
                 <label for="image">Image</label>
                 {% if project and project.image_filename %}
                 <div class="admin-form__current-img">

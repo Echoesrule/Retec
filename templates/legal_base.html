@@ -1,0 +1,118 @@
+{#
+  Shared layout for /privacy, /terms and /security.
+
+  Extends base.html, so the navbar, footer, flash stack, motion stack and
+  analytics are all inherited rather than duplicated. A legal page overrides two
+  blocks only:
+
+      {% block legal_page %}   the full page descriptor from legal.py
+      {% block page_scripts %} usually not needed — legal.js is loaded here
+
+  Everything below the hero is deliberately dumb: it renders the section list,
+  and static/js/legal.js watches the scroll position. No page-specific markup.
+
+  Motion: the hero and each section opt into the existing reveal system with
+  data-motion. Those reveals are the same masked-line and small-travel
+  animations the rest of the site uses, and motion.css keeps them inert when
+  prefers-reduced-motion is set — which is also the only case where the
+  scroll-spy is not needed at all.
+#}
+{% extends "base.html" %}
+{% from "_legal.html" import legal_blocks, legal_toc %}
+
+{% block content %}
+{#
+  A <div>, not a <main>: base.html already wraps the content block in
+  <main class="page-content">, and a nested main would put two main landmarks
+  in the accessibility tree.
+#}
+<div class="legal">
+
+    {# ------------------------------------------------------------ hero #}
+    <section class="legal__hero" aria-labelledby="legal-title">
+        <div class="container">
+            <div class="legal__hero-inner">
+                <p class="section__eyebrow legal__eyebrow" data-motion="reveal">{{ legal_page.eyebrow }}</p>
+                <h1 class="legal__title" id="legal-title" data-motion="reveal">{{ legal_page.title }}</h1>
+                <p class="legal__lede" data-motion="reveal" data-motion-delay="80">{{ legal_page.lede }}</p>
+
+                {% if legal_page.intro %}
+                <div class="legal__intro" data-motion="reveal" data-motion-delay="100">
+                    {% for paragraph in legal_page.intro %}
+                    <p>{{ paragraph }}</p>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {# Rendered by the page as a <dl>, not a badge: "last updated" is
+                   a fact a reader may need to quote, not decoration. #}
+                <dl class="legal__stamp">
+                    <div class="legal__stamp-row">
+                        <dt>Last updated</dt>
+                        <dd><time datetime="{{ legal_updated_iso }}">{{ legal_updated }}</time></dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+    </section>
+
+    {# -------------------------------------------------------- mobile nav #}
+    {# The sticky aside is hidden below 1024px, so the rail is the mobile
+       equivalent rather than a second copy of the same list. Same markup
+       hooks, same active treatment, horizontally scrollable. #}
+    <div class="legal__rail-wrap">
+        <div class="container">
+            {{ legal_toc(legal_page.sections, 'rail') }}
+        </div>
+    </div>
+
+    {# -------------------------------------------------------------- body #}
+    <div class="container legal__body">
+        <aside class="legal__aside">
+            {{ legal_toc(legal_page.sections, 'aside') }}
+        </aside>
+
+        <article class="legal__article" aria-labelledby="legal-title">
+            {% for section in legal_page.sections %}
+            <section class="legal__section"
+                     id="{{ section.slug }}"
+                     data-legal-section="{{ section.slug }}"
+                     aria-labelledby="{{ section.slug }}-title"
+                     data-motion="reveal">
+                <div class="legal__section-head">
+                    <span class="legal__section-num" aria-hidden="true">{{ section.num }}</span>
+                    <h2 class="legal__section-title" id="{{ section.slug }}-title">{{ section.title }}</h2>
+                </div>
+                <div class="legal__prose">
+                    {{ legal_blocks(section.blocks, legal_emails) }}
+                </div>
+            </section>
+            {% endfor %}
+
+            {# A closing rule that is genuinely useful rather than a flourish:
+               the page's own status, stated once, plainly. #}
+            <footer class="legal__colophon">
+                <p>
+                    This page describes the {{ legal_page.title|lower }} for
+                    RETEC&rsquo;s public website as it is currently built. It is
+                    website copy, not legal advice, and it has not been settled by a
+                    qualified legal professional &mdash; treat it as a good-faith
+                    summary to be reviewed, not as the final word.
+                </p>
+                <p class="legal__colophon-meta">
+                    <a href="{{ url_for('privacy') }}">Privacy Policy</a>
+                    <span aria-hidden="true">&middot;</span>
+                    <a href="{{ url_for('terms') }}">Terms of Use</a>
+                    <span aria-hidden="true">&middot;</span>
+                    <a href="{{ url_for('security') }}">Security</a>
+                </p>
+            </footer>
+        </article>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block page_scripts %}
+<script src="{{ url_for('static', filename='js/legal.js') }}?v={{ css_version }}" defer></script>
+{% endblock %}
