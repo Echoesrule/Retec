@@ -285,8 +285,8 @@ class RequestTests(unittest.TestCase):
             source.count('@limiter.limit("5 per hour", methods=["POST"])'), 2)
 
     def test_subscribe_has_a_post_rate_limit(self):
-        # This endpoint is @csrf.exempt and can spend a ZeroBounce credit, an
-        # MX lookup and a Brevo call per request, and had no limit at all.
+        # Signups can trigger third-party list sync; the limit is POST-scoped so
+        # ordinary page loads are not counted against it.
         source = Path(retec.__file__).read_text()
         subscribe_block = source.split('def subscribe():')[0].rsplit("@app.route('/subscribe'", 1)[-1]
         self.assertIn('@limiter.limit(', subscribe_block)

@@ -2068,21 +2068,37 @@ def apply_response_headers(response):
     response.headers['Expires'] = '0'
     return response
 
+def _track_pageview_worker(page, ip, user_agent):
+    with app.app_context():
+        try:
+            db.session.add(PageView(
+                page=page, ip_address=ip, user_agent=user_agent))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            return
+        record_visitor_location(ip)
+
+
 @app.before_request
 def track_pageview():
     if 'admin_id' in session:
         return
     if request.path.startswith('/static') or request.path.startswith('/track') or request.path.startswith('/admin') or request.path == '/favicon.ico':
         return
+    page = request.path[:200]
     ip = get_client_ip()
-    view = PageView(
-        page=request.path[:200],
-        ip_address=ip,
-        user_agent=request.headers.get('User-Agent', '')[:500]
-    )
-    db.session.add(view)
-    db.session.commit()
-    record_visitor_location(ip)
+    user_agent = request.headers.get('User-Agent', '')[:500]
+    try:
+        threading.Thread(
+            target=_track_pageview_worker,
+            args=(page, ip, user_agent),
+            name='retec-pageview',
+            daemon=True,
+        ).start()
+    except Exception:
+        # Analytics must never block or break a page render.
+        pass
 
 
 def record_visitor_location(ip):
@@ -2090,10 +2106,9 @@ def record_visitor_location(ip):
 
     Geolocation is an analytics nicety, so it must never be able to add its
     network latency to a page view. The lookup is handed to a short-lived
-    daemon thread, exactly as the Journal scheduler hands off its fetch, and the
-    page view row is already committed by the time this returns. If the thread
-    cannot start, or the third party is slow or down, nothing is lost: the view
-    is still counted and the location is simply never recorded.
+    daemon thread, exactly as the Journal scheduler hands off its fetch. If the
+    thread cannot start, or the third party is slow or down, nothing is lost:
+    the view is still counted and the location is simply never recorded.
     """
     try:
         if not ip or LocationLog.query.filter_by(ip_address=ip).first() is not None:
@@ -2282,10 +2297,9 @@ def contact():
     return render_template('index.html', **context)
 
 @app.route('/subscribe', methods=['POST'])
-# This endpoint has no rate limit at all, and unlike the two forms above it is
-# @csrf.exempt because it is posted by JS from the newsletter bar. Each call can
-# spend a ZeroBounce credit, an SMTP/MX round trip and a Brevo API call, so an
-# unattended loop over one form is a direct route to exhausting all three.
+# POST only, CSRF-protected via the hidden token in the subscribe form. Each
+# signup can touch subscriber storage and optional third-party list sync, so
+# the limit is scoped to POST like the contact and partner forms.
 @limiter.limit("5 per hour", methods=["POST"])
 def subscribe():
     honeypot = request.form.get('website', '')
