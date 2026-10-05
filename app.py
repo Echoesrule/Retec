@@ -3939,8 +3939,8 @@ def admin_blog_fetch():
         flash('Could not start the news fetch. Please try again.', 'error')
         return _redirect_back_to_queue()
         flash('News fetch started. Check Recent fetches on the Journal Sources page for results.',
-            'success')
-        return redirect(url_for('admin_blog', status='new'))
+                    'success')
+        return redirect(url_for('admin_blog'))
 
 
 @app.route('/admin/upload-image', methods=['POST'])
