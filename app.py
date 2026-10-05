@@ -1760,6 +1760,7 @@ def regenerate_article_draft(article):
 # drive it from cron.
 
 _journal_tick_lock = threading.Lock()
+_journal_manual_fetch_lock = threading.Lock()
 
 
 def _journal_due():
@@ -1831,6 +1832,27 @@ def _release_fetch_slot(slot):
             db.session.commit()
         except Exception:
             db.session.rollback()
+
+
+def _run_manual_journal_fetch(source_ids=None):
+    """Run an on-demand fetch outside the request, in its own app context."""
+    with app.app_context():
+        try:
+            summary = run_journal_ingestion(
+                source_ids=source_ids, trigger='manual')
+            if summary['failures']:
+                app.logger.warning(
+                    'JOURNAL manual fetch completed with %d source failures: %s',
+                    len(summary['failures']), '; '.join(summary['failures'][:3]))
+            app.logger.info(
+                'JOURNAL manual fetch complete: %d sources, %d entries, '
+                '%d drafts, %d duplicates', summary['sources'], summary['entries'],
+                summary['created'], summary['duplicates'])
+        except Exception:
+            db.session.rollback()
+            app.logger.exception('JOURNAL manual fetch aborted')
+        finally:
+            _journal_manual_fetch_lock.release()
 
 
 def journal_scheduler_tick():
@@ -3895,16 +3917,24 @@ def admin_blog_delete(id):
 @app.route('/admin/blog/fetch', methods=['POST'])
 @admin_required
 def admin_blog_fetch():
-    """Run the ingestion pipeline now, on demand."""
+    """Start the ingestion pipeline without blocking the web worker."""
     source_ids = clean_optional_int(request.form.get('source_id'))
-    summary = run_journal_ingestion(
-        source_ids=[source_ids] if source_ids else None, trigger='manual')
-    if summary['failures']:
-        flash('%d source(s) failed: %s' % (len(summary['failures']),
-                                           '; '.join(summary['failures'][:3])), 'error')
-    flash('Fetched %d sources: %d entries, %d new drafts (%d AI-written), %d duplicates skipped.'
-          % (summary['sources'], summary['entries'], summary['created'],
-             summary['generated'], summary['duplicates']), 'success')
+    if not _journal_manual_fetch_lock.acquire(blocking=False):
+        flash('A manual news fetch is already running. Check Recent fetches shortly.', 'error')
+        return _redirect_back_to_queue()
+    try:
+        threading.Thread(
+            target=_run_manual_journal_fetch,
+            args=([source_ids] if source_ids else None,),
+            name='retec-journal-manual-fetch', daemon=True,
+        ).start()
+    except RuntimeError:
+        _journal_manual_fetch_lock.release()
+        app.logger.exception('JOURNAL could not start manual fetch thread')
+        flash('Could not start the news fetch. Please try again.', 'error')
+        return _redirect_back_to_queue()
+    flash('News fetch started. Check Recent fetches on the Journal Sources page for results.',
+          'success')
     return _redirect_back_to_queue()
 
 
