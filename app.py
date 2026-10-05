@@ -3605,11 +3605,16 @@ def _admin_article_or_404(id):
 
 
 def _redirect_back_to_queue(fallback_endpoint='admin_blog'):
-    """Return to the queue tab the admin came from, so filters survive an action."""
+    """Return to the same queue page and filters the admin acted from."""
+    page = max(1, request.args.get('page', 1, type=int) or 1)
     status = request.args.get('status', '').strip()
-    if status in JOURNAL_STATUS_VALUES:
-        return redirect(url_for(fallback_endpoint, status=status))
-    return redirect(url_for(fallback_endpoint))
+    content_type = request.args.get('type', '').strip()
+    return redirect(url_for(
+        fallback_endpoint,
+        page=page if page > 1 else None,
+        status=status if status in JOURNAL_STATUS_VALUES else None,
+        type=content_type if content_type in JOURNAL_CONTENT_TYPE_VALUES else None,
+    ))
 
 
 def _apply_article_form(article, form, is_new=False):
