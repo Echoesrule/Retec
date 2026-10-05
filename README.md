@@ -18,6 +18,8 @@ Personal portfolio website for RETEC, built with Flask. Features an admin dashbo
 - Fun fact ticker (floating bottom-left)
 - WhatsApp contact button (floating bottom-right)
 - Contact form with spam protection (honeypot + rate limiting)
+- Enquiry tracking: submissions stored and listed at `/admin/enquiries`, exportable as CSV
+- Contact alerts by email with a cumulative enquiry CSV attached (Brevo)
 - SMTP email support
 - CV page
 - Category-based project filtering
@@ -64,6 +66,19 @@ The app runs on `http://localhost:5000`. The first admin account is created only
 | `MAIL_PASSWORD` | SMTP password |
 | `MAIL_FROM` | Sender email address |
 | `MAIL_TO` | Contact form recipient |
+| `BREVO_API_KEY` | Brevo API key for contact alerts |
+| `SMS_NOTIFY_TO` | Unused. SMS alerts were replaced by the CSV-attachment email |
+
+## Enquiries
+
+Every contact form submission is stored in the `enquiry` table and listed at
+`/admin/enquiries`, with the full project message one click away. The same data
+is available as CSV from `/admin/enquiries/export.csv`.
+
+Each new enquiry also emails `MAIL_TO` with a cumulative CSV attached
+(`retec-enquiries-YYYY-MM-DD.csv`) containing every enquiry received so far, so
+the dataset is always recoverable from your inbox. This replaced the previous
+SMS alert; `send_sms_notification()` is kept in `app.py` but is no longer called.
 
 ## SMTP Setup
 

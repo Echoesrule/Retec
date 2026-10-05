@@ -395,7 +395,7 @@
             </div>
             <div class="contact__main" data-motion="reveal">
             <form class="contact__form" method="POST" action="{{ url_for('contact') }}">
-                <input type="hidden" name="csrf_token" value="{{ form.csrf_token._value() if form else '' }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="text" name="website" tabindex="-1" autocomplete="off" class="form__honeypot" aria-hidden="true">
                 <div class="form__row">
                     <div class="form__group">

@@ -4,7 +4,7 @@ from markupsafe import escape
 import click
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, Response, make_response
 from datetime import datetime, timezone, timedelta
-import logging, os, requests, csv, io, re, sys, time, secrets, json, socket, threading
+import logging, os, requests, csv, io, re, sys, time, secrets, json, socket, threading, base64
 from pathlib import Path
 from urllib.parse import urlsplit, urlencode
 from flask_sqlalchemy import SQLAlchemy
@@ -684,6 +684,17 @@ PARTNER_APPLICATION_STATUSES = [
 ]
 PARTNER_APPLICATION_STATUS_VALUES = {value for value, _ in PARTNER_APPLICATION_STATUSES}
 
+class Enquiry(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), default='')
+    business = db.Column(db.String(200), default='')
+    email = db.Column(db.String(255), default='')
+    project_type = db.Column(db.String(100), default='')
+    budget = db.Column(db.String(100), default='')
+    message = db.Column(db.Text, default='')
+    ip_address = db.Column(db.String(45), default='')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 # ===== HELPERS =====
 
 _geo_cache = {}
@@ -948,6 +959,47 @@ def get_github_stats():
     except Exception:
         return None
 
+ENQUIRY_CSV_HEADER = ['Date', 'Name', 'Business', 'Email', 'Project Type', 'Budget', 'IP', 'Message']
+
+def _csv_safe(value):
+    """Flatten a value to one line and neutralise spreadsheet formula injection."""
+    text = '' if value is None else str(value)
+    text = re.sub(r'\s+', ' ', text).strip()
+    if text[:1] in ('=', '+', '-', '@', '\t', '\r'):
+        text = "'" + text
+    return text
+
+def build_enquiries_csv():
+    """Cumulative CSV of every enquiry received so far, oldest first."""
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(ENQUIRY_CSV_HEADER)
+    for e in Enquiry.query.order_by(Enquiry.created_at.asc(), Enquiry.id.asc()).all():
+        writer.writerow([
+            e.created_at.strftime('%Y-%m-%d %H:%M UTC') if e.created_at else '',
+            _csv_safe(e.name),
+            _csv_safe(e.business),
+            _csv_safe(e.email),
+            _csv_safe(e.project_type),
+            _csv_safe(e.budget),
+            _csv_safe(e.ip_address),
+            _csv_safe(e.message),
+        ])
+    output.seek(0)
+    return output.getvalue()
+
+def enquiries_csv_attachment():
+    """Brevo attachment payload for the cumulative enquiry CSV, or None if unavailable."""
+    try:
+        content = build_enquiries_csv()
+    except Exception:
+        app.logger.exception('Enquiry CSV build failed: sending alert without attachment.')
+        return None
+    return {
+        'name': f"retec-enquiries-{datetime.utcnow().strftime('%Y-%m-%d')}.csv",
+        'content': base64.b64encode(content.encode('utf-8')).decode('ascii'),
+    }
+
 def send_email(name, email, business, project_type, budget, message, ip_address=''):
     api_key = app.config['BREVO_API_KEY']
     if not api_key or not app.config['MAIL_FROM'] or not app.config['MAIL_TO']:
@@ -966,16 +1018,20 @@ def send_email(name, email, business, project_type, budget, message, ip_address=
             f"Time: {timestamp}\n\n"
             f"Project Details:\n{message}"
         )
+        payload = {
+            'sender': {'email': app.config['MAIL_FROM']},
+            'to': [{'email': app.config['MAIL_TO']}],
+            'replyTo': {'email': email},
+            'subject': f"Project Inquiry: {(project_type or 'General')[:80]}",
+            'textContent': body,
+        }
+        attachment = enquiries_csv_attachment()
+        if attachment:
+            payload['attachment'] = [attachment]
         resp = requests.post(
             'https://api.brevo.com/v3/smtp/email',
             headers={'api-key': api_key, 'Content-Type': 'application/json'},
-            json={
-                'sender': {'email': app.config['MAIL_FROM']},
-                'to': [{'email': app.config['MAIL_TO']}],
-                'replyTo': {'email': email},
-                'subject': f"Project Inquiry: {(project_type or 'General')[:80]}",
-                'textContent': body,
-            },
+            json=payload,
             timeout=15,
         )
         if resp.ok:
@@ -989,12 +1045,16 @@ def send_email(name, email, business, project_type, budget, message, ip_address=
 def send_sms_notification(name, email, business, project_type, budget, message):
     """SMS the studio when a project inquiry is submitted.
 
+    NOT CALLED. The contact route now sends an email with a cumulative enquiry
+    CSV attached (see `enquiries_csv_attachment`) instead. Retained so SMS can be
+    restored by re-adding a single call in `contact()`. While unused, the
+    SMS_NOTIFY_TO / SMS_SENDER config has no effect.
+
     Uses Brevo transactional SMS (same BREVO_API_KEY as email). Pay-per-SMS
     via Brevo SMS credits; SMS credits must be enabled on the account. Fails
-    soft (logs only) so a failure never blocks the inquiry. Sent on top of the
-    existing Brevo email alert. `sender` is the alphanumeric sender name shown
-    to the recipient (max 11 chars), `recipient` must be in international
-    format with country code, digits only.
+    soft (logs only) so a failure never blocks the inquiry. `sender` is the
+    alphanumeric sender name shown to the recipient (max 11 chars),
+    `recipient` must be in international format with country code, digits only.
     """
     api_key = app.config['BREVO_API_KEY']
     recipient = app.config.get('SMS_NOTIFY_TO', '')
@@ -2272,7 +2332,7 @@ def get_homepage_data():
 
 @app.route('/')
 def home():
-    return render_template('index.html', active='home', **get_homepage_data())
+    return render_template('index.html', active='home', form=ContactForm(), **get_homepage_data())
 
 @app.route('/contact', methods=['GET', 'POST'])
 # POST only. Unscoped, the limit also counted GETs, so the sixth visitor to load
@@ -2284,12 +2344,25 @@ def contact():
     honeypot = request.form.get('website', '')
     if form.validate_on_submit() and not honeypot:
         ip = get_client_ip() or '0.0.0.0'
+        try:
+            db.session.add(Enquiry(
+                name=form.name.data,
+                business=form.business.data or '',
+                email=form.email.data,
+                project_type=form.project_type.data or '',
+                budget=form.budget.data or '',
+                message=form.message.data,
+                ip_address=ip,
+            ))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            app.logger.exception('Failed to store enquiry: %s', form.email.data)
         if send_email(form.name.data, form.email.data, form.business.data, form.project_type.data, form.budget.data, form.message.data, ip):
             flash('Thank you for your project inquiry. We will get back to you soon.', 'success')
         else:
             flash('Your inquiry could not be sent right now. Please email us directly.', 'error')
         save_subscriber(form.email.data, form.name.data, source='contact')
-        send_sms_notification(form.name.data, form.email.data, form.business.data, form.project_type.data, form.budget.data, form.message.data)
         return redirect(url_for('home') + '#contact')
     context = get_homepage_data()
     context['form'] = form
@@ -2994,6 +3067,7 @@ def admin_dashboard():
         Interest.section, db.func.count(Interest.id).label('count')
     ).group_by(Interest.section).order_by(db.desc('count')).limit(10).all()
     subscriber_count = Subscriber.query.count()
+    enquiry_count = Enquiry.query.count()
     countries_count = db.session.query(LocationLog.country).distinct().count()
     import sqlalchemy as sa
     top_locations = db.session.query(
@@ -3006,6 +3080,7 @@ def admin_dashboard():
         blog_count=blog_count, top_pages=top_pages,
         recent_views=recent_views, total_interests=total_interests,
         top_sections=top_sections, subscriber_count=subscriber_count,
+        enquiry_count=enquiry_count,
         countries_count=countries_count, top_locations=top_locations)
 
 # ----- Projects -----
@@ -4014,6 +4089,24 @@ def admin_partner_applications_export():
     output.seek(0)
     return Response(output.getvalue(), mimetype='text/csv',
         headers={'Content-Disposition': 'attachment;filename=partner-applications.csv'})
+
+# ----- Enquiries -----
+
+@app.route('/admin/enquiries')
+@admin_required
+def admin_enquiries():
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+    enquiries = Enquiry.query.order_by(Enquiry.created_at.desc()).paginate(page=page, per_page=per_page)
+    return render_template('admin/enquiries.html', enquiries=enquiries)
+
+@app.route('/admin/enquiries/export.csv')
+@admin_required
+def admin_enquiries_export():
+    csv_data = build_enquiries_csv()
+    filename = f"retec-enquiries-{datetime.utcnow().strftime('%Y-%m-%d')}.csv"
+    return Response(csv_data, mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment;filename={filename}'})
 
 # ----- Subscribers -----
 

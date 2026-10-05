@@ -1,0 +1,85 @@
+{% extends "admin/base.html" %}
+{% block title %}Enquiries{% endblock %}
+{% set active = "enquiries" %}
+{% block content %}
+<div class="admin-page">
+    <div class="admin-page__head">
+        <h1 class="admin-page__title">Enquiries</h1>
+        <a href="{{ url_for('admin_enquiries_export') }}" class="admin-btn admin-btn--secondary">
+            <i class="fa-solid fa-download"></i> Export CSV
+        </a>
+    </div>
+
+    <div class="admin-card">
+        <div class="admin-table-wrap">
+        <table class="admin-table admin-table--cards">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Business</th>
+                    <th>Email</th>
+                    <th>Project Type</th>
+                    <th>Budget</th>
+                    <th>Date</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in enquiries.items %}
+                <tr>
+                    <td class="admin-card__primary" data-label="Name">{{ e.name or '-' }}</td>
+                    <td class="admin-card__label" data-label="Business">{{ e.business or '-' }}</td>
+                    <td class="admin-card__label" data-label="Email"><a href="mailto:{{ e.email }}">{{ e.email }}</a></td>
+                    <td class="admin-card__label" data-label="Project Type">{{ e.project_type or '-' }}</td>
+                    <td class="admin-card__label" data-label="Budget">{{ e.budget or '-' }}</td>
+                    <td class="admin-card__label" data-label="Date">{{ e.created_at|localtime|format_datetime }}</td>
+                    <td class="admin-card__label" data-label="Details">
+                        <button type="button" class="admin-btn admin-btn--sm" data-enquiry-toggle="{{ e.id }}">View</button>
+                    </td>
+                </tr>
+                <tr class="admin-enquiry-detail" id="enquiry-detail-{{ e.id }}" hidden>
+                    <td colspan="7">
+                        <strong>Project details</strong>
+                        <p class="admin-enquiry-detail__message">{{ e.message }}</p>
+                        <span class="admin-enquiry-detail__meta">IP: {{ e.ip_address or 'unknown' }} &middot; Received {{ e.created_at|localtime|format_datetime('%Y-%m-%d %H:%M:%S') }}</span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted)">No enquiries yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    {% if enquiries.pages > 1 %}
+    <div class="admin-pagination">
+        {% if enquiries.has_prev %}
+        <a href="{{ url_for('admin_enquiries', page=enquiries.prev_num) }}" class="admin-btn admin-btn--sm">&laquo; Prev</a>
+        {% endif %}
+        <span class="admin-pagination__info">Page {{ enquiries.page }} of {{ enquiries.pages }}</span>
+        {% if enquiries.has_next %}
+        <a href="{{ url_for('admin_enquiries', page=enquiries.next_num) }}" class="admin-btn admin-btn--sm">Next &raquo;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    document.querySelectorAll('[data-enquiry-toggle]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var row = document.getElementById('enquiry-detail-' + btn.dataset.enquiryToggle);
+            if (!row) return;
+            var opening = row.hasAttribute('hidden');
+            if (opening) { row.removeAttribute('hidden'); } else { row.setAttribute('hidden', ''); }
+            btn.textContent = opening ? 'Hide' : 'View';
+        });
+    });
+})();
+</script>
+{% endblock %}
