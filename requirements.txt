@@ -11,5 +11,6 @@ requests==2.32.3
 gunicorn==22.0.0
 python-dotenv==1.0.0
 psycopg2-binary==2.9.12
+psycopg[binary]>=3.2,<4
 cloudinary>=1.40.0
 
