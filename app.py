@@ -143,7 +143,7 @@ JOURNAL_FETCH_INTERVAL_MINUTES = clean_env_int(os.environ.get('JOURNAL_FETCH_INT
 # Run the fetch off the request thread so no visitor waits on a feed.
 JOURNAL_FETCH_IN_BACKGROUND = os.environ.get('JOURNAL_FETCH_IN_BACKGROUND', '1') not in ('0', 'false', 'False')
 JOURNAL_AI_ENABLED = os.environ.get('JOURNAL_AI_ENABLED', '1') not in ('0', 'false', 'False')
-JOURNAL_MAX_DRAFTS_PER_SOURCE = clean_env_int(os.environ.get('JOURNAL_MAX_DRAFTS_PER_SOURCE'), 8)
+JOURNAL_MAX_DRAFTS_PER_SOURCE = clean_env_int(os.environ.get('JOURNAL_MAX_DRAFTS_PER_SOURCE'), 5)
 JOURNAL_PUBLISHER = {
     'name': 'RETEC',
     'url': 'https://retec.dev',
@@ -3938,9 +3938,9 @@ def admin_blog_fetch():
         app.logger.exception('JOURNAL could not start manual fetch thread')
         flash('Could not start the news fetch. Please try again.', 'error')
         return _redirect_back_to_queue()
-    flash('News fetch started. Check Recent fetches on the Journal Sources page for results.',
-          'success')
-    return _redirect_back_to_queue()
+        flash('News fetch started. Check Recent fetches on the Journal Sources page for results.',
+            'success')
+        return redirect(url_for('admin_blog', status='new'))
 
 
 @app.route('/admin/upload-image', methods=['POST'])
