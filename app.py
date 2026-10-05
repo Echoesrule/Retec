@@ -1,7 +1,12 @@
+from concurrent.futures import ThreadPoolExecutor
+from markupsafe import escape
+
+import click
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, Response, make_response
 from datetime import datetime, timezone, timedelta
-import os, requests, csv, io, re, time, secrets, json, socket, threading
+import logging, os, requests, csv, io, re, sys, time, secrets, json, socket, threading
 from pathlib import Path
+from urllib.parse import urlsplit, urlencode
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_wtf.csrf import CSRFProtect
@@ -22,12 +27,17 @@ import cloudinary.uploader
 load_dotenv()
 
 
-def clean_env_int(value, default):
+def clean_env_int(value, default, low=None, high=None):
     """Environment integer with a fallback, so a typo cannot crash boot."""
     try:
-        return int(str(value).strip())
+        parsed = int(str(value).strip())
     except (TypeError, ValueError):
-        return default
+        parsed = default
+    if low is not None and parsed < low:
+        return low
+    if high is not None and parsed > high:
+        return high
+    return parsed
 
 # Fail fast, before Flask, SQLAlchemy or any model exists, if we have been
 # pointed at a remote database by accident. See db_guard.py for why this is
@@ -42,6 +52,39 @@ _is_production = (
     or os.environ.get('RENDER', '').lower() in ('1', 'true')
     or os.environ.get('VERCEL') == '1'
 )
+
+
+def configure_logging(application, production):
+    """Make sure ``app.logger`` actually emits at INFO in production.
+
+    Flask installs a WARNING-level handler on the application logger when
+    ``app.debug`` is false, so without this every ``app.logger.info(...)`` in
+    the Journal pipeline, the Brevo calls and the admin actions was silently
+    discarded once deployed. Handlers attached here go to stderr, which is where
+    gunicorn collects worker output, so nothing depends on a log file existing.
+    """
+    level = logging.INFO if not production else os.environ.get(
+        'LOG_LEVEL', 'INFO').upper()
+    resolved = getattr(logging, str(level).upper(), None)
+    if not isinstance(resolved, int):
+        resolved = logging.INFO
+    root = logging.getLogger('retec')
+    root.setLevel(resolved)
+    root.propagate = False
+    if not any(getattr(h, '_retec_handler', False) for h in root.handlers):
+        handler = logging.StreamHandler(sys.stderr)
+        handler.setFormatter(logging.Formatter(
+            '%(asctime)s %(levelname)s [%(name)s] %(message)s'))
+        handler._retec_handler = True
+        root.addHandler(handler)
+    application.logger.setLevel(resolved)
+    # Werkzeug's request log is off by default; the limiter and our own
+    # after_request work are what matter, and duplicate access logs from a
+    # reverse proxy in front of gunicorn are pure noise.
+    logging.getLogger('werkzeug').setLevel(logging.WARNING)
+
+
+configure_logging(app, _is_production)
 _secret_key = os.environ.get('SECRET_KEY')
 if not _secret_key:
     if _is_production:
@@ -54,7 +97,12 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = os.environ.get(
     'SESSION_COOKIE_SECURE', 'true' if _is_production else 'false'
 ).lower() in ('1', 'true', 'yes')
-app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+# Static files are revalidated on every navigation when this is 0, which costs a
+# round trip per asset per page load (~20 assets on the homepage). The real
+# cache-busting is the `?v=` stamp in the templates, so an hour is a safe floor
+# for everything that is not explicitly versioned.
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = clean_env_int(
+    os.environ.get('STATIC_MAX_AGE_SECONDS'), 3600)
 _db_url = os.environ.get('DATABASE_URL', 'sqlite:///portfolio.db')
 if _db_url and _db_url.startswith('postgres://'):
     _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
@@ -103,9 +151,18 @@ JOURNAL_PUBLISHER = {
 _cloudinary_url = app.config['CLOUDINARY_URL']
 if _cloudinary_url:
     cloudinary.config(cloudinary_url=_cloudinary_url)
-    print(f'[STARTUP] Cloudinary configured: {_cloudinary_url[:40]}...')
+    # Log the account/cloud name only. CLOUDINARY_URL embeds the API secret as
+    # its password component, so logging any prefix of the URL put a working
+    # credential into Render's log stream on every boot. Never log this value.
+    _cloud_name = ''
+    try:
+        _cred = urlsplit(_cloudinary_url).netloc
+        _cloud_name = _cred.rpartition(':')[0].partition('@')[0]
+    except Exception:
+        pass
+    app.logger.info('STARTUP Cloudinary configured for cloud %s', _cloud_name or '(unknown)')
 else:
-    print('[STARTUP] CLOUDINARY_URL not set, using local file storage')
+    app.logger.info('STARTUP CLOUDINARY_URL not set, using local file storage')
 
 csrf = CSRFProtect(app)
 _rate_limit_storage_uri = os.environ.get('RATELIMIT_STORAGE_URI', 'memory://').strip() or 'memory://'
@@ -168,6 +225,41 @@ def _human_date_filter(value, fmt='%B %d, %Y'):
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'mp4', 'webm', 'ogg'}
 VIDEO_EXTENSIONS = {'mp4', 'webm', 'ogg'}
+# Sniffing targets for uploads. An SVG declares its own type in the XML header,
+# so without an explicit entry it would be served as text/plain and some older
+# browsers would download it instead of rendering it.
+UPLOAD_CONTENT_TYPES = {
+    'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+    'gif': 'image/gif', 'webp': 'image/webp', 'svg': 'image/svg+xml',
+    'mp4': 'video/mp4', 'webm': 'video/webm', 'ogg': 'video/ogg',
+}
+# Scripts and event handlers that make an SVG self-executing. See
+# upload_image for why a .svg under /static/uploads/ is a live risk.
+_SVG_ACTIVE_RE = re.compile(
+    r'<\s*script|\son[a-z]+\s*=|javascript:|<\s*(foreignObject|iframe|embed|object)'
+    r'|<\s*handler\b|data:text/html',
+    re.IGNORECASE)
+
+
+def sanitize_svg(raw):
+    """Reject an uploaded SVG that can execute, or return ``None``.
+
+    An SVG is an XML document that can carry <script>, on* handlers and
+    javascript: URLs. Any of those opened directly from RETEC's own origin
+    runs with that origin's privileges, including access to the admin session
+    cookie -- the file is only ever supposed to be an inert picture. Rather than
+    try to strip the dangerous parts and hope the result still renders, an SVG
+    that contains any of them is refused outright; there is no legitimate reason
+    for an uploaded logo or icon to contain a script.
+    """
+    text = raw.decode('utf-8', 'replace')
+    if _SVG_ACTIVE_RE.search(text):
+        return None
+    # A DOCTYPE with entity declarations is how XXE/billion-laughs payloads get
+    # in, and this document never needs one.
+    if re.search(r'<!DOCTYPE', text, re.IGNORECASE):
+        return None
+    return text
 
 # ===== MODELS =====
 
@@ -513,6 +605,24 @@ def clean_optional_int(value):
     except (TypeError, ValueError):
         return None
 
+def form_int(value, default=0, low=None, high=None):
+    """Coerce a submitted integer field, or fall back.
+
+    `sort_order` was read with a bare `int(request.form.get(...))`, so typing a
+    letter into the field produced an unhandled ValueError and a 500 rather than
+    the validation message the form already shows for every other field. The
+    optional bounds clamp an out-of-range number instead of trusting the browser.
+    """
+    try:
+        parsed = int(str(value).strip())
+    except (TypeError, ValueError):
+        return default
+    if low is not None and parsed < low:
+        return low
+    if high is not None and parsed > high:
+        return high
+    return parsed
+
 def clean_optional_date(value):
     if not value:
         return None
@@ -577,30 +687,84 @@ PARTNER_APPLICATION_STATUS_VALUES = {value for value, _ in PARTNER_APPLICATION_S
 # ===== HELPERS =====
 
 _geo_cache = {}
+_GEO_CACHE_MAX = 5000
+
 
 def get_client_ip():
     return request.remote_addr
+
+
+def _geo_cache_put(ip, value):
+    """Insert into the geo cache, evicting the oldest key once it is full.
+
+    This dict used to grow for the lifetime of the worker, keyed by IP, with no
+    upper bound. On a long-lived process that is an unbounded memory leak driven
+    by hostile traffic, since every distinct address gets its own entry.
+    """
+    if len(_geo_cache) >= _GEO_CACHE_MAX:
+        # dicts preserve insertion order, so the first key is the oldest.
+        _geo_cache.pop(next(iter(_geo_cache)), None)
+    _geo_cache[ip] = value
+
 
 def lookup_location(ip):
     if not ip or ip in ('127.0.0.1', '::1', 'localhost'):
         return None
     if ip in _geo_cache:
         return _geo_cache[ip]
+    result = None
     try:
-        r = requests.get(f'http://ip-api.com/json/{ip}?fields=country,city,query', timeout=3)
+        # https, not http: this is analytics-only data, so there is no reason to
+        # hand a third party a plaintext request and to trust the reply.
+        r = requests.get(f'https://ip-api.com/json/{ip}?fields=status,country,city,query', timeout=2)
         if r.status_code == 200:
             data = r.json()
-            if data.get('country'):
+            # `fail`/`private` come back HTTP 200 with status set and no country.
+            if data.get('status') == 'success' and data.get('country'):
                 result = {'country': data['country'], 'city': data.get('city', '')}
-                _geo_cache[ip] = result
-                return result
     except Exception:
+        # Geolocation is decorative; never let it affect the caller.
         pass
-    _geo_cache[ip] = None
-    return None
+    # Failures are cached too, so a slow third party costs one timeout per IP
+    # rather than one per request.
+    _geo_cache_put(ip, result)
+    return result
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def _csv_cell(value):
+    """Neutralise spreadsheet formula injection in an exported CSV cell.
+
+    Excel, LibreOffice and Google Sheets all treat a cell whose first character
+    is `=`, `+`, `-` or `@` as a formula to evaluate. Every export here contains
+    fields that are filled in by an unauthenticated visitor -- partner
+    applications and subscribers in particular -- so an attacker who submits a
+    name of `=cmd|'/c calc'!A1` gets that string written into the file an admin
+    later opens, and it executes with the admin's privileges rather than the
+    attacker's. Prefixing with an apostrophe is the standard mitigation: the
+    cell still reads as the original text, and spreadsheets treat it as a
+    literal.
+    """
+    if value is None:
+        return ''
+    if isinstance(value, (datetime,)):
+        return value
+    if isinstance(value, (int, float, bool)):
+        return value
+    text = str(value)
+    if text[:1] in ('=', '+', '-', '@', '\t', '\r'):
+        return "'" + text
+    return text
+
+
+def _csv_writer(output):
+    # QUOTE_ALL so no submitted value can break out of its column by containing
+    # a comma, quote or newline. Note that this alone is *not* the fix for
+    # formula injection -- see _csv_cell.
+    return csv.writer(output, quoting=csv.QUOTE_ALL)
+
 
 def upload_image(file):
     if not file or not file.filename:
@@ -609,7 +773,27 @@ def upload_image(file):
         return ''
     filename = secure_filename(f"{datetime.now().timestamp()}_{file.filename}")
     saved_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(saved_path)
+
+    if filename.rsplit('.', 1)[-1].lower() == 'svg':
+        # Check the bytes, not the extension: `logo.svg` is a text file, and
+        # anything it contains is what a browser will execute if it is opened.
+        # Rejecting here is the only point before the file is already live on
+        # disk and reachable at /static/uploads/.
+        try:
+            with file.stream as stream:
+                raw = stream.read(1024 * 512)
+        except Exception:
+            return ''
+        cleaned = sanitize_svg(raw)
+        if cleaned is None:
+            app.logger.warning('UPLOAD refused svg with active content: %s',
+                               file.filename)
+            return ''
+        with open(saved_path, 'w', encoding='utf-8') as handle:
+            handle.write(cleaned)
+    else:
+        file.save(saved_path)
+
     if _cloudinary_url:
         prev_timeout = socket.getdefaulttimeout()
         socket.setdefaulttimeout(30)
@@ -619,14 +803,15 @@ def upload_image(file):
             if ext in VIDEO_EXTENSIONS:
                 params['resource_type'] = 'video'
             result = cloudinary.uploader.upload(saved_path, **params)
-            print(f'[UPLOAD] Cloudinary success: {result["secure_url"][:60]}...')
+            app.logger.info('UPLOAD Cloudinary success for %s', filename)
             return result['secure_url']
-        except Exception as e:
-            print(f'[UPLOAD] Cloudinary failed for {filename}: {e}')
+        except Exception as exc:
+            app.logger.warning('UPLOAD Cloudinary failed for %s: %s: %s',
+                               filename, type(exc).__name__, exc)
         finally:
             socket.setdefaulttimeout(prev_timeout)
     else:
-        print(f'[UPLOAD] No CLOUDINARY_URL set, saving locally: {filename}')
+        app.logger.info('UPLOAD no CLOUDINARY_URL set, saving locally: %s', filename)
     return filename
 
 def get_image_url(image_filename):
@@ -653,13 +838,52 @@ def delete_image(image_filename):
         os.remove(path)
 
 def admin_required(f):
+    """Gate a route on a live admin account.
+
+    The presence of `admin_id` in the signed session cookie was the whole
+    check, so an admin who was deleted, or had their password changed by
+    someone else, stayed fully authorised until the cookie expired. The session
+    cookie has no server-side lifetime, which means up to a year by default. The
+    user row is therefore re-read on every admin request: that is one indexed
+    primary-key lookup, and it is what makes deleting an admin account actually
+    revoke access.
+
+    Admin JSON endpoints answer 401 with JSON. They previously answered 302 to
+    the login page, so a fetch in the browser's console got HTML where it
+    expected an object and died on a parse error instead of reporting 401.
+    """
     @wraps(f)
     def decorated(*args, **kwargs):
         if 'admin_id' not in session:
+            if _wants_json():
+                return jsonify({'error': 'Authentication required'}), 401
             flash('Please log in first.', 'error')
             return redirect(url_for('admin_login'))
+        try:
+            user = db.session.get(User, session['admin_id'])
+        except Exception:
+            db.session.rollback()
+            user = None
+        if user is None:
+            session.pop('admin_id', None)
+            session.pop('admin_username', None)
+            app.logger.info('ADMIN rejected stale session for id=%s', session.get('admin_id'))
+            if _wants_json():
+                return jsonify({'error': 'Authentication required'}), 401
+            flash('Your session is no longer valid. Please log in again.', 'error')
+            return redirect(url_for('admin_login'))
+        session['admin_username'] = user.username
         return f(*args, **kwargs)
     return decorated
+
+
+def _wants_json():
+    """True when the caller is an admin API client rather than a browser page."""
+    return (
+        request.path.startswith('/admin/api/')
+        or request.accept_mimetypes.best_match(['application/json', 'text/html'])
+           == 'application/json'
+    )
 
 def _get_setting(key, default=None):
     s = SiteSetting.query.filter_by(key=key).first()
@@ -889,28 +1113,57 @@ def send_verification_code(email, code):
         return False
 
 def send_broadcast(subject, html_content, test_email=None):
+    """Send a broadcast through Brevo's transactional API.
+
+    This runs inside an admin request, one synchronous HTTP POST per subscriber
+    with a 15s timeout each. Against a list of a few hundred, that is several
+    minutes of work in a request thread -- past Render's 30s request timeout,
+    which means gunicorn kills the worker mid-send and the list is delivered
+    part-way with no record of where it stopped.
+
+    Two changes bound that. Recipients go out in parallel with a thread pool
+    rather than one after another, and the whole thing stops at a wall-clock
+    budget (BREVO_BROADCAST_BUDGET_SECONDS, 25s by default, deliberately under
+    the platform request limit) so the worker is always released cleanly.
+    Whatever was not attempted is reported back explicitly rather than silently
+    dropped, so the admin knows to send the remainder.
+    """
     api_key = app.config['BREVO_API_KEY']
     broadcast_from = app.config.get('MAIL_FROM', 'contact.retec@gmail.com')
     if not api_key:
         return False, "BREVO_API_KEY not configured."
 
-    targets = []
     if test_email:
-        targets = [{'email': test_email, 'name': 'Test'}]
+        # Validate the test recipient rather than forwarding whatever was typed
+        # into the form straight to the API.
+        candidate = str(test_email).strip().lower()
+        if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]{2,}$', candidate):
+            return False, "That test email address is not valid."
+        targets = [{'email': candidate, 'name': 'Test'}]
     else:
         targets = Subscriber.query.filter_by(active=True).all()
         if not targets:
             return False, "No active subscribers."
 
-    sent = 0
-    failed = 0
-    for sub in targets:
+    budget = clean_env_int(os.environ.get('BREVO_BROADCAST_BUDGET_SECONDS'), 25, low=5, high=120)
+    deadline = time.monotonic() + budget
+    totals = {'sent': 0, 'failed': 0, 'skipped': 0}
+    lock = threading.Lock()
+
+    def deliver(target):
+        email = target['email'] if isinstance(target, dict) else target.email
+        name = ((target.get('name', '') if isinstance(target, dict) else (target.name or '')) or '')
+        if time.monotonic() >= deadline:
+            with lock:
+                totals['skipped'] += 1
+            return
         try:
-            email = sub.email if hasattr(sub, 'email') else sub['email']
-            name = (sub.name or '') if hasattr(sub, 'name') else sub.get('name', '')
-            greeting = f"Hi {name or 'there'},"
+            greeting = "Hi %s," % (name or 'there')
             unsub = url_for('unsubscribe', email=email, _external=True)
-            html = render_template('email/broadcast.html', content=f"<p>{greeting}</p>{html_content}", unsubscribe_url=unsub)
+            html = render_template(
+                'email/broadcast.html',
+                content="<p>%s</p>%s" % (escape(greeting), html_content),
+                unsubscribe_url=unsub)
 
             resp = requests.post(
                 'https://api.brevo.com/v3/smtp/email',
@@ -922,17 +1175,34 @@ def send_broadcast(subject, html_content, test_email=None):
                     'htmlContent': html,
                     'textContent': f"View this email in a browser that supports HTML.\n\nSubject: {subject}",
                 },
-                timeout=15,
+                timeout=10,
             )
-            if resp.ok:
-                sent += 1
-            else:
-                app.logger.error('Brevo broadcast error %s to %s: %s', resp.status_code, email, resp.text)
-                failed += 1
-        except Exception as exc:
-            app.logger.exception('Broadcast email failed to %s', email if 'email' in dir() else 'unknown')
-            failed += 1
-    return True, f"Sent: {sent}, Failed: {failed}"
+            with lock:
+                if resp.ok:
+                    totals['sent'] += 1
+                else:
+                    totals['failed'] += 1
+                    app.logger.error('Brevo broadcast error %s to %s: %s',
+                                     resp.status_code, email, resp.text)
+        except Exception:
+            with lock:
+                totals['failed'] += 1
+            app.logger.exception('Broadcast email failed to %s', email)
+
+    workers = clean_env_int(os.environ.get('BREVO_BROADCAST_WORKERS'), 8, low=1, high=32)
+    with ThreadPoolExecutor(max_workers=workers,
+                            thread_name_prefix='retec-broadcast') as pool:
+        # Submit everything, but each task re-checks the deadline before doing
+        # any network work, so queued recipients are skipped rather than started
+        # and abandoned when the budget runs out.
+        list(pool.map(deliver, targets))
+
+    summary = "Sent: %d, Failed: %d" % (totals['sent'], totals['failed'])
+    if totals['skipped']:
+        summary += ", Not sent (time limit): %d" % totals['skipped']
+        app.logger.warning('Broadcast stopped at the %ds budget with %d recipient(s) '
+                           'unsent', budget, totals['skipped'])
+    return True, summary
 
 @app.route('/unsubscribe')
 def unsubscribe():
@@ -1279,7 +1549,7 @@ def _fetch_one_source(source, trigger='schedule', ai_editor=None,
         source.last_error = run.error
         source.consecutive_failures = (source.consecutive_failures or 0) + 1
         db.session.commit()
-        print('[JOURNAL] source %r failed: %s' % (source.name, run.error))
+        app.logger.warning('JOURNAL source %r failed: %s', source.name, run.error)
         return run
     except Exception as exc:  # unexpected: still must not kill the pipeline
         run.ok = False
@@ -1289,7 +1559,7 @@ def _fetch_one_source(source, trigger='schedule', ai_editor=None,
         source.last_error = run.error
         source.consecutive_failures = (source.consecutive_failures or 0) + 1
         db.session.commit()
-        print('[JOURNAL] source %r raised %s: %s' % (source.name, type(exc).__name__, exc))
+        app.logger.exception('JOURNAL source %r raised', source.name)
         return run
 
     for item in items:
@@ -1307,8 +1577,8 @@ def _fetch_one_source(source, trigger='schedule', ai_editor=None,
             # Roll back just this item so a bad entry cannot poison the rest.
             db.session.rollback()
             duplicates += 1
-            print('[JOURNAL] skipping entry from %r: %s: %s'
-                  % (source.name, type(exc).__name__, exc))
+            app.logger.warning('JOURNAL skipping entry from %r: %s: %s',
+                               source.name, type(exc).__name__, exc)
 
     source.last_status = 'ok'
     source.last_error = ''
@@ -1321,8 +1591,8 @@ def _fetch_one_source(source, trigger='schedule', ai_editor=None,
     run.drafts_generated = generated
     run.finished_at = datetime.utcnow()
     db.session.commit()
-    print('[JOURNAL] %s: %d entries, %d drafts, %d duplicates, %d AI-written'
-          % (source.name, run.entries_seen, created, duplicates, generated))
+    app.logger.info('JOURNAL %s: %d entries, %d drafts, %d duplicates, %d AI-written',
+                    source.name, run.entries_seen, created, duplicates, generated)
     return run
 
 
@@ -1434,11 +1704,15 @@ def _journal_due():
     if slot is None:
         return None
     try:
-        # Nothing to fetch: do not claim the slot, or the interval is burned on
-        # an empty pass and the log fills with meaningless runs.
-        if not NewsSource.query.filter_by(is_active=True).first():
-            return None
+        # Slot first, on purpose. This runs on the before_request path of every
+        # uncached page view for anonymous visitors, and this was the only thing
+        # keeping it to a query. Ordering it the other way round meant the
+        # source check ran first, so every visit paid two round trips to find
+        # out that no fetch was due. The source check is the cheaper thing to
+        # skip when the slot has already been claimed.
         if NewsFetchRun.query.filter_by(slot=slot).first() is not None:
+            return None
+        if not NewsSource.query.filter_by(is_active=True).first():
             return None
     except Exception:
         db.session.rollback()
@@ -1466,7 +1740,7 @@ def _run_scheduled_fetch(slot):
             summary = run_journal_ingestion(trigger='schedule')
         except Exception as exc:
             db.session.rollback()
-            print('[JOURNAL] scheduled fetch aborted: %s: %s' % (type(exc).__name__, exc))
+            app.logger.warning('JOURNAL scheduled fetch aborted: %s: %s', type(exc).__name__, exc)
             _release_fetch_slot(slot)
             return
         run.finished_at = datetime.utcnow()
@@ -1507,7 +1781,7 @@ def journal_scheduler_tick():
         else:
             _run_scheduled_fetch(slot)
     except Exception as exc:
-        print('[JOURNAL] scheduler tick failed: %s: %s' % (type(exc).__name__, exc))
+        app.logger.warning('JOURNAL scheduler tick failed: %s: %s', type(exc).__name__, exc)
         try:
             db.session.rollback()
         except Exception:
@@ -1623,14 +1897,35 @@ def inject_globals():
         ])).all()
     }
     try:
-        meta_url = request.url
-        meta_image = url_for('static', filename='uploads/default-og.png', _external=True)
+        # request.url carries the query string, so /blog?page=2 and
+        # /blog?page=2&category=Foo each declared themselves canonical. Search
+        # engines read that as several URLs competing for the same content and
+        # pick one arbitrarily. request.base_url is the same URL with the query
+        # and fragment stripped, so only parameters that select a genuinely
+        # different view are added back.
+        meta_url = request.base_url
+        keep = {}
+        if request.path.rstrip('/') == '/blog':
+            # Empty values and page=1 describe the same view as the bare URL, so
+            # they are dropped rather than echoed back into the canonical.
+            content_type = request.args.get('type', '').strip()
+            category = request.args.get('category', '').strip()
+            page = request.args.get('page', '').strip()
+            if content_type:
+                keep['type'] = content_type
+            if category:
+                keep['category'] = category
+            if page and page != '1':
+                keep['page'] = page
+        if keep:
+            meta_url = f"{meta_url}?{urlencode(keep)}"
+        meta_image = url_for('static', filename='images/og-default.png', _external=True)
     except RuntimeError:
         meta_url = '/'
         meta_image = ''
     return {
         'year': datetime.now().year,
-        'css_version': int(datetime.now().timestamp()),
+        'css_version': ASSET_VERSION,
         'fun_facts': fun_facts,
         'fun_fact': fun_facts[0].text if fun_facts else None,
         'meta_title': 'Retec-Biz Yako.Tech Yetu',
@@ -1644,18 +1939,130 @@ def inject_globals():
         'hero_poster_url': get_image_url(settings['hero_poster']) if 'hero_poster' in settings else url_for('static', filename='images/hero-bg.svg'),
         'hero_quote_interval': settings.get('hero_quote_interval', '6000'),
         'cube_positioner_enabled': settings.get('cube_positioner_enabled') == '1' and 'admin_id' in session,
-        'cube_positions': json.loads(settings.get('cube_positions') or 'null') or None
+        'cube_positions': _load_cube_positions(settings.get('cube_positions'))
     }
+
+
+def _load_cube_positions(raw):
+    """Parse the stored cube-position JSON, treating anything invalid as absent.
+
+    This setting is read on every homepage render. One bad value -- a truncated
+    write, a hand-edited row -- raised out of the context processor and took the
+    whole homepage down with a 500, rather than just losing the cube layout.
+    """
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        app.logger.warning('Ignoring malformed cube_positions setting (%d bytes)', len(raw))
+        return None
+    return data if isinstance(data, list) and data else None
+
+def _asset_version():
+    """A cache-busting stamp for `?v=` on CSS and JS that only changes on deploy.
+
+    This used to be ``int(datetime.now().timestamp())``, which produced a
+    different value on every single render. Every stylesheet and script URL was
+    therefore unique per page view, so none of them could ever come out of the
+    browser cache. Taking the newest mtime under static/css and static/js means
+    the stamp is stable for the life of a deploy and changes exactly when the
+    assets do.
+    """
+    try:
+        newest = 0
+        for folder in ('css', 'js'):
+            root = Path(app.static_folder) / folder
+            if root.is_dir():
+                for entry in root.rglob('*'):
+                    if entry.is_file():
+                        newest = max(newest, entry.stat().st_mtime)
+        return str(int(newest) or 1)
+    except OSError:
+        return '1'
+
+
+ASSET_VERSION = _asset_version()
+
+# Only the hosts RETEC actually loads from are allow-listed. `script-src` needs
+# `'unsafe-inline'` because base.html, index.html and most admin templates carry
+# inline <script> blocks; that part of the policy is therefore advisory rather
+# than enforcing, and it is called out here so nobody mistakes this CSP for XSS
+# protection. What it does enforce is the rest of the attack surface: no plugin
+# objects, no framing by anyone else, no form posts off-origin, and no script,
+# style, font, image or XHR from a host that is not listed here.
+CSP_DIRECTIVES = (
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'self'",
+    "form-action 'self'",
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com",
+    "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com",
+    "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com",
+    # External images are part of the design (Unsplash hero, Simple Icons,
+    # Pinterest avatar) and Journal article covers come from arbitrary feeds, so
+    # https: is required here. Cloudinary delivery is covered by it too.
+    "img-src 'self' data: blob: https:",
+    "media-src 'self' blob: https:",
+    "connect-src 'self'",
+    "manifest-src 'self'",
+    "worker-src 'self' blob:",
+)
+CSP = '; '.join(CSP_DIRECTIVES)
+# Applied on top of the policy when TLS is actually in play, so a stray http://
+# asset or link cannot downgrade a visitor.
+CSP_PRODUCTION = CSP + '; upgrade-insecure-requests'
+
+PERMISSIONS_POLICY = (
+    'accelerometer=(), camera=(), geolocation=(), gyroscope=(), '
+    'magnetometer=(), microphone=(), payment=(), usb=()'
+)
+
+# Uploaded media is user content served from RETEC's own origin. Without this,
+# an uploaded `.svg` opened directly would run its embedded script with access
+# to the session cookie. A CSP delivered with a subresource is ignored by
+# browsers, so this only takes effect when the file is navigated to directly or
+# framed -- which is exactly the case that needs it, and it leaves the same
+# files working as ordinary <img>/<video> sources.
+UPLOADS_CSP = "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox"
+
+
+def _cache_static(response):
+    """Cache policy for /static/, chosen by how the URL is versioned.
+
+    A `?v=` stamp means the URL changes whenever the bytes do, so it can be
+    cached immutably. Everything else (fonts, images, the hero video) keeps a
+    short lifetime so replacing a file is picked up without a redeploy.
+    """
+    if request.path.startswith('/static/uploads/'):
+        response.headers['Content-Security-Policy'] = UPLOADS_CSP
+        response.headers['Cache-Control'] = 'public, max-age=3600'
+    elif 'v=' in request.query_string.decode('latin-1'):
+        response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+    else:
+        response.headers['Cache-Control'] = 'public, max-age=%d' % app.config[
+            'SEND_FILE_MAX_AGE_DEFAULT']
+    return response
+
 
 # ===== AFTER REQUEST =====
 
 @app.after_request
-def no_cache(response):
+def apply_response_headers(response):
     response.headers.setdefault('X-Content-Type-Options', 'nosniff')
     response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
     response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+    response.headers.setdefault('Permissions-Policy', PERMISSIONS_POLICY)
+    response.headers['Content-Security-Policy'] = (
+        CSP_PRODUCTION if _is_production else CSP)
+    if _is_production and request.is_secure:
+        response.headers.setdefault(
+            'Strict-Transport-Security', 'max-age=31536000')
+
     if request.path.startswith('/static/'):
-        return response
+        return _cache_static(response)
+
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
@@ -1669,18 +2076,48 @@ def track_pageview():
         return
     ip = get_client_ip()
     view = PageView(
-        page=request.path,
+        page=request.path[:200],
         ip_address=ip,
         user_agent=request.headers.get('User-Agent', '')[:500]
     )
     db.session.add(view)
     db.session.commit()
-    geo = lookup_location(ip)
-    if geo:
-        existing = LocationLog.query.filter_by(ip_address=ip).first()
-        if not existing:
-            db.session.add(LocationLog(ip_address=ip, country=geo['country'], city=geo['city']))
+    record_visitor_location(ip)
+
+
+def record_visitor_location(ip):
+    """Attribute a visitor to a country/city without holding up the response.
+
+    Geolocation is an analytics nicety, so it must never be able to add its
+    network latency to a page view. The lookup is handed to a short-lived
+    daemon thread, exactly as the Journal scheduler hands off its fetch, and the
+    page view row is already committed by the time this returns. If the thread
+    cannot start, or the third party is slow or down, nothing is lost: the view
+    is still counted and the location is simply never recorded.
+    """
+    try:
+        if not ip or LocationLog.query.filter_by(ip_address=ip).first() is not None:
+            return
+    except Exception:
+        db.session.rollback()
+        return
+    threading.Thread(target=_record_visitor_location_worker, args=(ip,),
+                     name='retec-geo-lookup', daemon=True).start()
+
+
+def _record_visitor_location_worker(ip):
+    with app.app_context():
+        geo = lookup_location(ip)
+        if not geo:
+            return
+        try:
+            if LocationLog.query.filter_by(ip_address=ip).first() is not None:
+                return
+            db.session.add(LocationLog(ip_address=ip, country=geo['country'],
+                                       city=geo['city']))
             db.session.commit()
+        except Exception:
+            db.session.rollback()
 
 @app.before_request
 def journal_scheduler_hook():
@@ -1703,18 +2140,75 @@ def fetch_journal_command():
     requests:  flask fetch-journal
     """
     summary = run_journal_ingestion(trigger='cli')
-    print('sources: %d | entries: %d | drafts: %d (ai: %d) | duplicates: %d'
-          % (summary['sources'], summary['entries'], summary['created'],
-             summary['generated'], summary['duplicates']))
+    # A CLI command's output is the whole point, so this stays on stdout.
+    click.echo('sources: %d | entries: %d | drafts: %d (ai: %d) | duplicates: %d'
+               % (summary['sources'], summary['entries'], summary['created'],
+                  summary['generated'], summary['duplicates']))
     for failure in summary['failures']:
-        print('  FAILED %s' % failure)
-    print('All created articles are drafts awaiting admin review.')
+        click.echo('  FAILED %s' % failure)
+    click.echo('All created articles are drafts awaiting admin review.')
 
 # ===== ERROR HANDLERS =====
 
+def _error_is_json():
+    """True when the client expects JSON, not a rendered page."""
+    return (
+        request.path.startswith('/admin/api/')
+        or request.path.startswith('/track/')
+        or request.accept_mimetypes.best_match(['application/json', 'text/html'])
+           == 'application/json'
+    )
+
+
+def _error_response(message, status):
+    if _error_is_json():
+        return jsonify({'error': message}), status
+    template = '500.html' if status >= 500 else '404.html'
+    try:
+        return render_template(template), status
+    except Exception:
+        return make_response(message, status)
+
+
 @app.errorhandler(404)
 def not_found(e):
+    if _error_is_json():
+        return jsonify({'error': 'Not found'}), 404
     return render_template('404.html'), 404
+
+@app.errorhandler(405)
+def method_not_allowed(e):
+    # A POST to a GET-only route previously produced the default Werkzeug HTML
+    # page. This keeps the site's own styling and stays JSON for API clients.
+    if _error_is_json():
+        return jsonify({'error': 'Method not allowed'}), 405
+    return render_template('404.html'), 405
+
+@app.errorhandler(413)
+def request_too_large(e):
+    # MAX_CONTENT_LENGTH is 16MB. Uploading over it used to surface as a raw
+    # Werkzeug page; the admin forms now show a specific message on 413 too.
+    if _error_is_json():
+        return jsonify({'error': 'File too large (16MB maximum)'}), 413
+    if request.path.startswith('/admin'):
+        flash('That file is over the 16MB limit. Please upload something smaller.', 'error')
+        return redirect(url_for(request.endpoint) if request.endpoint in app.view_functions
+                        else url_for('admin_dashboard'))
+    flash('That file is over the 16MB limit.', 'error')
+    return redirect(url_for('home') + '#contact')
+
+@app.errorhandler(500)
+def internal_error(e):
+    # The exception is logged, never rendered: Werkzeug's default 500 page in
+    # debug mode is where tracebacks and local variables leak out.
+    db.session.rollback()
+    app.logger.exception('Unhandled error on %s %s', request.method, request.path)
+    if _error_is_json():
+        return jsonify({'error': 'Internal server error'}), 500
+    try:
+        return render_template('500.html'), 500
+    except Exception:
+        return make_response('Internal server error', 500)
 
 @app.errorhandler(429)
 def rate_limited(e):
@@ -1723,6 +2217,29 @@ def rate_limited(e):
         return redirect(url_for('admin_login'))
     flash('Too many messages. Please try again later.', 'error')
     return redirect(url_for('home') + '#contact')
+
+
+@app.route('/healthz')
+def healthz():
+    """Liveness/readiness probe.
+
+    Checks that the database actually answers, not just that the process is
+    alive. Render's health check pointed at `/` before, which rendered the whole
+    homepage -- including a GitHub API call on every request -- and returned 200
+    even with the database down.
+    """
+    checks = {'app': 'ok'}
+    status = 200
+    try:
+        db.session.execute(db.text('SELECT 1'))
+        checks['database'] = 'ok'
+    except Exception as exc:
+        db.session.rollback()
+        checks['database'] = 'error'
+        checks['detail'] = type(exc).__name__
+        status = 503
+    return jsonify({'status': 'ok' if status == 200 else 'degraded',
+                    'checks': checks}), status
 
 # ===== PUBLIC ROUTES =====
 
@@ -1743,7 +2260,10 @@ def home():
     return render_template('index.html', active='home', **get_homepage_data())
 
 @app.route('/contact', methods=['GET', 'POST'])
-@limiter.limit("5 per hour")
+# POST only. Unscoped, the limit also counted GETs, so the sixth visitor to load
+# the contact section at all was refused a 429 page -- even though the form was
+# never submitted and no email was ever sent.
+@limiter.limit("5 per hour", methods=["POST"])
 def contact():
     form = ContactForm()
     honeypot = request.form.get('website', '')
@@ -1762,6 +2282,11 @@ def contact():
     return render_template('index.html', **context)
 
 @app.route('/subscribe', methods=['POST'])
+# This endpoint has no rate limit at all, and unlike the two forms above it is
+# @csrf.exempt because it is posted by JS from the newsletter bar. Each call can
+# spend a ZeroBounce credit, an SMTP/MX round trip and a Brevo API call, so an
+# unattended loop over one form is a direct route to exhausting all three.
+@limiter.limit("5 per hour", methods=["POST"])
 def subscribe():
     honeypot = request.form.get('website', '')
     if honeypot:
@@ -1782,7 +2307,7 @@ def subscribe():
     return redirect(url_for('home') + '#contact')
 
 @app.route('/verify-email', methods=['POST'])
-@limiter.limit("10 per minute")
+@limiter.limit("20 per minute", methods=["POST"])
 @csrf.exempt
 def verify_email():
     data = request.get_json(silent=True) or {}
@@ -1815,7 +2340,9 @@ def verify_email():
 # url_for() emits.
 @app.route('/become-a-partner', methods=['GET', 'POST'])
 @app.route('/partner', methods=['GET', 'POST'])
-@limiter.limit("5 per hour")
+# POST only, for the same reason as /contact: counting page loads here locked
+# out ordinary readers of the partner page, not submitters.
+@limiter.limit("5 per hour", methods=["POST"])
 def partner():
     """Become a Partner / collaboration page and application form.
 
@@ -2169,49 +2696,73 @@ def _journal_structured_data(post, canonical, description, image):
 
 # ===== TRACKING ROUTES =====
 
+def _tracking_payload():
+    """Read a tracking beacon body as a small dict of clipped strings.
+
+    `silent=True` means a malformed body yields `None` instead of raising, and
+    the fallback used to then trust whatever `data.get()` returned: sending
+    `{"page": 12345}` put an int into a `String(200)` column, `{"page": {...}}`
+    put a dict there, and both ended as an unhandled exception and a 500 on a
+    fire-and-forget endpoint. Anything that is not a string is replaced, never
+    passed through, and each field is length-capped to its column.
+    """
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return {}
+    return data
+
+
+def _track_value(data, key, default, limit):
+    value = data.get(key, default)
+    if not isinstance(value, str):
+        # Numbers, bools, nulls and nested objects are not meaningful for any of
+        # these fields; fall back to the default rather than coerce.
+        return default
+    value = value.strip()
+    return value[:limit] if value else default
+
+
 @app.route('/track/pageview', methods=['POST'])
 @csrf.exempt
+@limiter.limit("120 per minute", methods=["POST"])
 def track_pageview_ajax():
     if 'admin_id' in session:
         return '', 204
     ip = get_client_ip()
-    data = request.get_json(silent=True) or {}
+    data = _tracking_payload()
     view = PageView(
-        page=data.get('page', '/'),
+        page=_track_value(data, 'page', '/', 200),
         ip_address=ip,
         user_agent=request.headers.get('User-Agent', '')[:500]
     )
     db.session.add(view)
     db.session.commit()
-    geo = lookup_location(ip)
-    if geo:
-        existing = LocationLog.query.filter_by(ip_address=ip).first()
-        if not existing:
-            db.session.add(LocationLog(ip_address=ip, country=geo['country'], city=geo['city']))
-            db.session.commit()
+    record_visitor_location(ip)
     return '', 204
+
 
 @app.route('/track/interest', methods=['POST'])
 @csrf.exempt
+@limiter.limit("120 per minute", methods=["POST"])
 def track_interest():
     if 'admin_id' in session:
         return '', 204
     ip = get_client_ip()
-    data = request.get_json(silent=True) or {}
+    data = _tracking_payload()
     interest = Interest(
-        section=data.get('section', 'unknown'),
-        action=data.get('action', 'view'),
+        section=_track_value(data, 'section', 'unknown', 100),
+        action=_track_value(data, 'action', 'view', 100),
         ip_address=ip
     )
     db.session.add(interest)
     db.session.commit()
-    geo = lookup_location(ip)
-    if geo:
-        existing = LocationLog.query.filter_by(ip_address=ip).first()
-        if not existing:
-            db.session.add(LocationLog(ip_address=ip, country=geo['country'], city=geo['city']))
-            db.session.commit()
+    record_visitor_location(ip)
     return '', 204
+
+# A valid bcrypt hash of a value nobody knows, used to keep the failed-login
+# path the same cost whether or not the username exists. Generated once at
+# import; it is not a credential for anything.
+_DUMMY_HASH = bcrypt.generate_password_hash(secrets.token_urlsafe(32)).decode('utf-8')
 
 # ===== ADMIN ROUTES =====
 
@@ -2222,7 +2773,13 @@ def admin_login():
         username = request.form.get('username')
         password = request.form.get('password')
         user = User.query.filter_by(username=username).first()
-        if user and bcrypt.check_password_hash(user.password_hash, password):
+        # Compare against a real bcrypt hash even when the username does not
+        # exist. Returning early on an unknown user made the "no such user" path
+        # measurably faster than the wrong-password path, which is a timing
+        # oracle for enumerating admin usernames.
+        stored_hash = user.password_hash if user else _DUMMY_HASH
+        password_ok = bcrypt.check_password_hash(stored_hash, password or '')
+        if user and password_ok:
             session.clear()
             session['admin_id'] = user.id
             session['admin_username'] = user.username
@@ -2317,10 +2874,8 @@ def admin_hero_settings():
     hero_quote_interval = SiteSetting.query.filter_by(key='hero_quote_interval').first()
     cube_positioner_enabled = SiteSetting.query.filter_by(key='cube_positioner_enabled').first()
     cube_positions_setting = SiteSetting.query.filter_by(key='cube_positions').first()
-    try:
-        cube_positions = json.loads(cube_positions_setting.value) if cube_positions_setting and cube_positions_setting.value else None
-    except (TypeError, ValueError):
-        cube_positions = None
+    cube_positions = _load_cube_positions(
+        cube_positions_setting.value if cube_positions_setting else None)
     return render_template('admin/hero_settings.html',
         hero_bg_type=hero_bg_type.value if hero_bg_type else 'video',
         hero_video=hero_video.value if hero_video else '',
@@ -2479,7 +3034,7 @@ def admin_project_add():
             featured=bool(request.form.get('featured')),
             visible=bool(request.form.get('visible')),
             status=clean_project_status(request.form.get('status')),
-            sort_order=int(request.form.get('sort_order', 0))
+            sort_order=form_int(request.form.get('sort_order', 0))
         )
         db.session.add(project)
         db.session.commit()
@@ -2513,7 +3068,7 @@ def admin_project_edit(id):
         project.featured = bool(request.form.get('featured'))
         project.visible = bool(request.form.get('visible'))
         project.status = clean_project_status(request.form.get('status'))
-        project.sort_order = int(request.form.get('sort_order', 0))
+        project.sort_order = form_int(request.form.get('sort_order', 0))
         if request.files.get('image') and request.files['image'].filename:
             delete_image(project.image_filename)
             project.image_filename = upload_image(request.files['image'])
@@ -2779,21 +3334,28 @@ def admin_analytics_clear():
         LocationLog.query.delete()
         db.session.commit()
         flash('All analytics data cleared.', 'success')
-    except Exception as e:
+    except Exception as exc:
         db.session.rollback()
-        flash('Error clearing analytics: ' + str(e), 'error')
+        # Log the detail, show a generic message. The old text rendered
+        # str(exc) into the page, so a database failure showed the driver
+        # message and table names to whoever triggered it.
+        app.logger.exception('Failed to clear analytics')
+        flash('Could not clear analytics. Please try again.', 'error')
     return redirect(url_for('admin_analytics'))
 
 @app.route('/admin/analytics/export.csv')
 @admin_required
 def admin_analytics_export():
     output = io.StringIO()
-    writer = csv.writer(output)
+    writer = _csv_writer(output)
     writer.writerow(['Type', 'Page/Section', 'IP', 'User Agent', 'Timestamp'])
     for v in PageView.query.order_by(PageView.timestamp.desc()).limit(5000):
-        writer.writerow(['pageview', v.page, v.ip_address or '', v.user_agent or '', v.timestamp])
+        writer.writerow(['pageview', _csv_cell(v.page), _csv_cell(v.ip_address),
+                         _csv_cell(v.user_agent), _csv_cell(v.timestamp)])
     for i in Interest.query.order_by(Interest.timestamp.desc()).limit(5000):
-        writer.writerow(['interest', f"{i.section}/{i.action}", i.ip_address or '', '', i.timestamp])
+        writer.writerow(['interest', _csv_cell(f"{i.section}/{i.action}"),
+                         _csv_cell(i.ip_address), '',
+                         _csv_cell(i.timestamp)])
     output.seek(0)
     return Response(output.getvalue(), mimetype='text/csv',
         headers={'Content-Disposition': 'attachment;filename=analytics.csv'})
@@ -2814,11 +3376,7 @@ def admin_fun_fact_add():
         if not text:
             flash('Fun fact text is required.', 'error')
             return redirect(url_for('admin_fun_fact_add'))
-        duration = request.form.get('duration_seconds', 6)
-        try:
-            duration = int(duration)
-        except ValueError:
-            duration = 6
+        duration = form_int(request.form.get('duration_seconds', 6), 6, low=1, high=600)
         fact = FunFact(text=text, active=bool(request.form.get('active')), duration_seconds=duration)
         db.session.add(fact)
         db.session.commit()
@@ -2837,11 +3395,7 @@ def admin_fun_fact_edit(id):
             return redirect(url_for('admin_fun_fact_edit', id=id))
         fact.text = text
         fact.active = bool(request.form.get('active'))
-        duration = request.form.get('duration_seconds', 6)
-        try:
-            fact.duration_seconds = int(duration)
-        except ValueError:
-            fact.duration_seconds = 6
+        fact.duration_seconds = form_int(request.form.get('duration_seconds', 6), 6, low=1, high=600)
         db.session.commit()
         flash('Fun fact updated.', 'success')
         return redirect(url_for('admin_fun_facts'))
@@ -2877,7 +3431,7 @@ def admin_testimonial_add():
         testimonial = Testimonial(name=name, role=request.form.get('role', ''),
             text=text, avatar_filename=avatar,
             active=bool(request.form.get('active')),
-            sort_order=int(request.form.get('sort_order', 0)))
+            sort_order=form_int(request.form.get('sort_order', 0)))
         db.session.add(testimonial)
         db.session.commit()
         flash('Testimonial added.', 'success')
@@ -2898,7 +3452,7 @@ def admin_testimonial_edit(id):
         testimonial.role = request.form.get('role', '')
         testimonial.text = text
         testimonial.active = bool(request.form.get('active'))
-        testimonial.sort_order = int(request.form.get('sort_order', 0))
+        testimonial.sort_order = form_int(request.form.get('sort_order', 0))
         if request.files.get('avatar') and request.files['avatar'].filename:
             delete_image(testimonial.avatar_filename)
             testimonial.avatar_filename = upload_image(request.files['avatar'])
@@ -3435,12 +3989,14 @@ def admin_partner_application_delete(id):
 @admin_required
 def admin_partner_applications_export():
     output = io.StringIO()
-    writer = csv.writer(output)
+    writer = _csv_writer(output)
     writer.writerow(['Received', 'Name', 'Email', 'Company', 'Role',
                      'Collaboration Type', 'Portfolio', 'Expertise', 'Status', 'Message'])
     for a in PartnerApplication.query.order_by(PartnerApplication.created_at.desc()).all():
-        writer.writerow([a.created_at, a.name, a.email, a.company, a.role,
-                         a.collaboration_type, a.portfolio, a.expertise, a.status, a.message])
+        writer.writerow([_csv_cell(a.created_at), _csv_cell(a.name), _csv_cell(a.email),
+                         _csv_cell(a.company), _csv_cell(a.role), _csv_cell(a.collaboration_type),
+                         _csv_cell(a.portfolio), _csv_cell(a.expertise), _csv_cell(a.status),
+                         _csv_cell(a.message)])
     output.seek(0)
     return Response(output.getvalue(), mimetype='text/csv',
         headers={'Content-Disposition': 'attachment;filename=partner-applications.csv'})
@@ -3459,10 +4015,12 @@ def admin_subscribers():
 @admin_required
 def admin_subscribers_export():
     output = io.StringIO()
-    writer = csv.writer(output)
+    writer = _csv_writer(output)
     writer.writerow(['Email', 'Name', 'Source', 'Brevo Synced', 'Active', 'Subscribed At'])
     for s in Subscriber.query.order_by(Subscriber.created_at.desc()).all():
-        writer.writerow([s.email, s.name or '', s.source, 'Yes' if s.brevo_synced else 'No', 'Yes' if s.active else 'No', s.created_at])
+        writer.writerow([_csv_cell(s.email), _csv_cell(s.name), _csv_cell(s.source),
+                         'Yes' if s.brevo_synced else 'No',
+                         'Yes' if s.active else 'No', _csv_cell(s.created_at)])
     output.seek(0)
     return Response(output.getvalue(), mimetype='text/csv',
         headers={'Content-Disposition': 'attachment;filename=subscribers.csv'})
@@ -3470,9 +4028,10 @@ def admin_subscribers_export():
 with app.app_context():
     try:
         db.create_all()
-    except Exception as e:
-        print('[STARTUP] Database connection failed:', e)
-        print('[STARTUP] App will run without database. Check if Render DB is sleeping.')
+    except Exception as exc:
+        app.logger.error(
+            'STARTUP database connection failed (%s: %s). The app will run without a '
+            'database; check if the Render DB is sleeping.', type(exc).__name__, exc)
     try:
         import sqlalchemy as sa
         inspector = sa.inspect(db.engine)
@@ -3515,11 +4074,11 @@ with app.app_context():
                 if col not in cols:
                     db.session.execute(sa.text(f'ALTER TABLE {table} ADD COLUMN {col} {col_def}'))
                     db.session.commit()
-                    print(f'Added {col} column to {table} table.')
+                    app.logger.info('Migration: added %s column to %s', col, table)
             except Exception:
                 db.session.rollback()
     except Exception as e:
-        print('Startup note (migration):', e)
+        app.logger.warning('Startup migration note: %s', e)
         db.session.rollback()
     try:
         # Indexes for the Journal's query patterns. create_all() only builds
@@ -3535,11 +4094,34 @@ with app.app_context():
             'CREATE INDEX IF NOT EXISTS ix_blog_post_status_published_at ON blog_post (status, published_at)',
             'CREATE INDEX IF NOT EXISTS ix_blog_post_canonical_url ON blog_post (canonical_url)',
             'CREATE INDEX IF NOT EXISTS ix_blog_post_external_id ON blog_post (external_id)',
+            'CREATE INDEX IF NOT EXISTS ix_blog_post_fetched_at ON blog_post (fetched_at)',
         ]:
             db.session.execute(sa.text(statement))
         db.session.commit()
     except Exception as e:
-        print('Startup note (journal indexes):', e)
+        app.logger.warning('Journal index setup failed: %s', e)
+        db.session.rollback()
+    try:
+        # Analytics indexes. Every admin analytics endpoint groups or filters on
+        # these columns with no index at all, so the admin dashboard ran a full
+        # table scan plus a sort on tables that grow by a row per page view. The
+        # composite (timestamp, page) index serves both the date-bucketed chart
+        # and the "top pages" group-by from one structure.
+        import sqlalchemy as sa
+        for statement in [
+            'CREATE INDEX IF NOT EXISTS ix_page_view_timestamp ON page_view (timestamp)',
+            'CREATE INDEX IF NOT EXISTS ix_page_view_page ON page_view (page)',
+            'CREATE INDEX IF NOT EXISTS ix_page_view_timestamp_page ON page_view (timestamp, page)',
+            'CREATE INDEX IF NOT EXISTS ix_interest_timestamp ON interest (timestamp)',
+            'CREATE INDEX IF NOT EXISTS ix_interest_section ON interest (section)',
+            'CREATE INDEX IF NOT EXISTS ix_interest_timestamp_section ON interest (timestamp, section)',
+            'CREATE INDEX IF NOT EXISTS ix_location_log_ip ON location_log (ip_address)',
+            'CREATE INDEX IF NOT EXISTS ix_location_log_country ON location_log (country)',
+        ]:
+            db.session.execute(sa.text(statement))
+        db.session.commit()
+    except Exception as e:
+        app.logger.warning('Analytics index setup failed: %s', e)
         db.session.rollback()
     try:
         # Backfill: articles that existed before the Journal have a `published`
@@ -3552,9 +4134,10 @@ with app.app_context():
             "UPDATE blog_post SET status = 'draft' WHERE status IS NULL OR status = ''"))
         db.session.commit()
         if updated.rowcount:
-            print('Journal: backfilled %d published article(s).' % updated.rowcount)
+            app.logger.info('Journal: backfilled %d published article(s).',
+                            updated.rowcount)
     except Exception as e:
-        print('Startup note (journal backfill):', e)
+        app.logger.warning('Startup journal backfill note: %s', e)
         db.session.rollback()
     try:
         # Starter sources, written once so the feed list is admin data from
@@ -3566,9 +4149,9 @@ with app.app_context():
                     name=name, feed_url=feed_url, website_url=website_url,
                     category=category, is_active=True))
             db.session.commit()
-            print('Journal: seeded %d starter news sources.' % len(journal.DEFAULT_NEWS_SOURCES))
+            app.logger.info('Journal: seeded %d starter news sources.', len(journal.DEFAULT_NEWS_SOURCES))
     except Exception as e:
-        print('Startup note (journal sources):', e)
+        app.logger.warning('Startup journal source note: %s', e)
         db.session.rollback()
     try:
         if not User.query.first():
@@ -3578,11 +4161,13 @@ with app.app_context():
                 hashed = bcrypt.generate_password_hash(initial_password).decode('utf-8')
                 db.session.add(User(username=initial_username, password_hash=hashed))
                 db.session.commit()
-                print('Initial admin user created from environment configuration.')
+                app.logger.info('Initial admin user created from environment configuration.')
             else:
-                print('No admin user created. Set INITIAL_ADMIN_USERNAME and a 12+ character INITIAL_ADMIN_PASSWORD before first startup.')
+                app.logger.warning(
+                'No admin user created. Set INITIAL_ADMIN_USERNAME and a 12+ character '
+                'INITIAL_ADMIN_PASSWORD before first startup.')
     except Exception as e:
-        print('Startup note (admin bootstrap):', e)
+        app.logger.warning('Startup admin bootstrap note: %s', e)
         db.session.rollback()
 
 if __name__ == '__main__':
