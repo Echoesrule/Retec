@@ -92,6 +92,29 @@ img { max-width: 100%; display: block; }
     outline: none;
     transition: border-color 0.2s ease, background 0.2s ease;
 }
+.admin-login__field input.admin-login__password-input {
+    padding-right: 3rem;
+}
+.admin-login__password-toggle {
+    position: absolute;
+    right: 0.6rem;
+    display: grid;
+    width: 2.25rem;
+    height: 2.25rem;
+    place-items: center;
+    border: 0;
+    background: transparent;
+    color: #777;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+.admin-login__password-toggle:hover {
+    color: #000;
+}
+.admin-login__password-toggle:focus-visible {
+    outline: 2px solid #000;
+    outline-offset: 1px;
+}
 .admin-login__field input::placeholder {
     color: #bbb;
     font-weight: 400;

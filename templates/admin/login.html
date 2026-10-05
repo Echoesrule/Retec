@@ -39,7 +39,10 @@
                 </div>
                 <div class="admin-login__field">
                     <span class="admin-login__field-icon"><i class="fa-solid fa-lock"></i></span>
-                    <input type="password" id="password" name="password" placeholder="Password" required>
+                    <input class="admin-login__password-input" type="password" id="password" name="password" placeholder="Password" required>
+                    <button class="admin-login__password-toggle" type="button" id="passwordToggle" aria-label="Show password" aria-controls="password" aria-pressed="false">
+                        <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                    </button>
                 </div>
                 <button type="submit" class="admin-login__submit">Log In</button>
             </form>
@@ -51,5 +54,21 @@
         </div>
     </div>
     <script src="{{ url_for('static', filename='js/flash-messages.js') }}?v={{ css_version }}"></script>
+    <script>
+        (function() {
+            var password = document.getElementById('password');
+            var toggle = document.getElementById('passwordToggle');
+            var icon = toggle.querySelector('i');
+
+            toggle.addEventListener('click', function() {
+                var isVisible = password.type === 'text';
+                password.type = isVisible ? 'password' : 'text';
+                toggle.setAttribute('aria-label', isVisible ? 'Show password' : 'Hide password');
+                toggle.setAttribute('aria-pressed', String(!isVisible));
+                icon.classList.toggle('fa-eye', isVisible);
+                icon.classList.toggle('fa-eye-slash', !isVisible);
+            });
+        })();
+    </script>
 </body>
 </html>
