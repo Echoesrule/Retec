@@ -116,6 +116,12 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_recycle': 300,
     'pool_timeout': 20,
 }
+if _db_url.startswith('postgresql+psycopg://'):
+    # Transaction poolers can route each transaction to a different backend,
+    # so psycopg's session-level prepared statements must stay disabled.
+    app.config['SQLALCHEMY_ENGINE_OPTIONS']['connect_args'] = {
+        'prepare_threshold': None,
+    }
 app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['MAIL_FROM'] = os.environ.get('MAIL_FROM', 'contact.retec@gmail.com')
@@ -1592,6 +1598,7 @@ def _fetch_one_source(source, trigger='schedule', ai_editor=None,
     Never raises: a broken feed is recorded against the source and the run
     moves on, so one bad URL cannot stop the other fifteen.
     """
+    source_name = source.name
     run = NewsFetchRun(source_id=source.id, trigger=trigger, started_at=datetime.utcnow())
     db.session.add(run)
     source.last_fetched_at = run.started_at
@@ -1609,7 +1616,7 @@ def _fetch_one_source(source, trigger='schedule', ai_editor=None,
         source.last_error = run.error
         source.consecutive_failures = (source.consecutive_failures or 0) + 1
         db.session.commit()
-        app.logger.warning('JOURNAL source %r failed: %s', source.name, run.error)
+        app.logger.warning('JOURNAL source %r failed: %s', source_name, run.error)
         return run
     except Exception as exc:  # unexpected: still must not kill the pipeline
         run.ok = False
@@ -1619,7 +1626,7 @@ def _fetch_one_source(source, trigger='schedule', ai_editor=None,
         source.last_error = run.error
         source.consecutive_failures = (source.consecutive_failures or 0) + 1
         db.session.commit()
-        app.logger.exception('JOURNAL source %r raised', source.name)
+        app.logger.exception('JOURNAL source %r raised', source_name)
         return run
 
     for item in items:
@@ -1638,7 +1645,7 @@ def _fetch_one_source(source, trigger='schedule', ai_editor=None,
             db.session.rollback()
             duplicates += 1
             app.logger.warning('JOURNAL skipping entry from %r: %s: %s',
-                               source.name, type(exc).__name__, exc)
+                               source_name, type(exc).__name__, exc)
 
     source.last_status = 'ok'
     source.last_error = ''
@@ -1652,7 +1659,7 @@ def _fetch_one_source(source, trigger='schedule', ai_editor=None,
     run.finished_at = datetime.utcnow()
     db.session.commit()
     app.logger.info('JOURNAL %s: %d entries, %d drafts, %d duplicates, %d AI-written',
-                    source.name, run.entries_seen, created, duplicates, generated)
+                    source_name, run.entries_seen, created, duplicates, generated)
     return run
 
 
@@ -1676,13 +1683,14 @@ def run_journal_ingestion(source_ids=None, trigger='manual', generate_ai=True):
         'generated': 0, 'failures': [],
     }
     for source in sources:
+        source_name = source.name
         try:
             run = _fetch_one_source(source, trigger=trigger, ai_editor=ai_editor)
         except Exception as exc:
             # Belt and braces: _fetch_one_source already contains its own
             # failures, so reaching here means a database-level problem.
             db.session.rollback()
-            summary['failures'].append('%s: %s' % (source.name, type(exc).__name__))
+            summary['failures'].append('%s: %s' % (source_name, type(exc).__name__))
             continue
         summary['entries'] += run.entries_seen or 0
         summary['created'] += run.drafts_created or 0
