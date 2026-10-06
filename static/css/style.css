@@ -9962,3 +9962,52 @@ body:has(.journal) .header .nav__link--active { color: var(--journal-ink); }
         transition: none;
     }
 }
+
+/* ===== JOURNAL LATEST BATCHES =====
+   /blog renders every story on one page, so the original lead/stacked/grid
+   block is repeated for each batch of five. Separate the blocks instead of
+   letting the next lead card sit flush under the previous grid. */
+
+.journal__batch + .journal__batch {
+    margin-top: 2.4rem;
+    padding-top: 2.4rem;
+    border-top: 1px solid var(--journal-line);
+}
+
+/* ===== JOURNAL GRID-CARD: subdue the bottom widgets =====
+   The two side-by-side cards beneath the lead card reached the same height as
+   the lead story, so the batch read as several equal headlines. The structure
+   stays, but it is scaled down: a short wide banner image, a two-line title, a
+   one-line summary and tighter padding so the lead card clearly reads as the
+   headline of the batch. */
+
+.journal-card--story-grid-card .journal-card__image { aspect-ratio: 5 / 2; }
+.journal-card--story-grid-card h3 {
+    padding: 0.35rem 0.8rem 0.55rem;
+    font-size: clamp(0.78rem, 0.95vw, 0.9rem);
+    font-weight: 600;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+}
+.journal-card--story-grid-card .journal-card__meta { padding: 0.65rem 0 0 0.8rem; }
+.journal-card--story-grid-card .journal-card__date {
+    padding: 0.65rem 0.8rem 0 0;
+    font-size: 0.56rem;
+}
+.journal-card--story-grid-card .journal-card__summary {
+    padding: 0.4rem 0.8rem 0;
+    font-size: 0.64rem;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    overflow: hidden;
+}
+.journal-card--story-grid-card .journal-card__footer {
+    padding: 0.5rem 0.8rem 0.7rem;
+    font-size: 0.58rem;
+}
+.journal-card--story-grid-card .journal-card__link { margin: 0 0.6rem 0 0; }

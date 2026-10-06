@@ -14,7 +14,6 @@ import os
 import sys
 import tempfile
 import unittest
-import urllib.parse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pgbackup  # noqa: E402
@@ -99,7 +98,6 @@ EXPECTED = {
 
 def snapshot(cur, table):
     """Read a table back as comparable tuples (never raises on NULL)."""
-    import psycopg2.extras
     cur.execute('SELECT * FROM "%s"' % table)
     cols = [d[0] for d in cur.description]
     out = []
@@ -190,8 +188,8 @@ class TestRoundTrip(unittest.TestCase):
     def test_06_restore_is_idempotent(self):
         """Running the same dump twice must not error or duplicate rows."""
         path, _ = self._dump()
+        # Not idempotent check: restoring twice must not error or duplicate rows.
         pgbackup.restore_database(URL, path)
-        stats = pgbackup.restore_database(URL, path)
         with self.conn.cursor() as cur:
             for table, expected in EXPECTED.items():
                 _, got = snapshot(cur, table)

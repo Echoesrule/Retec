@@ -83,25 +83,3 @@
     </div>
 </a>
 {%- endmacro %}
-
-{#
-  Pagination. Server-rendered query-string links: filtering is a database
-  query, not a client-side filter over a downloaded array.
-#}
-{% macro pagination(pagination, endpoint='blog') -%}
-{% if pagination and pagination.pages > 1 %}
-<nav class="journal-pagination" aria-label="Journal pages">
-    {% if pagination.has_prev %}
-    <a class="journal-pagination__step" href="{{ url_for(endpoint, page=pagination.prev_num, type=active_content_type or None, category=active_category or None) }}" rel="prev">
-        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Previous
-    </a>
-    {% else %}<span class="journal-pagination__step journal-pagination__step--off" aria-hidden="true"><i class="fa-solid fa-arrow-left"></i> Previous</span>{% endif %}
-    <span class="journal-pagination__info">Page {{ pagination.page }} of {{ pagination.pages }}</span>
-    {% if pagination.has_next %}
-    <a class="journal-pagination__step" href="{{ url_for(endpoint, page=pagination.next_num, type=active_content_type or None, category=active_category or None) }}" rel="next">
-        Next <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-    </a>
-    {% else %}<span class="journal-pagination__step journal-pagination__step--off" aria-hidden="true">Next <i class="fa-solid fa-arrow-right"></i></span>{% endif %}
-</nav>
-{% endif %}
-{%- endmacro %}

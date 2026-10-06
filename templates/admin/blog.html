@@ -123,23 +123,23 @@
                                 <a href="{{ url_for('admin_blog_edit', id=a.id) }}" class="admin-btn admin-btn--sm">Edit</a>
 
                                 {%- if a.status == 'published' %}
-                                <form method="POST" action="{{ url_for('admin_blog_archive', id=a.id, page=pagination.page, status=active_status or None, type=active_content_type or None) }}" style="display:inline">
+                                <form method="POST" action="{{ url_for('admin_blog_archive', id=a.id, status=active_status or None, type=active_content_type or None) }}" style="display:inline">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="admin-btn admin-btn--sm">Archive</button>
                                 </form>
                                 <a href="{{ request.host_url }}blog/{{ a.slug }}" class="admin-btn admin-btn--sm" target="_blank" rel="noopener">Public</a>
                                 {%- else %}
-                                <form method="POST" action="{{ url_for('admin_blog_publish', id=a.id, page=pagination.page, status=active_status or None, type=active_content_type or None) }}" style="display:inline">
+                                <form method="POST" action="{{ url_for('admin_blog_publish', id=a.id, status=active_status or None, type=active_content_type or None) }}" style="display:inline">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="admin-btn admin-btn--sm admin-btn--primary">Approve &amp; Publish</button>
                                 </form>
                                 {%- if a.status != 'rejected' and a.status != 'archived' %}
-                                <form method="POST" action="{{ url_for('admin_blog_reject', id=a.id, page=pagination.page, status=active_status or None, type=active_content_type or None) }}" style="display:inline">
+                                <form method="POST" action="{{ url_for('admin_blog_reject', id=a.id, status=active_status or None, type=active_content_type or None) }}" style="display:inline">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="admin-btn admin-btn--sm">Reject</button>
                                 </form>
                                 {%- endif %}
-                                <form method="POST" action="{{ url_for('admin_blog_delete', id=a.id, page=pagination.page, status=active_status or None, type=active_content_type or None) }}"
+                                <form method="POST" action="{{ url_for('admin_blog_delete', id=a.id, status=active_status or None, type=active_content_type or None) }}"
                                       style="display:inline" onsubmit="return confirm('Delete this draft permanently?')">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="admin-btn admin-btn--sm admin-btn--danger">Delete</button>
@@ -147,7 +147,7 @@
                                 {%- endif %}
                             </div>
                             {%- if a.source_url and a.status not in ('published',) %}
-                            <form method="POST" action="{{ url_for('admin_blog_redraft', id=a.id, page=pagination.page, status=active_status or None, type=active_content_type or None) }}" style="display:inline">
+                            <form method="POST" action="{{ url_for('admin_blog_redraft', id=a.id, status=active_status or None, type=active_content_type or None) }}" style="display:inline">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="admin-btn admin-btn--sm jr-btn--ghost">Regenerate AI draft</button>
                             </form>
@@ -168,17 +168,6 @@
             </table>
         </div>
     </div>
-
-    {%- if pagination and pagination.pages > 1 %}
-    <div class="admin-pagination">
-        {%- if pagination.has_prev %}<a href="{{ url_for('admin_blog', page=pagination.prev_num, status=active_status or None, type=active_content_type or None) }}" class="admin-btn admin-btn--sm">Previous</a>{% endif %}
-        <span class="admin-pagination__info">Page {{ pagination.page }} of {{ pagination.pages }} &middot; {{ pagination.total }} article(s)</span>
-        {%- if ai_ready and scheduler_on %}
-        <span class="admin-pagination__info">Fetching every {{ interval_minutes }} min &middot; AI drafting on</span>
-        {%- endif %}
-        {%- if pagination.has_next %}<a href="{{ url_for('admin_blog', page=pagination.next_num, status=active_status or None, type=active_content_type or None) }}" class="admin-btn admin-btn--sm">Next</a>{% endif %}
-    </div>
-    {%- endif %}
 
     <p class="jr-footnote">
                 Ingestion runs {{ 'every ' ~ interval_minutes ~ ' minutes' if scheduler_on else 'manually only' }} and creates drafts, never publications.

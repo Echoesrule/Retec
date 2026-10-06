@@ -12,7 +12,6 @@ Importing app runs db.create_all() and the startup migration block, so the
 DATABASE_URL above is what keeps this away from the live database.
 """
 
-import io
 import os
 import sys
 import unittest
@@ -258,13 +257,15 @@ class RequestTests(unittest.TestCase):
 
     def test_canonical_url_does_not_duplicate_pages(self):
         import re
+        # The archive renders on one page now: paging parameters no longer name
+        # distinct content, so they must not appear in the canonical.
         html = self.client.get('/blog?page=2&category=Foo').get_data(as_text=True)
         canonical = re.search(r'<link rel="canonical" href="([^"]+)"', html)
         self.assertIsNotNone(canonical)
-        self.assertIn('page=2', canonical.group(1))
         self.assertIn('category=Foo', canonical.group(1))
+        self.assertNotIn('page=', canonical.group(1))
 
-        html = self.client.get('/blog?page=1').get_data(as_text=True)
+        html = self.client.get('/blog?page=2').get_data(as_text=True)
         canonical = re.search(r'<link rel="canonical" href="([^"]+)"', html)
         self.assertIsNotNone(canonical)
         self.assertNotIn('page=', canonical.group(1))

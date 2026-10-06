@@ -1284,7 +1284,6 @@ def unsubscribe():
 @app.route('/admin/broadcast', methods=['GET', 'POST'])
 @admin_required
 def admin_broadcast():
-    result = None
     if request.method == 'POST':
         subject = request.form.get('subject', '').strip()
         content = request.form.get('content', '').strip()
@@ -1996,17 +1995,15 @@ def inject_globals():
         meta_url = request.base_url
         keep = {}
         if request.path.rstrip('/') == '/blog':
-            # Empty values and page=1 describe the same view as the bare URL, so
-            # they are dropped rather than echoed back into the canonical.
+            # Empty values describe the same view as the bare URL, so they are
+            # dropped rather than echoed back into the canonical. `page` is not
+            # kept because the archive no longer paginates.
             content_type = request.args.get('type', '').strip()
             category = request.args.get('category', '').strip()
-            page = request.args.get('page', '').strip()
             if content_type:
                 keep['type'] = content_type
             if category:
                 keep['category'] = category
-            if page and page != '1':
-                keep['page'] = page
         if keep:
             meta_url = f"{meta_url}?{urlencode(keep)}"
         meta_image = url_for('static', filename='images/og-default.png', _external=True)
@@ -2593,7 +2590,6 @@ def security():
 # a reason to break those. `/journal` is a permanent redirect to it so the new
 # name resolves for anyone who types or links it.
 
-JOURNAL_PER_PAGE = 9
 JOURNAL_RELATED_COUNT = 3
 JOURNAL_FEATURED_FALLBACK_WINDOW = 60  # days a featured article stays lead
 
@@ -2673,20 +2669,24 @@ def blog():
     if content_type not in JOURNAL_CONTENT_TYPE_VALUES:
         content_type = ''
     category = request.args.get('category', '').strip()
-    page = max(1, request.args.get('page', 1, type=int))
 
     # The lead article is picked from the unfiltered archive so filtering the
     # grid never produces an empty page with a stranger sitting above it.
     featured = _journal_featured()
     exclude = [featured.id] if featured is not None else []
 
-    query = _journal_article_query(content_type, category)
+    # Every published article in the current view renders on this one page —
+    # there are no pages after it and no page links left to keep alive. The
+    # ordering is "featured first, then latest": manually featured stories lead
+    # and whatever is published after them follows newest-first.
+    posts = _journal_article_query(content_type, category)
     if exclude:
-        query = query.filter(JournalArticle.id.notin_(exclude))
-    pagination = query.order_by(
+        posts = posts.filter(JournalArticle.id.notin_(exclude))
+    posts = posts.order_by(
+        JournalArticle.is_featured.desc().nullslast(),
         JournalArticle.published_at.desc().nullslast(),
         JournalArticle.id.desc(),
-    ).paginate(page=page, per_page=JOURNAL_PER_PAGE, error_out=False)
+    ).all()
 
     meta_title = 'RETEC Journal'
     if content_type:
@@ -2694,8 +2694,8 @@ def blog():
     if category:
         meta_title = '%s — RETEC Journal' % category
     return render_template(
-        'blog.html', active='blog', posts=pagination.items,
-        pagination=pagination, featured_post=featured,
+        'blog.html', active='blog', posts=posts,
+        featured_post=featured,
         categories=_journal_categories(),
         active_content_type=content_type, active_category=category,
         journal_content_types=JOURNAL_CONTENT_TYPES,
@@ -3453,7 +3453,7 @@ def admin_analytics_clear():
         LocationLog.query.delete()
         db.session.commit()
         flash('All analytics data cleared.', 'success')
-    except Exception as exc:
+    except Exception:
         db.session.rollback()
         # Log the detail, show a generic message. The old text rendered
         # str(exc) into the page, so a database failure showed the driver
@@ -3686,7 +3686,6 @@ def admin_blog():
     content_type = request.args.get('type', '').strip()
     if content_type not in JOURNAL_CONTENT_TYPE_VALUES:
         content_type = ''
-    page = max(1, request.args.get('page', 1, type=int))
 
     query = JournalArticle.query
     if status:
@@ -3694,11 +3693,12 @@ def admin_blog():
     if content_type:
         query = query.filter_by(content_type=content_type)
 
-    pagination = query.order_by(
+    articles = query.order_by(
+        JournalArticle.is_featured.desc(),
         JournalArticle.fetched_at.desc().nullslast(),
         JournalArticle.created_at.desc(),
         JournalArticle.id.desc(),
-    ).paginate(page=page, per_page=JOURNAL_ADMIN_PER_PAGE, error_out=False)
+    ).all()
 
     counts = {row[0]: row[1] for row in db.session.query(
         JournalArticle.status, db.func.count(JournalArticle.id)
@@ -3710,7 +3710,7 @@ def admin_blog():
                                              NewsSource.last_error != '').count()
 
     return render_template(
-        'admin/blog.html', articles=pagination.items, pagination=pagination,
+        'admin/blog.html', articles=articles,
         status_counts=counts, active_status=status, active_content_type=content_type,
         journal_content_types=JOURNAL_CONTENT_TYPES,
         journal_statuses=JOURNAL_STATUSES,
