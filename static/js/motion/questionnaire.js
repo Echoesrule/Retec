@@ -49,6 +49,10 @@
             return Math.max(0, Math.min(total - 1, index));
         }
 
+        /* A step counts as "answered" once the visitor has moved past it. The
+           progress bar is driven by this, so it fills as stages are completed. */
+        var answered = steps.map(function () { return false; });
+
         var startKey = form.getAttribute('data-qs-start') || '';
         if (startKey) {
             steps.some(function (step, index) {
@@ -56,10 +60,17 @@
                 return false;
             });
         }
+        for (var a = 0; a < current; a += 1) answered[a] = true;
 
         /* --------------------------------------------------------------- paint */
+        function answeredCount() {
+            var n = 0;
+            answered.forEach(function (done) { if (done) n += 1; });
+            return n;
+        }
+
         function paintProgress() {
-            if (fill) fill.style.width = (((current + 1) / total) * 100) + '%';
+            if (fill) fill.style.width = ((answeredCount() / total) * 100) + '%';
             if (countEl) countEl.textContent = String(current + 1);
             if (titleEl) titleEl.textContent = steps[current].getAttribute('data-qs-title') || '';
             if (prevBtn) prevBtn.disabled = current === 0;
@@ -67,7 +78,7 @@
 
             dots.forEach(function (dot, index) {
                 dot.classList.toggle('is-active', index === current);
-                dot.classList.toggle('is-done', index < current);
+                dot.classList.toggle('is-done', answered[index] && index !== current);
                 dot.setAttribute('aria-current', index === current ? 'step' : 'false');
             });
         }
@@ -76,6 +87,9 @@
             steps.forEach(function (step, i) {
                 var on = i === index;
                 step.classList.toggle('is-active', on);
+                /* Belt and braces: the hidden attribute guarantees one-step-at-a-
+                   time behaviour even if an older stylesheet is still cached. */
+                step.hidden = !on;
                 step.setAttribute('aria-hidden', on ? 'false' : 'true');
             });
         }
@@ -165,9 +179,10 @@
             }
 
             var dir = index > current ? 1 : -1;
+            /* Moving forward counts the stages behind us as answered. */
+            for (var a = 0; a < index; a += 1) answered[a] = true;
 
             if (!canAnimate()) {
-                steps[current].classList.remove('is-active');
                 current = index;
                 activate(current);
                 paintProgress();
@@ -186,9 +201,11 @@
                 ease: motion.ease.standard,
                 onComplete: function () {
                     from.classList.remove('is-active');
+                    from.hidden = true;
                     gsap.set(from, { clearProps: 'opacity,transform' });
 
                     current = index;
+                    target.hidden = false;
                     target.classList.add('is-active');
                     paintProgress();
 
@@ -271,7 +288,11 @@
                 event.preventDefault();
                 if (bad !== current) goTo(bad, true);
                 else { shake(steps[current]); focusStep(); }
+                return;
             }
+            /* Everything passed: show the bar complete while the POST leaves. */
+            answered = answered.map(function () { return true; });
+            if (fill) fill.style.width = '100%';
         });
 
         /* Start on the step carrying the first server-side error, if any. */
