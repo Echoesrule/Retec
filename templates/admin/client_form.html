@@ -1,0 +1,149 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ 'Edit' if client else 'Add' }} Client{% endblock %}
+{% set active = "clients" %}
+{% block content %}
+<div class="admin-page">
+    <a class="cs-back" href="{{ url_for('admin_client_detail', id=client.id) if client else url_for('admin_clients') }}">
+        <i class="fa-solid fa-arrow-left"></i> {{ 'Client record' if client else 'All clients' }}
+    </a>
+    <h1 class="admin-page__title">{{ 'Edit' if client else 'Add' }} Client</h1>
+
+    <form method="POST" class="admin-form admin-card">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="cf-grid">
+            <div class="admin-form__group">
+                <label for="name">Client name *</label>
+                <input type="text" id="name" name="name" maxlength="100" required
+                       value="{{ client.name if client and client.name else '' }}">
+            </div>
+            <div class="admin-form__group">
+                <label for="business">Business / organization</label>
+                <input type="text" id="business" name="business" maxlength="200"
+                       value="{{ client.business if client else '' }}">
+            </div>
+            <div class="admin-form__group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" maxlength="255"
+                       value="{{ client.email if client else '' }}">
+            </div>
+            <div class="admin-form__group">
+                <label for="phone">Phone / WhatsApp</label>
+                <input type="text" id="phone" name="phone" maxlength="50"
+                       value="{{ client.phone if client else '' }}">
+            </div>
+            <div class="admin-form__group">
+                <label for="location">Location</label>
+                <input type="text" id="location" name="location" maxlength="200"
+                       value="{{ client.location if client else '' }}">
+            </div>
+            <div class="admin-form__group">
+                <label for="role">Role / position</label>
+                <input type="text" id="role" name="role" maxlength="150"
+                       value="{{ client.role if client else '' }}">
+            </div>
+            <div class="admin-form__group">
+                <label for="contact_method">Preferred contact method</label>
+                <select id="contact_method" name="contact_method">
+                    <option value="">Not set</option>
+                    {% for value, label in contact_methods %}
+                    <option value="{{ value }}" {% if client and client.contact_method == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="admin-form__group">
+                <label for="status">Status</label>
+                <select id="status" name="status">
+                    {% for value, label in statuses %}
+                    <option value="{{ value }}" {% if client and client.status == value %}selected{% elif not client and value == 'lead' %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="admin-form__group">
+                <label for="source">Source</label>
+                <select id="source" name="source">
+                    {% for value, label in [('questionnaire', 'Discovery questionnaire'), ('enquiry', 'Contact enquiry'), ('referral', 'Referral'), ('manual', 'Added manually'), ('other', 'Other')] %}
+                    <option value="{{ value }}" {% if client and client.source == value %}selected{% elif not client and value == 'manual' %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <h2 class="cf-heading">Project</h2>
+        <div class="cf-grid">
+            <div class="admin-form__group admin-form__group--full">
+                <label for="project_title">Project title</label>
+                <input type="text" id="project_title" name="project_title" maxlength="200"
+                       value="{{ client.project_title if client else '' }}">
+            </div>
+            <div class="admin-form__group admin-form__group--full">
+                <label for="project_summary">Project summary</label>
+                <textarea id="project_summary" name="project_summary" rows="3">{{ client.project_summary if client else '' }}</textarea>
+            </div>
+            <div class="admin-form__group admin-form__group--full">
+                <label for="problem">Problem / what is being solved</label>
+                <textarea id="problem" name="problem" rows="3">{{ client.problem if client else '' }}</textarea>
+            </div>
+            <div class="admin-form__group admin-form__group--full">
+                <label for="requirements">Requirements <span class="cf-hint">one per line</span></label>
+                <textarea id="requirements" name="requirements" rows="4">{% if client %}{{ client.requirements_list|join('\n') }}{% endif %}</textarea>
+            </div>
+            <div class="admin-form__group">
+                <label for="budget_range">Budget range</label>
+                <select id="budget_range" name="budget_range">
+                    {% for value, label in budget_choices %}
+                    <option value="{{ value }}" {% if client and client.budget_range == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="admin-form__group">
+                <label for="desired_launch">Desired launch</label>
+                <input type="date" id="desired_launch" name="desired_launch"
+                       value="{{ client.desired_launch.isoformat() if client and client.desired_launch else '' }}">
+            </div>
+            <div class="admin-form__group admin-form__group--full">
+                <label for="timeline_notes">Timeline notes</label>
+                <textarea id="timeline_notes" name="timeline_notes" rows="2">{{ client.timeline_notes if client else '' }}</textarea>
+            </div>
+        </div>
+
+        <h2 class="cf-heading">Commercial</h2>
+        <div class="cf-grid">
+            <div class="admin-form__group">
+                <label for="package">Package</label>
+                <select id="package" name="package">
+                    {% for value, label in packages %}
+                    <option value="{{ value }}" {% if client and client.package == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="admin-form__group">
+                <label for="fee">Project fee (KSh)</label>
+                <input type="number" id="fee" name="fee" min="0" step="0.01" inputmode="decimal"
+                       value="{{ client.fee if client and client.fee is not none else '' }}">
+            </div>
+            <div class="admin-form__group">
+                <label for="start_date">Start date</label>
+                <input type="date" id="start_date" name="start_date"
+                       value="{{ client.start_date.isoformat() if client and client.start_date else '' }}">
+            </div>
+            <div class="admin-form__group">
+                <label for="expected_delivery">Expected delivery</label>
+                <input type="date" id="expected_delivery" name="expected_delivery"
+                       value="{{ client.expected_delivery.isoformat() if client and client.expected_delivery else '' }}">
+            </div>
+            <div class="admin-form__group admin-form__group--full">
+                <label for="support_period">Support period</label>
+                <input type="text" id="support_period" name="support_period" maxlength="100"
+                       placeholder="e.g. 30 days after handover"
+                       value="{{ client.support_period if client else '' }}">
+            </div>
+        </div>
+
+        <div class="admin-form__actions">
+            <button type="submit" class="admin-btn admin-btn--primary">{{ 'Save changes' if client else 'Create client' }}</button>
+            <a href="{{ url_for('admin_client_detail', id=client.id) if client else url_for('admin_clients') }}" class="admin-btn">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

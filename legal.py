@@ -24,7 +24,7 @@ security mailbox — it is written as an explicit placeholder rather than invent
 
 # Shown on all three pages. Bump when the wording changes; it is the only thing
 # that tells a reader whether what they are reading is current.
-LAST_UPDATED = '2 February 2026'
+LAST_UPDATED = '8 October 2026'
 
 # Placeholder markers. Deliberately loud: a legal page that ships with these
 # visible is telling the truth about itself. Clear them once real values exist.
@@ -106,15 +106,32 @@ PRIVACY = _page(
                   'we can contact you about the enquiry and send occasional studio '
                   'updates. You can ask us to remove that record at any time.'),
 
+            ('h3', 'Discovery questionnaire'),
+            ('p', 'The discovery questionnaire at "/start-a-project" is the detailed '
+                  'first step of a project. It asks about you and how to reach you '
+                  '(name, email, phone, business, location, role and preferred contact '
+                  'method); what the business does and its current digital presence; '
+                  'what you want built and what success would look like — the last two '
+                  'are required, along with your name and email; the features you need '
+                  'from a fixed list; what content, brand assets, design references and '
+                  'technical integrations already exist; timeline and deadline; a '
+                  'budget range; who decides and approves; and anything else you want '
+                  'us to know.'),
+            ('p', 'Your answers are stored as a record in our database and attached to '
+                  'an internal project record, and the submission is emailed to the '
+                  'studio. We use them to prepare the proposal — scope, timeline and '
+                  'price come from what you write. Nothing in the questionnaire commits '
+                  'you to anything, and you can ask us to correct or delete your '
+                  'responses at any time.'),
+
             ('h3', 'Become a Partner application form'),
             ('p', 'The partner application asks for your name, email address, '
                   'company or studio, your role or specialty, a link to your '
                   'portfolio, the kind of collaboration you are proposing, your areas '
                   'of expertise, and a longer message. All of it is stored, because an '
                   'application is something we need to be able to refer back to.'),
-            ('p', 'This is the only form on the site where your submitted message is '
-                  'held as a record in our database rather than existing mainly as an '
-                  'email.'),
+            ('p', 'Like the discovery questionnaire, your application is held as a '
+                  'record in our database rather than existing mainly as an email.'),
 
             ('h3', 'Newsletter signup'),
             ('p', 'The signup form asks for an email address and, optionally, a name. '
@@ -268,7 +285,7 @@ PRIVACY = _page(
         _s('09', 'retention', 'Data Retention', [
             ('p', 'We keep information only as long as it is doing a job.'),
             ('dl', [
-                ('Enquiry and application records',
+                ('Enquiry, questionnaire and application records',
                  'Kept for as long as the conversation or collaboration lasts, and '
                  'then deleted. ' + TODO + ': state a specific period, for example '
                  '"24 months after the last exchange", and apply it to the stored '

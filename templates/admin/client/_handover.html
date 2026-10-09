@@ -1,0 +1,56 @@
+{% set state = handover.parsed() if handover else {} %}
+<section class="cd-card">
+    <div class="cd-card__head">
+        <h2 class="cd-card__title">Handover checklist</h2>
+        <p class="cd-progress">
+            {{ handover.checked_count if handover else 0 }} / {{ handover_total }} complete
+        </p>
+    </div>
+
+    <form method="POST" action="{{ url_for('admin_client_handover', client_id=client.id) }}" class="cf-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        {% for title, items in handover_sections %}
+        <fieldset class="cd-check-group">
+            <legend class="cs-label">{{ title }}</legend>
+            {% for item_id, item_label in items %}
+            <label class="cd-check">
+                <input type="checkbox" name="item_{{ item_id }}" value="1" {% if state.get(item_id) %}checked{% endif %}>
+                <span>{{ item_label }}</span>
+            </label>
+            {% endfor %}
+        </fieldset>
+        {% endfor %}
+
+        <div class="cf-grid" style="margin-top:1.25rem">
+            <div class="admin-form__group admin-form__group--full">
+                <label for="ho_notes">Handover notes</label>
+                <textarea id="ho_notes" name="notes" rows="3" maxlength="3000"
+                          placeholder="Credentials transferred, assets delivered, training given…">{{ handover.notes if handover else '' }}</textarea>
+            </div>
+            <div class="admin-form__group">
+                <label for="ho_signoff_name">Signed off by</label>
+                <input type="text" id="ho_signoff_name" name="signoff_name" maxlength="100"
+                       value="{{ handover.signoff_name if handover else '' }}">
+            </div>
+            <div class="admin-form__group">
+                <label for="ho_signoff_date">Sign-off date</label>
+                <input type="date" id="ho_signoff_date" name="signoff_date"
+                       value="{{ handover.signoff_date.isoformat() if handover and handover.signoff_date else '' }}">
+            </div>
+            <div class="admin-form__group">
+                <label for="ho_signoff_method">Sign-off method</label>
+                <input type="text" id="ho_signoff_method" name="signoff_method" maxlength="100"
+                       placeholder="e.g. email confirmation, signed PDF"
+                       value="{{ handover.signoff_method if handover else '' }}">
+            </div>
+        </div>
+
+        <div class="admin-form__actions">
+            <button type="submit" class="admin-btn admin-btn--primary">Save checklist</button>
+            {% if handover and handover.completed_at %}
+            <span class="jr-status jr-status--ok">Completed {{ handover.completed_at|localtime|format_datetime('%d %b %Y') }}</span>
+            {% endif %}
+        </div>
+    </form>
+</section>

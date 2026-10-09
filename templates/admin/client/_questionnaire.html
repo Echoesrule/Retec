@@ -1,0 +1,42 @@
+{% if questionnaire %}
+<div class="cd-qa__head">
+    <div>
+        <h2 class="cd-card__title">Discovery questionnaire</h2>
+        <p class="cd-qa__meta">
+            Submitted {{ questionnaire.submitted_at|localtime|format_datetime('%d %b %Y %H:%M') }}
+            &middot; <span class="jr-status jr-status--{{ questionnaire.status }}">{{ questionnaire.status|capitalize }}</span>
+        </p>
+    </div>
+</div>
+
+{% for section in sections %}
+<section class="cd-card">
+    <h3 class="cd-card__title"><span class="cd-card__letter">{{ section.letter }}</span> {{ section.title }}</h3>
+    <dl class="cd-qa">
+        {% for field in section['fields'] %}
+        {% set value = responses.get(field.name, '') %}
+        <dt>{{ field.label }}</dt>
+        <dd class="{% if not value %}cd-qa__empty{% endif %}">
+            {% if field.type == 'checkboxes' %}
+                {% if value %}
+                <ul class="cd-tags">
+                    {% for item in value %}<li class="jr-tag">{{ requirement_labels.get(item, item) }}</li>{% endfor %}
+                </ul>
+                {% else %}None selected{% endif %}
+            {% elif field.type in ('select', 'radio') %}
+                {% if value %}
+                    {% for v, l in field.options if v == value %}{{ l }}{% else %}{{ value }}{% endfor %}
+                {% else %}—{% endif %}
+            {% else %}
+                {% if value %}{{ value }}{% else %}—{% endif %}
+            {% endif %}
+        </dd>
+        {% endfor %}
+    </dl>
+</section>
+{% endfor %}
+{% else %}
+<div class="admin-empty" style="padding:3rem 1rem;text-align:center;color:#999">
+    No questionnaire submitted for this client yet.
+</div>
+{% endif %}

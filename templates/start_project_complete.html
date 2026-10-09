@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Questionnaire received{% endblock %}
+{% block content %}
+<section class="section qs-done section--light">
+    <div class="container">
+        <div class="qs-done__inner" data-motion="reveal">
+            <p class="section__eyebrow">Received</p>
+            <h1 class="section__title">Your questionnaire<br><span>is in.</span></h1>
+            <p class="qs-done__lead">Thank you — the RETEC team has your project details. We review every submission personally and reply with the practical next step, usually within one business day.</p>
+            <ul class="qs-done__steps">
+                <li>
+                    <span class="qs-done__num">01</span>
+                    <div>
+                        <strong>We review your answers</strong>
+                        <p>Your requirements, budget range and timeline are read against what is realistically buildable.</p>
+                    </div>
+                </li>
+                <li>
+                    <span class="qs-done__num">02</span>
+                    <div>
+                        <strong>We follow up</strong>
+                        <p>A short call or message to confirm anything unclear — we contact you the way you asked.</p>
+                    </div>
+                </li>
+                <li>
+                    <span class="qs-done__num">03</span>
+                    <div>
+                        <strong>You get a proposal</strong>
+                        <p>Scope, deliverables, timeline and price — prepared from what you wrote, with no surprises.</p>
+                    </div>
+                </li>
+            </ul>
+            <div class="qs-done__actions">
+                <a href="/#contact" class="form__submit">Back to contact <i class="fa-solid fa-arrow-right"></i></a>
+                <a href="/#work" class="qs-done__link">See recent work</a>
+            </div>
+            <p class="qs-done__meta">Need to add something? Just reply to the confirmation email, or email <a href="mailto:contact.retec@gmail.com">contact.retec@gmail.com</a>.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends "admin/base.html" %}
+{% block title %}Clients{% endblock %}
+{% set active = "clients" %}
+{% block content %}
+<div class="admin-page">
+    <div class="admin-page__head">
+        <h1 class="admin-page__title">Clients</h1>
+        <div class="admin-actions">
+            <a href="{{ url_for('admin_clients_export') }}" class="admin-btn admin-btn--secondary">
+                <i class="fa-solid fa-download"></i> Export CSV
+            </a>
+            <a href="{{ url_for('admin_client_add') }}" class="admin-btn admin-btn--primary">
+                <i class="fa-solid fa-plus"></i> Add Client
+            </a>
+        </div>
+    </div>
+
+    <div class="jr-filters">
+        <form method="GET" action="{{ url_for('admin_clients') }}" class="jr-filters__search">
+            {% if active_status %}<input type="hidden" name="status" value="{{ active_status }}">{% endif %}
+            <input type="search" name="q" value="{{ term }}" placeholder="Search name, business, email, project…" aria-label="Search clients">
+            <button type="submit" class="admin-btn admin-btn--sm">Search</button>
+            {% if term %}<a href="{{ url_for('admin_clients', status=active_status) }}" class="admin-btn admin-btn--sm">Clear</a>{% endif %}
+        </form>
+    </div>
+
+    <nav class="jr-tabs" aria-label="Filter by status">
+        <a href="{{ url_for('admin_clients', q=term) }}" class="jr-tab {% if not active_status %}jr-tab--active{% endif %}">
+            All <span class="jr-tab__count">{{ counts.values()|sum }}</span>
+        </a>
+        {% for value, label in statuses %}
+        <a href="{{ url_for('admin_clients', status=value, q=term) }}" class="jr-tab {% if active_status == value %}jr-tab--active{% endif %}">
+            {{ label }} {% if counts.get(value) %}<span class="jr-tab__count">{{ counts.get(value) }}</span>{% endif %}
+        </a>
+        {% endfor %}
+    </nav>
+
+    <div class="admin-card">
+        <div class="admin-table-wrap">
+        <table class="admin-table admin-table--cards">
+            <thead>
+                <tr>
+                    <th>Client</th>
+                    <th>Status</th>
+                    <th>Project</th>
+                    <th>Fee</th>
+                    <th>Paid</th>
+                    <th>Source</th>
+                    <th>Updated</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in clients.items %}
+                <tr>
+                    <td class="admin-card__primary" data-label="Client">
+                        <a href="{{ url_for('admin_client_detail', id=c.id) }}"><strong>{{ c.name }}</strong></a>
+                        {% if c.business %}<span class="admin-truncate" style="display:block;color:#777;font-size:.8rem">{{ c.business }}</span>{% endif %}
+                    </td>
+                    <td class="admin-card__label" data-label="Status">
+                        <span class="jr-status jr-status--{{ c.status }}">{{ c.status_label }}</span>
+                    </td>
+                    <td class="admin-card__label admin-truncate" data-label="Project">{{ c.project_title or '—' }}</td>
+                    <td class="admin-card__label" data-label="Fee">{{ c.fee_amount|money }}</td>
+                    <td class="admin-card__label" data-label="Paid">{{ c.fee_paid|money }}</td>
+                    <td class="admin-card__label" data-label="Source">{{ c.source_label }}</td>
+                    <td class="admin-card__label" data-label="Updated">{{ c.updated_at|localtime|format_datetime }}</td>
+                    <td class="admin-card__label" data-label="">
+                        <div class="admin-actions">
+                            <a href="{{ url_for('admin_client_detail', id=c.id) }}" class="admin-btn admin-btn--sm">Open</a>
+                            <a href="{{ url_for('admin_client_edit', id=c.id) }}" class="admin-btn admin-btn--sm">Edit</a>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="admin-empty">
+                        No client records yet. <a href="{{ url_for('admin_client_add') }}">Add the first one</a>
+                        or convert an <a href="{{ url_for('admin_enquiries') }}">enquiry</a>.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    {% if clients.pages > 1 %}
+    <div class="admin-pagination">
+        {% if clients.has_prev %}
+        <a href="{{ url_for('admin_clients', page=clients.prev_num, status=active_status, q=term) }}" class="admin-btn admin-btn--sm">&laquo; Prev</a>
+        {% endif %}
+        <span class="admin-pagination__info">Page {{ clients.page }} of {{ clients.pages }}</span>
+        {% if clients.has_next %}
+        <a href="{{ url_for('admin_clients', page=clients.next_num, status=active_status, q=term) }}" class="admin-btn admin-btn--sm">Next &raquo;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

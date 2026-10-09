@@ -67,6 +67,10 @@
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
                     Content Studio
                 </a>
+                <a href="{{ url_for('admin_clients') }}" class="admin-sidebar__link {% if active == 'clients' %}admin-sidebar__link--active{% endif %}">
+                    <i class="fa-solid fa-handshake-angle"></i>
+                    Clients
+                </a>
                 <a href="{{ url_for('admin_enquiries') }}" class="admin-sidebar__link {% if active == 'enquiries' %}admin-sidebar__link--active{% endif %}">
                     <i class="fa-solid fa-inbox"></i>
                     Enquiries

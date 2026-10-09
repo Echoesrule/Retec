@@ -1,0 +1,116 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ agreement.reference or 'Agreement' }} — {{ client.name }}{% endblock %}
+{% set active = "clients" %}
+{% block content %}
+<div class="admin-page">
+    <a class="cs-back" href="{{ url_for('admin_client_detail', id=client.id, tab='documents') }}">
+        <i class="fa-solid fa-arrow-left"></i> {{ client.name }} — documents
+    </a>
+
+    <div class="admin-page__head">
+        <h1 class="admin-page__title">Agreement <span class="cd-ref">{{ agreement.reference or 'Draft' }}</span>
+            <span class="jr-status jr-status--{{ agreement.status }}">{{ agreement.status_label }}</span>
+        </h1>
+        <div class="admin-actions">
+            <a class="admin-btn" href="{{ url_for('admin_client_agreement_edit', client_id=client.id, agreement_id=agreement.id) }}">
+                <i class="fa-solid fa-pen"></i> Edit
+            </a>
+            <button type="button" class="admin-btn" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
+            <form method="POST" action="{{ url_for('admin_client_agreement_status', client_id=client.id, agreement_id=agreement.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% if agreement.status != 'signed' %}
+                <input type="text" name="signed_by" class="admin-input--sm" placeholder="Signed by" maxlength="100" aria-label="Signed by">
+                {% endif %}
+                <select name="status" class="admin-select admin-select--sm" aria-label="Agreement status">
+                    {% for value, label in agreement_statuses %}
+                    <option value="{{ value }}" {% if agreement.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="admin-btn admin-btn--sm">Set status</button>
+            </form>
+        </div>
+    </div>
+
+    <p class="jr-alert jr-alert--warn"><i class="fa-solid fa-scale-balanced"></i> {{ agreement_disclaimer }}</p>
+    {% if missing %}
+    <p class="jr-alert jr-alert--warn"><i class="fa-solid fa-triangle-exclamation"></i>
+        Missing values still shown as placeholders: {{ missing|join(', ') }}.</p>
+    {% endif %}
+
+    <article class="doc doc--agreement">
+        <header class="doc__head">
+            <div class="doc__brand">
+                <strong>RETEC</strong>
+                <span>{{ retec_info.tagline }}</span>
+                <span>{{ retec_info.website }}</span>
+                <span>{{ retec_info.email }}</span>
+            </div>
+            <div class="doc__meta">
+                <p><span>Reference</span> {{ agreement.reference or 'Draft' }}</p>
+                <p><span>Created</span> {{ agreement.created_at|localtime|format_datetime('%d %B %Y') }}</p>
+                <p><span>Status</span> {{ agreement.status_label }}</p>
+                {% if agreement.signed_at %}<p><span>Signed</span> {{ agreement.signed_at|localtime|format_datetime('%d %B %Y') }}</p>{% endif %}
+            </div>
+        </header>
+
+        <section class="doc__section doc__section--center">
+            <h1 class="doc__title">Client Services Agreement</h1>
+            <p class="doc__lead">This Client Services Agreement is between the parties named below and covers the project described in it.</p>
+        </section>
+
+        <section class="doc__party">
+            <div>
+                <h4>Client</h4>
+                <p><strong>{{ client.name }}</strong>{% if client.business %}<br>{{ client.business }}{% endif %}</p>
+                {% if client.location %}<p>{{ client.location }}</p>{% endif %}
+                {% if client.email %}<p>{{ client.email }}</p>{% endif %}
+                {% if client.phone %}<p>{{ client.phone }}</p>{% endif %}
+            </div>
+            <div>
+                <h4>Service provider</h4>
+                <p><strong>RETEC</strong></p>
+                <p>{{ retec_info.website }}</p>
+                <p><a href="mailto:{{ retec_info.email }}">{{ retec_info.email }}</a></p>
+                <p>{{ retec_info.phone }}</p>
+            </div>
+        </section>
+
+        <section class="doc__section doc__terms">
+            <ol class="doc-clauses">
+                {% for number, heading, text, clause_missing in clauses %}
+                <li>
+                    <strong>{{ number }}. {{ heading }}</strong>
+                    <p>{{ text }}</p>
+                </li>
+                {% endfor %}
+            </ol>
+
+            {% if agreement.special_terms %}
+            <div class="doc__special">
+                <strong>{{ clauses|length + 1 }}. Special terms</strong>
+                <p>{{ agreement.special_terms }}</p>
+            </div>
+            {% endif %}
+        </section>
+
+        <section class="doc__section doc__signatures">
+            <div class="doc__sign">
+                <span class="doc__sign-line"></span>
+                <p><strong>{{ client.name }}</strong><br>for and on behalf of {{ client.business or client.name }}</p>
+                <p>{% if agreement.signed_at %}Signed {{ agreement.signed_at|localtime|format_datetime('%d %B %Y') }}{% else %}Date: ______________{% endif %}</p>
+                {% if agreement.signed_by %}<p>Name: {{ agreement.signed_by }}</p>{% endif %}
+            </div>
+            <div class="doc__sign">
+                <span class="doc__sign-line"></span>
+                <p><strong>RETEC</strong></p>
+                <p>Date: ______________</p>
+            </div>
+        </section>
+
+        <footer class="doc__foot">
+            <span>RETEC &middot; {{ retec_info.website }}</span>
+            <span>{{ agreement_note }}</span>
+        </footer>
+    </article>
+</div>
+{% endblock %}

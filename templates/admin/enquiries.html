@@ -34,7 +34,13 @@
                     <td class="admin-card__label" data-label="Budget">{{ e.budget or '-' }}</td>
                     <td class="admin-card__label" data-label="Date">{{ e.created_at|localtime|format_datetime }}</td>
                     <td class="admin-card__label" data-label="Details">
-                        <button type="button" class="admin-btn admin-btn--sm" data-enquiry-toggle="{{ e.id }}">View</button>
+                        <div class="admin-actions">
+                            <button type="button" class="admin-btn admin-btn--sm" data-enquiry-toggle="{{ e.id }}">View</button>
+                            <form method="POST" action="{{ url_for('admin_enquiry_convert', id=e.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="admin-btn admin-btn--sm admin-btn--secondary" title="Create a client record (status Lead) from this enquiry">To client</button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
                 <tr class="admin-enquiry-detail" id="enquiry-detail-{{ e.id }}" hidden>

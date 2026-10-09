@@ -1,0 +1,77 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ client.name }} — Client{% endblock %}
+{% set active = "clients" %}
+{% block content %}
+<div class="admin-page cd-page">
+    <a class="cs-back" href="{{ url_for('admin_clients') }}"><i class="fa-solid fa-arrow-left"></i> All clients</a>
+
+    <div class="cd-head">
+        <div class="cd-head__main">
+            <p class="cd-head__source">{{ client.source_label }} &middot; created {{ client.created_at|localtime|format_datetime('%d %b %Y') }}</p>
+            <h1 class="admin-page__title">{{ client.name }}{% if client.business %} <span class="cd-head__business">{{ client.business }}</span>{% endif %}</h1>
+            <p class="cd-head__contact">
+                {% if client.email %}<a href="mailto:{{ client.email }}">{{ client.email }}</a>{% endif %}
+                {% if client.phone %} &middot; <a href="https://wa.me/{{ client.phone|replace(' ', '') }}" target="_blank" rel="noopener">{{ client.phone }}</a>{% endif %}
+                {% if client.contact_method_label %} &middot; prefers {{ client.contact_method_label }}{% endif %}
+            </p>
+        </div>
+        <div class="admin-actions">
+            <a href="{{ url_for('admin_client_edit', id=client.id) }}" class="admin-btn"><i class="fa-solid fa-pen"></i> Edit</a>
+            <form method="POST" action="{{ url_for('admin_client_delete', id=client.id) }}"
+                  onsubmit="return confirm('Delete this client record and every proposal, payment and note attached to it?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="admin-btn admin-btn--danger"><i class="fa-solid fa-trash"></i> Delete</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="cd-statusbar">
+        <form method="POST" action="{{ url_for('admin_client_status', id=client.id) }}" class="cd-statusbar__form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="tab" value="{{ tab }}">
+            <label for="client_status">Status</label>
+            <select id="client_status" name="status">
+                {% for value, label in statuses %}
+                <option value="{{ value }}" {% if client.status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="admin-btn admin-btn--sm">Update</button>
+        </form>
+        <p class="cd-statusbar__next"><strong>Next:</strong> {{ next_action }}</p>
+    </div>
+
+    <div class="cd-stats">
+        <div class="cd-stat">
+            <span class="cd-stat__label">Project fee</span>
+            <span class="cd-stat__value">{{ client.currency or 'KSh' }} {{ client.fee_amount|money }}</span>
+        </div>
+        <div class="cd-stat">
+            <span class="cd-stat__label">Paid</span>
+            <span class="cd-stat__value">{{ client.currency or 'KSh' }} {{ client.fee_paid|money }}</span>
+        </div>
+        <div class="cd-stat">
+            <span class="cd-stat__label">Outstanding</span>
+            <span class="cd-stat__value">{{ client.currency or 'KSh' }} {{ client.fee_outstanding|money }}</span>
+        </div>
+        <div class="cd-stat">
+            <span class="cd-stat__label">Pending payments</span>
+            <span class="cd-stat__value">{{ client.currency or 'KSh' }} {{ client.pending_amount|money }}</span>
+        </div>
+        <div class="cd-stat">
+            <span class="cd-stat__label">Open tasks</span>
+            <span class="cd-stat__value">{{ client.open_tasks|length }}</span>
+        </div>
+    </div>
+
+    <nav class="jr-tabs" aria-label="Client record sections">
+        {% for value, label in tabs %}
+        <a href="{{ url_for('admin_client_detail', id=client.id, tab=value) }}"
+           class="jr-tab {% if tab == value %}jr-tab--active{% endif %}">{{ label }}</a>
+        {% endfor %}
+    </nav>
+
+    <div class="cd-panel">
+        {% include 'admin/client/_' ~ tab ~ '.html' %}
+    </div>
+</div>
+{% endblock %}

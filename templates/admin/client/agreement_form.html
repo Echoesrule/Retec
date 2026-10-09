@@ -1,0 +1,91 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ 'Edit' if agreement else 'New' }} Agreement — {{ client.name }}{% endblock %}
+{% set active = "clients" %}
+{% block content %}
+<div class="admin-page">
+    <a class="cs-back" href="{{ url_for('admin_client_detail', id=client.id, tab='documents') }}">
+        <i class="fa-solid fa-arrow-left"></i> {{ client.name }} — documents
+    </a>
+    <div class="admin-page__head">
+        <h1 class="admin-page__title">{{ 'Edit' if agreement else 'New' }} Agreement{% if agreement %} <span class="cd-ref">{{ agreement.reference }}</span>{% endif %}</h1>
+        {% if agreement %}
+        <a class="admin-btn" href="{{ url_for('admin_client_agreement_view', client_id=client.id, agreement_id=agreement.id) }}">
+            <i class="fa-solid fa-eye"></i> Preview document
+        </a>
+        {% endif %}
+    </div>
+
+    <p class="jr-alert jr-alert--warn"><i class="fa-solid fa-scale-balanced"></i> {{ agreement_disclaimer }}</p>
+
+    <form method="POST" class="admin-form admin-card">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <h2 class="cf-heading">Commercial terms</h2>
+        <div class="cf-grid">
+            <div class="admin-form__group">
+                <label for="a_fee">Project fee ({{ client.currency or 'KSh' }})</label>
+                <input type="number" id="a_fee" name="project_fee" min="0" step="0.01" inputmode="decimal"
+                       value="{{ agreement.project_fee if agreement and agreement.project_fee is not none else (client.fee if client.fee is not none else '') }}">
+            </div>
+            <div class="admin-form__group">
+                <label for="a_deposit">Deposit required (%)</label>
+                <input type="number" id="a_deposit" name="deposit_percent" min="0" max="100" step="0.5" inputmode="decimal"
+                       value="{{ agreement.deposit_percent if agreement and agreement.deposit_percent is not none else '' }}">
+            </div>
+            <div class="admin-form__group">
+                <label for="a_start">Project start date</label>
+                <input type="date" id="a_start" name="start_date"
+                       value="{{ agreement.start_date.isoformat() if agreement and agreement.start_date else (client.start_date.isoformat() if client.start_date else '') }}">
+            </div>
+            <div class="admin-form__group">
+                <label for="a_delivery">Expected delivery</label>
+                <input type="date" id="a_delivery" name="expected_delivery"
+                       value="{{ agreement.expected_delivery.isoformat() if agreement and agreement.expected_delivery else (client.expected_delivery.isoformat() if client.expected_delivery else '') }}">
+            </div>
+            <div class="admin-form__group admin-form__group--full">
+                <label for="a_support">Support period</label>
+                <input type="text" id="a_support" name="support_period" maxlength="100"
+                       placeholder="e.g. 30 days after handover"
+                       value="{{ agreement.support_period if agreement else client.support_period }}">
+            </div>
+            <div class="admin-form__group admin-form__group--full">
+                <label for="a_terms">Payment terms <span class="cf-hint">leave blank to derive from payments or the proposal schedule</span></label>
+                <textarea id="a_terms" name="payment_terms" rows="3" maxlength="3000"
+                          placeholder="e.g. 50% deposit on signing, 50% on delivery.">{{ agreement.payment_terms if agreement else '' }}</textarea>
+            </div>
+            <div class="admin-form__group admin-form__group--full">
+                <label for="a_special">Special terms <span class="cf-hint">appended to the agreement as an extra clause</span></label>
+                <textarea id="a_special" name="special_terms" rows="3" maxlength="5000">{{ agreement.special_terms if agreement else '' }}</textarea>
+            </div>
+            <div class="admin-form__group admin-form__group--full">
+                <label for="a_signed_by">Signed by (client)</label>
+                <input type="text" id="a_signed_by" name="signed_by" maxlength="100"
+                       value="{{ agreement.signed_by if agreement else '' }}">
+            </div>
+        </div>
+
+        <div class="admin-form__actions">
+            <button type="submit" class="admin-btn admin-btn--primary">{{ 'Save agreement' if agreement else 'Create agreement' }}</button>
+            <a href="{{ url_for('admin_client_detail', id=client.id, tab='documents') }}" class="admin-btn">Cancel</a>
+        </div>
+    </form>
+
+    <section class="admin-card" style="margin-top:1.25rem">
+        <h2 class="cf-heading" style="margin-top:0">Clause preview</h2>
+        <p class="cf-hint">Filled from this client record and the values above. Anything still missing stays visible as a bracketed placeholder.</p>
+        {% if missing %}
+        <p class="jr-alert jr-alert--warn"><i class="fa-solid fa-triangle-exclamation"></i>
+            Missing: {{ missing|join(', ') }}.</p>
+        {% endif %}
+        <ol class="doc-clauses">
+            {% for number, heading, text, clause_missing in clauses %}
+            <li>
+                <strong>{{ number }}. {{ heading }}</strong>
+                <p>{{ text }}</p>
+            </li>
+            {% endfor %}
+        </ol>
+        <p class="cf-hint">{{ agreement_note }}</p>
+    </section>
+</div>
+{% endblock %}

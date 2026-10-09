@@ -1,0 +1,103 @@
+<section class="cd-card">
+    <div class="cd-card__head">
+        <h2 class="cd-card__title">Payments</h2>
+        <div class="cd-totals">
+            <span>Fee {{ client.currency or 'KSh' }} {{ client.fee_amount|money }}</span>
+            <span>Paid {{ client.currency or 'KSh' }} {{ client.fee_paid|money }}</span>
+            <span>Outstanding {{ client.currency or 'KSh' }} {{ client.fee_outstanding|money }}</span>
+        </div>
+    </div>
+
+    {% if client.payments %}
+    <div class="admin-table-wrap">
+    <table class="admin-table admin-table--cards">
+        <thead>
+            <tr><th>Payment</th><th>Type</th><th>Amount</th><th>Due</th><th>Paid</th><th>Status</th><th>Ref</th><th></th></tr>
+        </thead>
+        <tbody>
+            {% for p in client.payments %}
+            <tr{% if p.status != 'paid' %} class="jr-row--pending"{% endif %}>
+                <td class="admin-card__primary" data-label="Payment">
+                    <strong>{{ p.label }}</strong>
+                    {% if p.notes %}<span style="display:block;color:#888;font-size:.78rem">{{ p.notes|lines|join(' ') }}</span>{% endif %}
+                </td>
+                <td class="admin-card__label" data-label="Type">{{ p.kind_label }}{% if not p.counts_towards_fee %} <span class="jr-tag">not fee</span>{% endif %}</td>
+                <td class="admin-card__label" data-label="Amount">{{ client.currency or 'KSh' }} {{ p.amount_value|money }}</td>
+                <td class="admin-card__label" data-label="Due">{{ p.due_date.strftime('%d %b %Y') if p.due_date else '—' }}</td>
+                <td class="admin-card__label" data-label="Paid">{{ p.paid_date.strftime('%d %b %Y') if p.paid_date else '—' }}</td>
+                <td class="admin-card__label" data-label="Status"><span class="jr-status jr-status--{{ 'ok' if p.status == 'paid' else p.status }}">{{ p.status_label }}</span></td>
+                <td class="admin-card__label" data-label="Ref">{{ p.reference or '—' }}</td>
+                <td class="admin-card__label" data-label="">
+                    <div class="admin-actions">
+                        <form method="POST" action="{{ url_for('admin_client_payment_toggle', client_id=client.id, payment_id=p.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="tab" value="payments">
+                            <button type="submit" class="admin-btn admin-btn--sm">{{ 'Undo' if p.status == 'paid' else 'Mark paid' }}</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('admin_client_payment_delete', client_id=client.id, payment_id=p.id) }}"
+                              onsubmit="return confirm('Delete this payment row?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="tab" value="payments">
+                            <button type="submit" class="admin-btn admin-btn--sm admin-btn--danger"><i class="fa-solid fa-trash"></i></button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="admin-empty" style="text-align:center;color:#999;padding:1.5rem">No payments recorded yet.</p>
+    {% endif %}
+</section>
+
+<section class="cd-card">
+    <h2 class="cd-card__title">Record a payment</h2>
+    <form method="POST" action="{{ url_for('admin_client_payment_add', client_id=client.id) }}" class="admin-form cf-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="tab" value="payments">
+        <div class="cf-grid">
+            <div class="admin-form__group admin-form__group--full">
+                <label for="pay_label">Label *</label>
+                <input type="text" id="pay_label" name="label" maxlength="120" required
+                       placeholder="e.g. Deposit, Milestone 1, Domain renewal">
+            </div>
+            <div class="admin-form__group">
+                <label for="pay_kind">Type</label>
+                <select id="pay_kind" name="kind">
+                    {% for value, label in payment_kinds %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="admin-form__group">
+                <label for="pay_amount">Amount ({{ client.currency or 'KSh' }}) *</label>
+                <input type="number" id="pay_amount" name="amount" min="0" step="0.01" inputmode="decimal" required>
+            </div>
+            <div class="admin-form__group">
+                <label for="pay_status">Status</label>
+                <select id="pay_status" name="status">
+                    {% for value, label in payment_statuses %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="admin-form__group">
+                <label for="pay_due">Due date</label>
+                <input type="date" id="pay_due" name="due_date">
+            </div>
+            <div class="admin-form__group">
+                <label for="pay_paid">Paid date</label>
+                <input type="date" id="pay_paid" name="paid_date">
+            </div>
+            <div class="admin-form__group">
+                <label for="pay_ref">Reference</label>
+                <input type="text" id="pay_ref" name="reference" maxlength="100" placeholder="M-Pesa code, invoice no.">
+            </div>
+            <div class="admin-form__group admin-form__group--full">
+                <label for="pay_notes">Notes</label>
+                <textarea id="pay_notes" name="notes" rows="2" maxlength="2000"></textarea>
+            </div>
+        </div>
+        <div class="admin-form__actions">
+            <button type="submit" class="admin-btn admin-btn--primary">Record payment</button>
+        </div>
+    </form>
+</section>

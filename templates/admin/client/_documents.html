@@ -1,0 +1,120 @@
+<section class="cd-card">
+    <div class="cd-card__head">
+        <h2 class="cd-card__title">Proposals</h2>
+        <a href="{{ url_for('admin_client_proposal_add', client_id=client.id) }}" class="admin-btn admin-btn--sm admin-btn--primary">
+            <i class="fa-solid fa-plus"></i> New proposal
+        </a>
+    </div>
+    {% if client.proposals %}
+    <div class="admin-table-wrap">
+    <table class="admin-table admin-table--cards">
+        <thead>
+            <tr><th>Ref</th><th>Project</th><th>Status</th><th>Investment</th><th>Created</th><th></th></tr>
+        </thead>
+        <tbody>
+            {% for p in client.proposals %}
+            <tr>
+                <td class="admin-card__primary" data-label="Ref">
+                    <a href="{{ url_for('admin_client_proposal_view', client_id=client.id, proposal_id=p.id) }}"><strong>{{ p.reference or 'Draft' }}</strong></a>
+                </td>
+                <td class="admin-card__label admin-truncate" data-label="Project">{{ p.title or '—' }}</td>
+                <td class="admin-card__label" data-label="Status"><span class="jr-status jr-status--{{ p.status }}">{{ p.status_label }}</span></td>
+                <td class="admin-card__label" data-label="Investment">{{ client.currency or 'KSh' }} {{ p.fee_amount|money }}</td>
+                <td class="admin-card__label" data-label="Created">{{ p.created_at|localtime|format_datetime('%d %b %Y') }}</td>
+                <td class="admin-card__label" data-label="">
+                    <div class="admin-actions">
+                        <a class="admin-btn admin-btn--sm" href="{{ url_for('admin_client_proposal_view', client_id=client.id, proposal_id=p.id) }}">View</a>
+                        <a class="admin-btn admin-btn--sm" href="{{ url_for('admin_client_proposal_edit', client_id=client.id, proposal_id=p.id) }}">Edit</a>
+                        <form method="POST" action="{{ url_for('admin_client_proposal_status', client_id=client.id, proposal_id=p.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <select name="status" class="admin-select admin-select--sm" aria-label="Proposal status">
+                                {% for value, label in proposal_statuses %}
+                                <option value="{{ value }}" {% if p.status == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="admin-btn admin-btn--sm">Set</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('admin_client_proposal_delete', client_id=client.id, proposal_id=p.id) }}"
+                              onsubmit="return confirm('Delete this proposal?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="admin-btn admin-btn--sm admin-btn--danger"><i class="fa-solid fa-trash"></i></button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="admin-empty" style="text-align:center;color:#999;padding:1.5rem">
+        No proposals yet. <a href="{{ url_for('admin_client_proposal_add', client_id=client.id) }}">Create the first one</a>.
+    </p>
+    {% endif %}
+</section>
+
+<section class="cd-card">
+    <div class="cd-card__head">
+        <h2 class="cd-card__title">Agreements</h2>
+        <a href="{{ url_for('admin_client_agreement_add', client_id=client.id) }}" class="admin-btn admin-btn--sm admin-btn--primary">
+            <i class="fa-solid fa-plus"></i> New agreement
+        </a>
+    </div>
+    {% if client.agreements %}
+    <div class="admin-table-wrap">
+    <table class="admin-table admin-table--cards">
+        <thead>
+            <tr><th>Ref</th><th>Status</th><th>Fee</th><th>Deposit</th><th>Signed</th><th></th></tr>
+        </thead>
+        <tbody>
+            {% for a in client.agreements %}
+            <tr>
+                <td class="admin-card__primary" data-label="Ref">
+                    <a href="{{ url_for('admin_client_agreement_view', client_id=client.id, agreement_id=a.id) }}"><strong>{{ a.reference or 'Draft' }}</strong></a>
+                </td>
+                <td class="admin-card__label" data-label="Status"><span class="jr-status jr-status--{{ a.status }}">{{ a.status_label }}</span></td>
+                <td class="admin-card__label" data-label="Fee">{{ client.currency or 'KSh' }} {{ a.fee_amount|money }}</td>
+                <td class="admin-card__label" data-label="Deposit">
+                    {{ a.deposit_percent|int if a.deposit_percent is not none else '—' }}%
+                    {% if a.deposit_amount is not none %}<span style="color:#888">({{ client.currency or 'KSh' }} {{ a.deposit_amount|money }})</span>{% endif %}
+                </td>
+                <td class="admin-card__label" data-label="Signed">{{ a.signed_at|localtime|format_datetime('%d %b %Y') if a.signed_at else '—' }}</td>
+                <td class="admin-card__label" data-label="">
+                    <div class="admin-actions">
+                        <a class="admin-btn admin-btn--sm" href="{{ url_for('admin_client_agreement_view', client_id=client.id, agreement_id=a.id) }}">View</a>
+                        <a class="admin-btn admin-btn--sm" href="{{ url_for('admin_client_agreement_edit', client_id=client.id, agreement_id=a.id) }}">Edit</a>
+                        <form method="POST" action="{{ url_for('admin_client_agreement_status', client_id=client.id, agreement_id=a.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            {% if a.status != 'signed' %}
+                            <input type="text" name="signed_by" class="admin-input--sm" placeholder="Signed by" maxlength="100" aria-label="Signed by">
+                            {% endif %}
+                            <select name="status" class="admin-select admin-select--sm" aria-label="Agreement status">
+                                {% for value, label in agreement_statuses %}
+                                <option value="{{ value }}" {% if a.status == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="admin-btn admin-btn--sm">Set</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('admin_client_agreement_delete', client_id=client.id, agreement_id=a.id) }}"
+                              onsubmit="return confirm('Delete this agreement?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="admin-btn admin-btn--sm admin-btn--danger"><i class="fa-solid fa-trash"></i></button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="admin-empty" style="text-align:center;color:#999;padding:1.5rem">
+        No agreements yet. <a href="{{ url_for('admin_client_agreement_add', client_id=client.id) }}">Create the first one</a>.
+    </p>
+    {% endif %}
+</section>
+
+{% if not client.email %}
+<p class="jr-alert jr-alert--warn"><i class="fa-solid fa-triangle-exclamation"></i>
+    This record has no email address, so proposal and agreement notifications cannot be sent to the client.</p>
+{% endif %}

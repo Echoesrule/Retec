@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Start a Project{% endblock %}
+{% block content %}
+<section class="section qs-hero section--light">
+    <div class="container">
+        <div class="qs-hero__inner" data-motion="reveal">
+            <p class="section__eyebrow">Discovery Questionnaire</p>
+            <h1 class="section__title">Tell us about<br><span>your project.</span></h1>
+            <p class="qs-hero__lead">The more you share, the sharper the proposal. Every answer goes straight to the RETEC team — scope, timeline and price are prepared from what you write here.</p>
+            <p class="qs-hero__meta">About 10–15 minutes &middot; Required fields are marked &middot; Nothing is charged or committed.</p>
+        </div>
+    </div>
+</section>
+
+<section class="section qs-body section--light">
+    <div class="container">
+        {% set ns = namespace(errors=[], first='') %}
+        {% for section in sections %}{% for field in section.fields %}
+        {% if field.type != 'checkboxes' and form[field.name].errors %}
+        {% set ns.errors = ns.errors + [field.label ~ ' — ' ~ form[field.name].errors[0]] %}
+        {% if not ns.first %}{% set ns.first = section.key %}{% endif %}
+        {% endif %}
+        {% endfor %}{% endfor %}
+        {% if ns.errors %}
+        <div class="qs-errors" role="alert">
+            <strong>Please check the following:</strong>
+            <ul>
+                {% for error in ns.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% set active_key = ns.first or (sections[0].key if sections else '') %}
+        <form method="POST" class="qs-form qs-wizard" data-qs-wizard data-qs-start="{{ active_key }}" novalidate>
+            {{ form.csrf_token }}
+            <input type="text" name="website" tabindex="-1" autocomplete="off" class="form__honeypot" aria-hidden="true">
+
+            <div class="qs-progress">
+                <div class="qs-progress__meta">
+                    <span class="qs-progress__count">Step <b data-qs-current>1</b> of {{ sections|length }}</span>
+                    <span class="qs-progress__title" data-qs-title>{{ sections[0].title if sections else '' }}</span>
+                </div>
+                <div class="qs-progress__track"><span class="qs-progress__fill"></span></div>
+                <ol class="qs-progress__dots">
+                    {% for section in sections %}
+                    <li>
+                        <button type="button" class="qs-progress__dot{% if section.key == active_key %} is-active{% endif %}"
+                                data-qs-jump="{{ loop.index0 }}" aria-label="{{ section.title }}"
+                                {% if section.key == active_key %}aria-current="step"{% else %}aria-current="false"{% endif %}>{{ section.letter }}</button>
+                    </li>
+                    {% endfor %}
+                </ol>
+            </div>
+
+            <div class="qs-steps">
+                {% for section in sections %}
+                <fieldset class="qs-section qs-step{% if section.key == active_key %} is-active{% endif %}"
+                          id="qs-{{ section.key }}" data-qs-step data-qs-title="{{ section.title }}"
+                          aria-hidden="{{ 'false' if section.key == active_key else 'true' }}">
+                    <div class="qs-section__head">
+                        <span class="qs-section__letter" aria-hidden="true">{{ section.letter }}</span>
+                        <div class="qs-section__heading">
+                            <h2 class="qs-section__title">{{ section.title }}</h2>
+                            <p class="qs-section__intro">{{ section.intro }}</p>
+                        </div>
+                    </div>
+
+                    <div class="qs-fields">
+                        {% for field in section.fields %}
+                        {% set f = form[field.name] %}
+                        {% set wide = field.type in ('textarea', 'checkboxes', 'radio') %}
+                        <div class="qs-field{% if wide %} qs-field--wide{% endif %}{% if field.type == 'radio' or field.type == 'checkboxes' %} qs-field--choice{% endif %}">
+                            {% if field.type == 'checkboxes' %}
+                            <span class="form__label qs-field__label">{{ field.label }}</span>
+                            {% if field.help %}<p class="qs-field__help">{{ field.help }}</p>{% endif %}
+                            <div class="qs-choices">
+                                {% for value, option_label in field.options %}
+                                <label class="qs-choice">
+                                    <input type="checkbox" name="{{ field.name }}__{{ value }}" value="1"
+                                           {% if form[field.name ~ '__' ~ value].data %}checked{% endif %}>
+                                    <span>{{ option_label }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                            {% elif field.type == 'radio' %}
+                            <span class="form__label qs-field__label">{{ field.label }}</span>
+                            {% if field.help %}<p class="qs-field__help">{{ field.help }}</p>{% endif %}
+                            <div class="qs-choices qs-choices--inline">
+                                {% for value, option_label in field.options %}
+                                <label class="qs-choice">
+                                    <input type="radio" name="{{ field.name }}" value="{{ value }}"
+                                           {% if f.data == value %}checked{% endif %}>
+                                    <span>{{ option_label }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                            {% elif field.type == 'select' %}
+                            <label class="form__label qs-field__label" for="id_{{ field.name }}">{{ field.label }}{% if field.required %} *{% endif %}</label>
+                            {% if field.help %}<p class="qs-field__help">{{ field.help }}</p>{% endif %}
+                            <select id="id_{{ field.name }}" name="{{ field.name }}" class="form__input">
+                                <option value="">Select an option</option>
+                                {% for value, option_label in field.options %}
+                                <option value="{{ value }}" {% if f.data == value %}selected{% endif %}>{{ option_label }}</option>
+                                {% endfor %}
+                            </select>
+                            {% elif field.type == 'textarea' %}
+                            <label class="form__label qs-field__label" for="id_{{ field.name }}">{{ field.label }}{% if field.required %} *{% endif %}</label>
+                            {% if field.help %}<p class="qs-field__help">{{ field.help }}</p>{% endif %}
+                            <textarea id="id_{{ field.name }}" name="{{ field.name }}" class="form__textarea"
+                                      rows="{{ field.rows or 3 }}"{% if field.max %} maxlength="{{ field.max }}"{% endif %}
+                                      placeholder="{{ field.placeholder or '' }}"{% if field.required %} required{% endif %}
+                                      data-cursor="text">{{ f.data or '' }}</textarea>
+                            {% else %}
+                            {# text / email / url / date #}
+                            <label class="form__label qs-field__label" for="id_{{ field.name }}">{{ field.label }}{% if field.required %} *{% endif %}</label>
+                            {% if field.help %}<p class="qs-field__help">{{ field.help }}</p>{% endif %}
+                            <input type="{{ 'date' if field.type == 'date' else field.type }}"
+                                   id="id_{{ field.name }}" name="{{ field.name }}" class="form__input"
+                                   value="{{ f.data or '' }}"
+                                   {% if field.max %}maxlength="{{ field.max }}"{% endif %}
+                                   placeholder="{{ field.placeholder or '' }}"
+                                   {% if field.required %}required{% endif %} data-cursor="text">
+                            {% endif %}
+                            {% if field.type != 'checkboxes' and field.type != 'radio' and f.errors %}
+                            <span class="form__error">{{ f.errors[0] }}</span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </fieldset>
+                {% endfor %}
+            </div>
+
+            <div class="qs-nav">
+                <button type="button" class="qs-nav__btn qs-nav__btn--prev" data-qs-prev>
+                    <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Back
+                </button>
+                <button type="button" class="qs-nav__btn qs-nav__btn--next" data-qs-next>
+                    Next <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                </button>
+                <button type="submit" class="form__submit qs-nav__submit" data-qs-submit>
+                    Submit Questionnaire <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                </button>
+            </div>
+            <p class="qs-submit__note">Prefer to talk first? Email <a href="mailto:contact.retec@gmail.com">contact.retec@gmail.com</a> or message us on <a href="https://wa.me/+254114581500" target="_blank" rel="noopener">WhatsApp</a>.</p>
+        </form>
+
+        <noscript>
+            <style>
+                .qs-wizard .qs-step { display: block !important; }
+                .qs-wizard .qs-progress { display: none; }
+                .qs-wizard .qs-nav__btn { display: none; }
+                .qs-wizard .qs-nav__submit { display: inline-flex !important; }
+            </style>
+        </noscript>
+    </div>
+</section>
+{% endblock %}

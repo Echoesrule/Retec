@@ -1,0 +1,57 @@
+<section class="cd-card">
+    <h2 class="cd-card__title">Add to activity</h2>
+    <form method="POST" action="{{ url_for('admin_client_note_add', client_id=client.id) }}" class="admin-form cf-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="tab" value="activity">
+        <div class="cf-grid">
+            <div class="admin-form__group">
+                <label for="note_kind">Kind</label>
+                <select id="note_kind" name="kind">
+                    {% for value, label in note_kinds %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="admin-form__group admin-form__group--full">
+                <label for="note_body">Entry *</label>
+                <textarea id="note_body" name="body" rows="3" maxlength="5000" required
+                          placeholder="Call outcomes, emails sent, client feedback, tasks…"></textarea>
+            </div>
+        </div>
+        <div class="admin-form__actions">
+            <button type="submit" class="admin-btn admin-btn--primary">Add entry</button>
+        </div>
+    </form>
+</section>
+
+<section class="cd-card">
+    <h2 class="cd-card__title">Activity log</h2>
+    {% if client.notes %}
+    <ol class="cd-timeline">
+        {% for note in client.notes %}
+        <li class="cd-timeline__item cd-timeline__item--{{ note.kind }}{% if note.kind == 'task' and note.done %} cd-timeline__item--done{% endif %}">
+            <span class="cd-timeline__kind">{{ note.kind_label }}</span>
+            <div class="cd-timeline__body">{{ note.body }}</div>
+            <span class="cd-timeline__meta">
+                {{ note.author or 'studio' }} &middot; {{ note.created_at|localtime|format_datetime('%d %b %Y %H:%M') }}
+            </span>
+            <div class="cd-timeline__actions">
+                {% if note.kind == 'task' %}
+                <form method="POST" action="{{ url_for('admin_client_note_toggle', client_id=client.id, note_id=note.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="tab" value="activity">
+                    <button type="submit" class="admin-btn admin-btn--sm">{{ 'Reopen' if note.done else 'Complete' }}</button>
+                </form>
+                {% endif %}
+                <form method="POST" action="{{ url_for('admin_client_note_delete', client_id=client.id, note_id=note.id) }}"
+                      onsubmit="return confirm('Delete this activity entry?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="tab" value="activity">
+                    <button type="submit" class="admin-btn admin-btn--sm admin-btn--danger"><i class="fa-solid fa-trash"></i></button>
+                </form>
+            </div>
+        </li>
+        {% endfor %}
+    </ol>
+    {% else %}
+    <p class="admin-empty" style="text-align:center;color:#999;padding:1.5rem">Nothing logged yet.</p>
+    {% endif %}
+</section>

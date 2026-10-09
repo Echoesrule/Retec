@@ -17,9 +17,14 @@ from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from dotenv import load_dotenv
 from forms import (ContactForm, PartnerForm, PROJECT_TYPES, BUDGET_OPTIONS,
-                   COLLABORATION_TYPES)
+                   COLLABORATION_TYPES, DiscoveryQuestionnaireForm,
+                   questionnaire_responses, QUESTIONNAIRE_SECTIONS,
+                   QUESTIONNAIRE_FIELDS, QUESTIONNAIRE_FIELD_SPECS,
+                   QUESTIONNAIRE_BUDGET_RANGES, QUESTIONNAIRE_BUDGET_LABELS,
+                   QUESTIONNAIRE_REQUIREMENT_LABELS)
 import journal
 import legal
+import client_documents
 
 import cloudinary
 import cloudinary.uploader
@@ -701,7 +706,935 @@ class Enquiry(db.Model):
     ip_address = db.Column(db.String(45), default='')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+# ===== CLIENT OPERATIONS =====
+#
+# Internal client records: LEAD -> DISCOVERY -> PROPOSAL -> AGREEMENT ->
+# PAYMENT -> PROJECT -> HANDOVER -> SUPPORT. Every model in this section is
+# admin-only; nothing here is rendered on a public page. The public surface is
+# the discovery questionnaire, which writes a Client + ClientQuestionnaire and
+# stops there.
+
+# Single source of truth for the client lifecycle, mirroring PROJECT_STATUSES
+# and JOURNAL_STATUSES: internal values live in the database, the label is the
+# only thing ever presented, and an arbitrary submitted string can never be
+# persisted because status changes are validated against this whitelist.
+CLIENT_STATUSES = [
+    ('lead', 'Lead'),
+    ('contacted', 'Contacted'),
+    ('discovery', 'Discovery'),
+    ('qualified', 'Qualified'),
+    ('proposal_sent', 'Proposal Sent'),
+    ('negotiation', 'Negotiation'),
+    ('approved', 'Approved'),
+    ('agreement_sent', 'Agreement Sent'),
+    ('signed', 'Signed'),
+    ('payment_pending', 'Payment Pending'),
+    ('active', 'Active'),
+    ('client_review', 'Client Review'),
+    ('completed', 'Completed'),
+    ('handover', 'Handover'),
+    ('support', 'Support'),
+    ('closed', 'Closed'),
+    ('lost', 'Lost'),
+]
+CLIENT_STATUS_VALUES = {value for value, _ in CLIENT_STATUSES}
+CLIENT_STATUS_LABELS = dict(CLIENT_STATUSES)
+
+# What happens next at each stage. This is what makes it obvious which
+# document or action belongs to the current status -- the record itself says
+# it, on the page where the status is changed.
+CLIENT_STATUS_NEXT = {
+    'lead': 'Introduce RETEC and send the discovery questionnaire.',
+    'contacted': 'Reply, qualify the enquiry, and decide if it is worth a proposal.',
+    'discovery': 'Review the questionnaire answers and hold the discovery call.',
+    'qualified': 'Prepare the proposal from the requirements that were agreed.',
+    'proposal_sent': 'Follow up on the proposal and answer scope or price questions.',
+    'negotiation': 'Agree the scope, price and timeline changes, then reissue the proposal.',
+    'approved': 'Send the client services agreement for signature.',
+    'agreement_sent': 'Follow up on the agreement signature.',
+    'signed': 'Request the deposit and confirm when it lands.',
+    'payment_pending': 'Confirm the outstanding project payment, then kick the project off.',
+    'active': 'Development is underway -- keep milestones, updates and feedback moving.',
+    'client_review': 'Send the work for review and collect written approval.',
+    'completed': 'Confirm final payment and schedule the handover.',
+    'handover': 'Run the handover checklist and transfer credentials and assets.',
+    'support': 'Provide support for the agreed period and log any requests as tasks.',
+    'closed': 'Engagement complete. Ask for a testimonial or referral.',
+    'lost': 'No further action. Record the reason in notes if it is not there already.',
+}
+
+# Document actions may only move the record forward from these stages, so
+# marking an old document as accepted can never silently drag a closed record
+# back into the pipeline.
+CLIENT_AUTO_TRANSITIONS = {
+    'proposal_accepted': {'proposal_sent', 'negotiation'},
+    'agreement_signed': {'agreement_sent', 'approved'},
+}
+
+CLIENT_SOURCES = [
+    ('questionnaire', 'Discovery questionnaire'),
+    ('enquiry', 'Contact enquiry'),
+    ('referral', 'Referral'),
+    ('manual', 'Added manually'),
+    ('other', 'Other'),
+]
+CLIENT_SOURCE_VALUES = {value for value, _ in CLIENT_SOURCES}
+CLIENT_SOURCE_LABELS = dict(CLIENT_SOURCES)
+
+CONTACT_METHODS = [
+    ('email', 'Email'),
+    ('phone', 'Phone call'),
+    ('whatsapp', 'WhatsApp'),
+    ('any', 'Any is fine'),
+]
+CONTACT_METHOD_LABELS = dict(CONTACT_METHODS)
+
+# Package tiers show RETEC's positioning ranges as labels. The label is
+# guidance only -- a price is never assigned automatically from it; `fee` on
+# the record is always entered deliberately.
+CLIENT_PACKAGES = [
+    ('', 'Not set'),
+    ('basic_website', 'Basic Website (KSh 15,000-25,000)'),
+    ('standard_website', 'Standard / Business Website (KSh 25,000-40,000)'),
+    ('custom', 'Web application / Custom software (quoted by scope)'),
+    ('maintenance', 'Maintenance / support'),
+    ('other', 'Other'),
+]
+CLIENT_PACKAGE_VALUES = {value for value, _ in CLIENT_PACKAGES}
+CLIENT_PACKAGE_LABELS = dict(CLIENT_PACKAGES)
+
+PAYMENT_KINDS = [
+    ('deposit', 'Deposit'),
+    ('milestone', 'Milestone payment'),
+    ('final', 'Final payment'),
+    ('additional_scope', 'Additional scope'),
+    ('third_party', 'Third-party cost'),
+    ('hosting', 'Hosting / domain'),
+    ('maintenance', 'Maintenance'),
+    ('other', 'Other'),
+]
+PAYMENT_KIND_VALUES = {value for value, _ in PAYMENT_KINDS}
+PAYMENT_KIND_LABELS = dict(PAYMENT_KINDS)
+# Kinds that count towards the project fee. The rest are pass-through or
+# optional costs and are reported separately from fee coverage.
+PROJECT_FEE_PAYMENT_KINDS = frozenset({'deposit', 'milestone', 'final'})
+
+PAYMENT_STATUSES = [
+    ('pending', 'Pending'),
+    ('paid', 'Paid'),
+    ('waived', 'Waived'),
+]
+PAYMENT_STATUS_VALUES = {value for value, _ in PAYMENT_STATUSES}
+PAYMENT_STATUS_LABELS = dict(PAYMENT_STATUSES)
+
+NOTE_KINDS = [
+    ('note', 'Note'),
+    ('call', 'Call / meeting'),
+    ('email', 'Email sent'),
+    ('task', 'Task'),
+    ('status', 'Status change'),
+]
+NOTE_KIND_VALUES = {value for value, _ in NOTE_KINDS}
+NOTE_KIND_LABELS = dict(NOTE_KINDS)
+
+PROPOSAL_STATUSES = [
+    ('draft', 'Draft'),
+    ('sent', 'Sent'),
+    ('accepted', 'Accepted'),
+    ('declined', 'Declined'),
+]
+PROPOSAL_STATUS_VALUES = {value for value, _ in PROPOSAL_STATUSES}
+PROPOSAL_STATUS_LABELS = dict(PROPOSAL_STATUSES)
+
+AGREEMENT_STATUSES = [
+    ('draft', 'Draft'),
+    ('sent', 'Sent'),
+    ('signed', 'Signed'),
+]
+AGREEMENT_STATUS_VALUES = {value for value, _ in AGREEMENT_STATUSES}
+AGREEMENT_STATUS_LABELS = dict(AGREEMENT_STATUSES)
+
+CLIENT_TABS = [
+    ('overview', 'Overview'),
+    ('questionnaire', 'Questionnaire'),
+    ('documents', 'Documents'),
+    ('payments', 'Payments'),
+    ('activity', 'Activity'),
+    ('handover', 'Handover'),
+]
+CLIENT_TAB_VALUES = {value for value, _ in CLIENT_TABS}
+
+
+def clean_client_status(value):
+    """Whitelist a submitted client status; unknown values leave it unchanged."""
+    value = (value or '').strip().lower()
+    return value if value in CLIENT_STATUS_VALUES else None
+
+
+def clean_client_source(value):
+    value = (value or '').strip().lower()
+    return value if value in CLIENT_SOURCE_VALUES else 'manual'
+
+
+def clean_client_package(value):
+    value = (value or '').strip().lower()
+    return value if value in CLIENT_PACKAGE_VALUES else ''
+
+
+def clean_money(value):
+    """Parse a money input ('15,000', 'KSh 15000.50') to a float, or None."""
+    if value is None:
+        return None
+    text = re.sub(r'[^0-9.\-]', '', str(value))
+    if not text or text in ('-', '.', '-.'):
+        return None
+    try:
+        amount = float(text)
+    except ValueError:
+        return None
+    if amount < 0:
+        return None
+    return round(amount, 2)
+
+
+def clean_date_value(value):
+    """Parse a yyyy-mm-dd string to a date, or None."""
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    try:
+        return datetime.strptime(str(value).strip(), '%Y-%m-%d').date()
+    except ValueError:
+        return None
+
+
+class Client(db.Model):
+    """One engagement: the client, their project, and where it stands."""
+
+    __tablename__ = 'client'
+    __table_args__ = (
+        db.Index('ix_client_status', 'status'),
+        db.Index('ix_client_email', 'email'),
+        db.Index('ix_client_enquiry_id', 'enquiry_id'),
+        db.Index('ix_client_created_at', 'created_at'),
+    )
+
+    # -- Client information --
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    business = db.Column(db.String(200), default='')
+    email = db.Column(db.String(255), default='')
+    phone = db.Column(db.String(50), default='')
+    location = db.Column(db.String(200), default='')
+    role = db.Column(db.String(150), default='')
+    contact_method = db.Column(db.String(30), default='')
+
+    # -- Record state --
+    status = db.Column(db.String(30), default='lead')
+    source = db.Column(db.String(30), default='manual')
+    enquiry_id = db.Column(db.Integer, nullable=True)
+
+    # -- Project information --
+    project_title = db.Column(db.String(200), default='')
+    project_summary = db.Column(db.Text, default='')
+    problem = db.Column(db.Text, default='')
+    requirements = db.Column(db.Text, default='')  # JSON list of requirement ids
+    budget_range = db.Column(db.String(100), default='')
+    timeline_notes = db.Column(db.Text, default='')
+    desired_launch = db.Column(db.Date, nullable=True)
+    package = db.Column(db.String(30), default='')
+
+    # -- Commercial --
+    fee = db.Column(db.Numeric(12, 2), nullable=True)
+    currency = db.Column(db.String(10), default='KSh')
+    start_date = db.Column(db.Date, nullable=True)
+    expected_delivery = db.Column(db.Date, nullable=True)
+    support_period = db.Column(db.String(100), default='')
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    questionnaires = db.relationship(
+        'ClientQuestionnaire', back_populates='client',
+        cascade='all, delete-orphan',
+        order_by='ClientQuestionnaire.created_at.desc()')
+    proposals = db.relationship(
+        'ClientProposal', back_populates='client',
+        cascade='all, delete-orphan',
+        order_by='ClientProposal.created_at.desc()')
+    agreements = db.relationship(
+        'ClientAgreement', back_populates='client',
+        cascade='all, delete-orphan',
+        order_by='ClientAgreement.created_at.desc()')
+    payments = db.relationship(
+        'ClientPayment', back_populates='client',
+        cascade='all, delete-orphan',
+        order_by='ClientPayment.due_date.asc()')
+    notes = db.relationship(
+        'ClientNote', back_populates='client',
+        cascade='all, delete-orphan',
+        order_by='ClientNote.created_at.desc()')
+    handover = db.relationship(
+        'ClientHandover', back_populates='client',
+        cascade='all, delete-orphan', uselist=False)
+
+    @property
+    def status_label(self):
+        return CLIENT_STATUS_LABELS.get(self.status, self.status or '')
+
+    @property
+    def next_action(self):
+        return CLIENT_STATUS_NEXT.get(self.status, '')
+
+    @property
+    def source_label(self):
+        return CLIENT_SOURCE_LABELS.get(self.source, self.source or '')
+
+    @property
+    def package_label(self):
+        return CLIENT_PACKAGE_LABELS.get(self.package, '')
+
+    @property
+    def contact_method_label(self):
+        return CONTACT_METHOD_LABELS.get(self.contact_method, self.contact_method or '')
+
+    @property
+    def budget_label(self):
+        if not self.budget_range:
+            return ''
+        return QUESTIONNAIRE_BUDGET_LABELS.get(self.budget_range, self.budget_range)
+
+    @property
+    def fee_amount(self):
+        return float(self.fee) if self.fee is not None else None
+
+    @property
+    def fee_paid(self):
+        return round(sum(
+            float(p.amount or 0) for p in self.payments
+            if p.kind in PROJECT_FEE_PAYMENT_KINDS and p.status == 'paid'
+        ), 2)
+
+    @property
+    def fee_outstanding(self):
+        if self.fee is None:
+            return None
+        return round(max(float(self.fee) - self.fee_paid, 0.0), 2)
+
+    @property
+    def other_costs_paid(self):
+        return round(sum(
+            float(p.amount or 0) for p in self.payments
+            if p.kind not in PROJECT_FEE_PAYMENT_KINDS and p.status == 'paid'
+        ), 2)
+
+    @property
+    def pending_amount(self):
+        return round(sum(
+            float(p.amount or 0) for p in self.payments if p.status == 'pending'
+        ), 2)
+
+    @property
+    def requirements_list(self):
+        try:
+            data = json.loads(self.requirements or '[]')
+        except (TypeError, ValueError):
+            return []
+        return [str(item) for item in data] if isinstance(data, list) else []
+
+    @property
+    def latest_proposal(self):
+        return self.proposals[0] if self.proposals else None
+
+    @property
+    def latest_agreement(self):
+        return self.agreements[0] if self.agreements else None
+
+    @property
+    def questionnaire(self):
+        return self.questionnaires[0] if self.questionnaires else None
+
+    @property
+    def open_tasks(self):
+        return [n for n in self.notes if n.kind == 'task' and not n.done]
+
+
+class ClientQuestionnaire(db.Model):
+    """Submitted discovery questionnaire responses, stored as JSON."""
+
+    __tablename__ = 'client_questionnaire'
+    __table_args__ = (
+        db.Index('ix_client_questionnaire_client_id', 'client_id'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
+    responses = db.Column(db.Text, default='{}')
+    status = db.Column(db.String(20), default='submitted')
+    submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    client = db.relationship('Client', back_populates='questionnaires')
+
+    def parsed(self):
+        try:
+            data = json.loads(self.responses or '{}')
+        except (TypeError, ValueError):
+            return {}
+        return data if isinstance(data, dict) else {}
+
+    @property
+    def requirements(self):
+        values = self.parsed().get('requirements')
+        return [str(v) for v in values] if isinstance(values, list) else []
+
+
+class ClientProposal(db.Model):
+    """A reusable RETEC proposal / quotation generated from stored data."""
+
+    __tablename__ = 'client_proposal'
+    __table_args__ = (
+        db.Index('ix_client_proposal_client_id', 'client_id'),
+        db.Index('ix_client_proposal_status', 'status'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
+    reference = db.Column(db.String(40), default='')
+    title = db.Column(db.String(200), default='')
+    summary = db.Column(db.Text, default='')
+    understanding = db.Column(db.Text, default='')
+    solution = db.Column(db.Text, default='')
+    scope = db.Column(db.Text, default='')
+    deliverables = db.Column(db.Text, default='')
+    features = db.Column(db.Text, default='')
+    technology = db.Column(db.Text, default='')
+    timeline = db.Column(db.Text, default='')
+    milestones = db.Column(db.Text, default='')
+    client_responsibilities = db.Column(db.Text, default='')
+    retec_responsibilities = db.Column(db.Text, default='')
+    # Price and schedule are entered per project -- never derived. Rows are
+    # JSON: [{"label": ..., "amount": ..., "timing": ...}, ...].
+    fee = db.Column(db.Numeric(12, 2), nullable=True)
+    payment_schedule = db.Column(db.Text, default='[]')
+    assumptions = db.Column(db.Text, default='')
+    exclusions = db.Column(db.Text, default='')
+    revisions = db.Column(db.Text, default='')
+    change_process = db.Column(db.Text, default='')
+    support_notes = db.Column(db.Text, default='')
+    validity_days = db.Column(db.Integer, default=14)
+    status = db.Column(db.String(20), default='draft')
+    sent_at = db.Column(db.DateTime, nullable=True)
+    responded_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    client = db.relationship('Client', back_populates='proposals')
+
+    @property
+    def status_label(self):
+        return PROPOSAL_STATUS_LABELS.get(self.status, self.status or '')
+
+    @property
+    def fee_amount(self):
+        return float(self.fee) if self.fee is not None else None
+
+    @property
+    def schedule_rows(self):
+        try:
+            data = json.loads(self.payment_schedule or '[]')
+        except (TypeError, ValueError):
+            return []
+        if not isinstance(data, list):
+            return []
+        rows = []
+        for row in data:
+            if not isinstance(row, dict):
+                continue
+            rows.append({
+                'label': str(row.get('label', '') or ''),
+                'amount': row.get('amount'),
+                'timing': str(row.get('timing', '') or ''),
+            })
+        return rows
+
+    @property
+    def schedule_total(self):
+        return round(sum(float(r['amount'] or 0) for r in self.schedule_rows), 2)
+
+    @property
+    def valid_until(self):
+        """Expiry date once sent: sent date plus the stated validity."""
+        if not self.sent_at or not self.validity_days:
+            return None
+        return (self.sent_at + timedelta(days=int(self.validity_days))).date()
+
+    @property
+    def missing_fields(self):
+        """Critical values the document still needs before it can be final."""
+        missing = []
+        if not (self.title or '').strip():
+            missing.append('Project title')
+        if not (self.summary or '').strip():
+            missing.append('Project summary')
+        if self.fee is None:
+            missing.append('Investment / project price')
+        if not self.schedule_rows:
+            missing.append('Payment schedule')
+        if not (self.timeline or '').strip():
+            missing.append('Timeline')
+        if not (self.scope or '').strip():
+            missing.append('Scope of work')
+        if not (self.deliverables or '').strip():
+            missing.append('Deliverables')
+        return missing
+
+    @property
+    def is_final(self):
+        return self.status != 'draft' and not self.missing_fields
+
+
+class ClientAgreement(db.Model):
+    """A RETEC Client Services Agreement built from the template clauses.
+
+    Values are snapshotted on the agreement (rather than read from the client
+    record each time) so a signed document does not change when the client
+    record is edited later.
+    """
+
+    __tablename__ = 'client_agreement'
+    __table_args__ = (
+        db.Index('ix_client_agreement_client_id', 'client_id'),
+        db.Index('ix_client_agreement_status', 'status'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
+    reference = db.Column(db.String(40), default='')
+    status = db.Column(db.String(20), default='draft')
+    project_fee = db.Column(db.Numeric(12, 2), nullable=True)
+    deposit_percent = db.Column(db.Numeric(5, 2), nullable=True)
+    start_date = db.Column(db.Date, nullable=True)
+    expected_delivery = db.Column(db.Date, nullable=True)
+    support_period = db.Column(db.String(100), default='')
+    payment_terms = db.Column(db.Text, default='')
+    special_terms = db.Column(db.Text, default='')
+    signed_at = db.Column(db.DateTime, nullable=True)
+    signed_by = db.Column(db.String(100), default='')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    client = db.relationship('Client', back_populates='agreements')
+
+    @property
+    def status_label(self):
+        return AGREEMENT_STATUS_LABELS.get(self.status, self.status or '')
+
+    @property
+    def fee_amount(self):
+        return float(self.project_fee) if self.project_fee is not None else None
+
+    @property
+    def deposit_amount(self):
+        if self.project_fee is None or self.deposit_percent is None:
+            return None
+        return round(float(self.project_fee) * float(self.deposit_percent) / 100.0, 2)
+
+
+class ClientPayment(db.Model):
+    """One payment row: deposit, milestone, final, or a pass-through cost."""
+
+    __tablename__ = 'client_payment'
+    __table_args__ = (
+        db.Index('ix_client_payment_client_id', 'client_id'),
+        db.Index('ix_client_payment_status', 'status'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
+    label = db.Column(db.String(120), nullable=False)
+    kind = db.Column(db.String(30), default='deposit')
+    amount = db.Column(db.Numeric(12, 2), default=0)
+    due_date = db.Column(db.Date, nullable=True)
+    paid_date = db.Column(db.Date, nullable=True)
+    status = db.Column(db.String(20), default='pending')
+    reference = db.Column(db.String(100), default='')
+    notes = db.Column(db.Text, default='')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    client = db.relationship('Client', back_populates='payments')
+
+    @property
+    def kind_label(self):
+        return PAYMENT_KIND_LABELS.get(self.kind, self.kind or '')
+
+    @property
+    def status_label(self):
+        return PAYMENT_STATUS_LABELS.get(self.status, self.status or '')
+
+    @property
+    def counts_towards_fee(self):
+        return self.kind in PROJECT_FEE_PAYMENT_KINDS
+
+    @property
+    def amount_value(self):
+        return float(self.amount or 0)
+
+
+class ClientNote(db.Model):
+    """Notes, call records, sent emails, tasks and status changes."""
+
+    __tablename__ = 'client_note'
+    __table_args__ = (
+        db.Index('ix_client_note_client_id', 'client_id'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
+    kind = db.Column(db.String(20), default='note')
+    body = db.Column(db.Text, nullable=False)
+    done = db.Column(db.Boolean, default=False)
+    author = db.Column(db.String(80), default='')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    client = db.relationship('Client', back_populates='notes')
+
+    @property
+    def kind_label(self):
+        return NOTE_KIND_LABELS.get(self.kind, self.kind or '')
+
+
+class ClientHandover(db.Model):
+    """Handover checklist state and the client's sign-off."""
+
+    __tablename__ = 'client_handover'
+    __table_args__ = (
+        db.Index('ix_client_handover_client_id', 'client_id'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('client.id'),
+                           nullable=False, unique=True)
+    checklist = db.Column(db.Text, default='{}')  # JSON: item id -> bool
+    notes = db.Column(db.Text, default='')
+    signoff_name = db.Column(db.String(100), default='')
+    signoff_date = db.Column(db.Date, nullable=True)
+    signoff_method = db.Column(db.String(100), default='')
+    completed_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    client = db.relationship('Client', back_populates='handover')
+
+    def parsed(self):
+        try:
+            data = json.loads(self.checklist or '{}')
+        except (TypeError, ValueError):
+            return {}
+        return data if isinstance(data, dict) else {}
+
+    @property
+    def checked_count(self):
+        state = self.parsed()
+        return sum(1 for item_id in client_documents.HANDOVER_ITEM_IDS
+                   if state.get(item_id))
+
+    @property
+    def total_count(self):
+        return len(client_documents.HANDOVER_ITEM_IDS)
+
+    @property
+    def is_complete(self):
+        return self.checked_count == self.total_count and bool(self.signoff_name)
+
 # ===== HELPERS =====
+
+# ----- Client operations helpers -----
+
+@app.template_filter('lines')
+def _lines_filter(value):
+    """Split a textarea of one-item-per-line into a list for document renders."""
+    return [line.strip() for line in (value or '').splitlines() if line.strip()]
+
+
+@app.template_filter('money')
+def _money_filter(value):
+    """Format a money value with thousands separators, no decimals if whole."""
+    if value in (None, ''):
+        return '—'
+    try:
+        amount = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    return '{:,.2f}'.format(amount) if amount % 1 else '{:,.0f}'.format(amount)
+
+
+def client_record_path(client):
+    """Admin path for a client record, for links inside notification emails.
+
+    A relative path rather than an absolute URL: the email is only ever sent
+    to the studio, and building an absolute URL outside a request would need
+    the deployment host to be configured.
+    """
+    return '/admin/clients/%d' % client.id
+
+
+def _short_title(text, limit=150):
+    """Reduce a free-text answer to something usable as a project title."""
+    text = ' '.join((text or '').split())
+    if len(text) <= limit:
+        return text
+    clipped = text[:limit].rsplit(' ', 1)[0]
+    return clipped + '…'
+
+
+def build_client_from_questionnaire(responses):
+    """Create (without committing) a Client row from questionnaire responses.
+
+    Only the fields that belong on the readable record are copied across; the
+    full response set stays on the ClientQuestionnaire row.
+    """
+    budget = responses.get('budget_range', '')
+    contact_method = responses.get('contact_method', '')
+    selected = responses.get('requirements') or []
+    requirements = [value for value in selected
+                    if value in QUESTIONNAIRE_REQUIREMENT_LABELS]
+    return Client(
+        name=(responses.get('full_name') or '').strip()[:100] or 'Unnamed lead',
+        business=(responses.get('business_name') or '').strip()[:200],
+        email=(responses.get('email') or '').strip().lower()[:255],
+        phone=(responses.get('phone') or '').strip()[:50],
+        location=(responses.get('business_location') or '').strip()[:200],
+        role=(responses.get('role_position') or '').strip()[:150],
+        contact_method=contact_method if contact_method in CONTACT_METHOD_LABELS else '',
+        status='discovery',
+        source='questionnaire',
+        project_title=_short_title(responses.get('looking_to_build', ''))[:200],
+        problem=(responses.get('problem_solving') or '').strip(),
+        requirements=json.dumps(requirements),
+        budget_range=budget if budget in QUESTIONNAIRE_BUDGET_LABELS else '',
+        desired_launch=clean_date_value(responses.get('desired_launch')),
+    )
+
+
+def log_client_note(client, kind, body, author=''):
+    """Stage a note on a client record (the caller commits)."""
+    body = (body or '').strip()
+    if not body:
+        return None
+    if kind not in NOTE_KIND_VALUES:
+        kind = 'note'
+    if not author:
+        author = session.get('admin_username', '') or ''
+    note = ClientNote(client=client, kind=kind, body=body[:5000], author=author[:80])
+    db.session.add(note)
+    return note
+
+
+def payment_terms_text(client):
+    """Human-readable payment terms for [PAYMENT TERMS].
+
+    Uses the stored fee payments when they exist (what is actually agreed),
+    then falls back to the latest proposal's schedule, then None so the
+    placeholder stays visible on a draft.
+    """
+    fee_payments = [p for p in client.payments if p.counts_towards_fee]
+    if fee_payments:
+        parts = []
+        for payment in fee_payments:
+            piece = '%s: %s %s' % (payment.label, client.currency or 'KSh',
+                                   _money_filter(payment.amount_value))
+            if payment.due_date:
+                piece += ' due ' + payment.due_date.strftime('%d %B %Y')
+            parts.append(piece)
+        return '; '.join(parts)
+    proposal = client.latest_proposal
+    if proposal and proposal.schedule_rows:
+        parts = []
+        for row in proposal.schedule_rows:
+            piece = '%s: %s %s' % (row['label'], client.currency or 'KSh',
+                                   _money_filter(row['amount']))
+            if row['timing']:
+                piece += ' (%s)' % row['timing']
+            parts.append(piece)
+        return '; '.join(parts)
+    return None
+
+
+def agreement_placeholder_values(agreement):
+    """Map AGREEMENT_PLACEHOLDERS to this agreement's stored values."""
+    client = agreement.client
+    fee = agreement.fee_amount
+    deposit = agreement.deposit_percent
+    if deposit is not None and float(deposit) == int(float(deposit)):
+        deposit_text = '%d%%' % int(float(deposit))
+    elif deposit is not None:
+        deposit_text = '%s%%' % ('%g' % float(deposit))
+    else:
+        deposit_text = None
+    return {
+        'CLIENT NAME': client.name or None,
+        'BUSINESS NAME': client.business or None,
+        'BUSINESS_SUFFIX': ' trading as %s' % client.business if client.business else '',
+        'PROJECT NAME': client.project_title or None,
+        'PROJECT DESCRIPTION': client.project_summary or client.problem or None,
+        'PROJECT FEE': (
+            '%s %s' % (client.currency or 'KSh', _money_filter(fee))
+            if fee is not None else None),
+        'DEPOSIT PERCENTAGE': deposit_text,
+        # An explicit term typed onto the agreement wins over the derived
+        # payment list, so the signed document matches what was negotiated.
+        'PAYMENT TERMS': ((agreement.payment_terms or '').strip()
+                          or payment_terms_text(client)),
+        'PROJECT START DATE': (
+            agreement.start_date.strftime('%d %B %Y') if agreement.start_date else None),
+        'EXPECTED DELIVERY DATE': (
+            agreement.expected_delivery.strftime('%d %B %Y')
+            if agreement.expected_delivery else None),
+        'SUPPORT PERIOD': agreement.support_period or client.support_period or None,
+    }
+
+
+def schedule_rows_from_form(form):
+    """Read the fixed payment-schedule rows from the proposal admin form."""
+    rows = []
+    for index in range(1, 5):
+        label = (form.get('sched_label_%d' % index) or '').strip()[:120]
+        amount = clean_money(form.get('sched_amount_%d' % index))
+        timing = (form.get('sched_timing_%d' % index) or '').strip()[:200]
+        if label and amount is not None:
+            rows.append({'label': label, 'amount': amount, 'timing': timing})
+    return rows
+
+
+def lines_text(*values):
+    """Join submitted textarea lists into one newline-delimited string."""
+    return '\n'.join((value or '').strip() for value in values if (value or '').strip())
+
+
+def send_questionnaire_notification(client, questionnaire):
+    """Email the studio that a discovery questionnaire was submitted.
+
+    Written after the database commit, so a mail failure never loses a
+    submission. Fails soft like every other send in this file.
+    """
+    api_key = app.config['BREVO_API_KEY']
+    if not api_key or not app.config['MAIL_FROM'] or not app.config['MAIL_TO']:
+        app.logger.warning('Questionnaire notification skipped: Brevo not configured.')
+        return False
+    try:
+        responses = questionnaire.parsed()
+        requirements = ', '.join(
+            QUESTIONNAIRE_REQUIREMENT_LABELS.get(value, value)
+            for value in questionnaire.requirements) or 'Not specified'
+        timestamp = questionnaire.submitted_at.strftime('%Y-%m-%d %H:%M UTC')
+        body = (
+            "New RETEC discovery questionnaire\n\n"
+            "Name: %s\n"
+            "Business / Organization: %s\n"
+            "Email: %s\n"
+            "Phone / WhatsApp: %s\n"
+            "Location: %s\n"
+            "Role: %s\n"
+            "Preferred contact: %s\n"
+            "Budget: %s\n"
+            "Desired launch: %s\n"
+            "Requirements: %s\n"
+            "Submitted: %s\n"
+            "Admin record: %s\n\n"
+            "What they want to build:\n%s\n\n"
+            "What would make it successful:\n%s\n\n"
+            "Anything else:\n%s\n"
+        ) % (
+            client.name,
+            client.business or 'N/A',
+            client.email or 'N/A',
+            client.phone or 'N/A',
+            client.location or 'N/A',
+            client.role or 'N/A',
+            client.contact_method_label or 'Not specified',
+            client.budget_label or 'Not specified',
+            client.desired_launch.isoformat() if client.desired_launch else 'Not specified',
+            requirements,
+            timestamp,
+            client_record_path(client),
+            responses.get('looking_to_build') or 'Not answered',
+            responses.get('project_success') or 'Not answered',
+            responses.get('anything_else') or 'Not answered',
+        )
+        payload = {
+            'sender': {'email': app.config['MAIL_FROM']},
+            'to': [{'email': app.config['MAIL_TO']}],
+            'subject': "Discovery Questionnaire: %s" % client.name[:80],
+            'textContent': body,
+        }
+        if client.email:
+            payload['replyTo'] = {'email': client.email}
+        resp = requests.post(
+            'https://api.brevo.com/v3/smtp/email',
+            headers={'api-key': api_key, 'Content-Type': 'application/json'},
+            json=payload,
+            timeout=15,
+        )
+        if resp.ok:
+            return True
+        app.logger.error('Brevo questionnaire notification error %s: %s',
+                         resp.status_code, resp.text)
+        return False
+    except Exception as exc:
+        app.logger.exception('Questionnaire notification failed: %s', exc)
+        return False
+
+
+def send_questionnaire_confirmation(client):
+    """Confirm receipt to the person who submitted the questionnaire."""
+    api_key = app.config['BREVO_API_KEY']
+    if not api_key or not app.config['MAIL_FROM'] or not client.email:
+        app.logger.warning('Questionnaire confirmation skipped: not configured, or no recipient.')
+        return False
+    try:
+        body = (
+            "Hi %s,\n\n"
+            "Thank you — we have received your RETEC discovery questionnaire%s.\n\n"
+            "What happens next:\n"
+            "1. We review your answers against what you want to build.\n"
+            "2. If anything needs clarifying, we will contact you to arrange a "
+            "short discovery call.\n"
+            "3. We prepare a proposal with scope, timeline and price for you to "
+            "consider. A proposal is not a commitment to work together until "
+            "you accept it in writing.\n\n"
+            "How we handle your information is described in our Privacy "
+            "Policy: %s/privacy\n\n"
+            "If anything you submitted needs to change, reply to this email.\n\n"
+            "— RETEC\n%s\n"
+        ) % (
+            client.name or 'there',
+            ' for %s' % client.business if client.business else '',
+            client_documents.RETEC_INFO['website'],
+            client_documents.RETEC_INFO['tagline'],
+        )
+        resp = requests.post(
+            'https://api.brevo.com/v3/smtp/email',
+            headers={'api-key': api_key, 'Content-Type': 'application/json'},
+            json={
+                'sender': {'email': app.config['MAIL_FROM'], 'name': 'RETEC'},
+                'to': [{'email': client.email}],
+                'subject': 'We have received your RETEC discovery questionnaire',
+                'textContent': body,
+            },
+            timeout=15,
+        )
+        if resp.ok:
+            return True
+        app.logger.error('Brevo questionnaire confirmation error %s: %s',
+                         resp.status_code, resp.text)
+        return False
+    except Exception as exc:
+        app.logger.exception('Questionnaire confirmation failed: %s', exc)
+        return False
+
 
 _geo_cache = {}
 _GEO_CACHE_MAX = 5000
@@ -2396,6 +3329,61 @@ def contact():
     context['active'] = 'home'
     return render_template('index.html', **context)
 
+@app.route('/start-a-project', methods=['GET', 'POST'])
+# Heavier than the contact form: one submission creates a client record and
+# several kilobytes of answers, so the per-IP limit is tighter.
+@limiter.limit("3 per hour", methods=["POST"])
+def start_project():
+    """Public discovery questionnaire — step one of the client lifecycle.
+
+    A validated submission writes a Client (status `discovery`) plus a
+    ClientQuestionnaire holding the full response set, then redirects to the
+    confirmation page (post/redirect/get, so a refresh cannot resubmit).
+    Internal follow-up — discovery call, proposal — happens in the admin
+    record, never on a public page.
+    """
+    form = DiscoveryQuestionnaireForm()
+    honeypot = request.form.get('website', '')
+    if request.method == 'POST' and form.validate_on_submit() and not honeypot:
+        responses = questionnaire_responses(form)
+        try:
+            client = build_client_from_questionnaire(responses)
+            db.session.add(client)
+            questionnaire = ClientQuestionnaire(
+                client=client,
+                responses=json.dumps(responses, ensure_ascii=False),
+            )
+            db.session.add(questionnaire)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            app.logger.exception('Failed to store questionnaire from %s',
+                                 responses.get('email'))
+            flash('Your questionnaire could not be submitted right now. '
+                  'Please try again, or email us directly.', 'error')
+        else:
+            # The record is committed before any email is attempted, so a
+            # mail failure can never lose a submission.
+            send_questionnaire_notification(client, questionnaire)
+            send_questionnaire_confirmation(client)
+            return redirect(url_for('start_project_complete'))
+    return render_template(
+        'start_project.html', form=form, sections=QUESTIONNAIRE_SECTIONS,
+        active='start',
+        meta_title='Discovery Questionnaire — RETEC',
+        meta_desc='Tell RETEC about your business and your project so we can '
+                  'prepare a clear proposal with scope, timeline and price.',
+    )
+
+
+@app.route('/start-a-project/complete')
+def start_project_complete():
+    return render_template(
+        'start_project_complete.html', active='start',
+        meta_title='Questionnaire received — RETEC',
+        meta_desc='Your RETEC discovery questionnaire has been received.',
+    )
+
 @app.route('/subscribe', methods=['POST'])
 # POST only, CSRF-protected via the hidden token in the subscribe form. Each
 # signup can touch subscriber storage and optional third-party list sync, so
@@ -2520,7 +3508,7 @@ def cv():
 # rendered as visible [TODO: ...] markers rather than plausible fiction.
 
 LEGAL_LAST_UPDATED = legal.LAST_UPDATED
-LEGAL_LAST_UPDATED_ISO = '2026-02-02'
+LEGAL_LAST_UPDATED_ISO = '2026-10-08'
 
 # Mailboxes are configuration, never copy. `contact_email` is the address this
 # application actually sends from, which is also the one published in the
@@ -4174,6 +5162,814 @@ def admin_subscribers_export():
     output.seek(0)
     return Response(output.getvalue(), mimetype='text/csv',
         headers={'Content-Disposition': 'attachment;filename=subscribers.csv'})
+
+# ===== ADMIN: CLIENT OPERATIONS =====
+#
+# The internal side of the client lifecycle. Every route here is gated on
+# @admin_required, every POST carries CSRF, and every status/kind value is
+# validated against the whitelists above. Nothing in this section is reachable
+# without an authenticated admin session.
+
+def _client_tab(tab):
+    return tab if tab in CLIENT_TAB_VALUES else 'overview'
+
+
+def _client_detail_context(client, tab):
+    """Shared template context for every tab of the client record."""
+    questionnaire = client.questionnaire
+    budget_choices = [('', 'Not set')] + list(QUESTIONNAIRE_BUDGET_RANGES)
+    if client.budget_range and client.budget_range not in QUESTIONNAIRE_BUDGET_LABELS:
+        # Enquiry-derived budgets are free text; keep them selectable on the
+        # edit form instead of silently resetting them to blank.
+        budget_choices.append((client.budget_range, client.budget_range))
+    return {
+        'client': client,
+        'tab': _client_tab(tab),
+        'tabs': CLIENT_TABS,
+        'statuses': CLIENT_STATUSES,
+        'status_labels': CLIENT_STATUS_LABELS,
+        'next_action': client.next_action,
+        'questionnaire': questionnaire,
+        'responses': questionnaire.parsed() if questionnaire else {},
+        'sections': QUESTIONNAIRE_SECTIONS,
+        'field_specs': QUESTIONNAIRE_FIELD_SPECS,
+        'requirement_labels': QUESTIONNAIRE_REQUIREMENT_LABELS,
+        'budget_choices': budget_choices,
+        'packages': CLIENT_PACKAGES,
+        'payment_kinds': PAYMENT_KINDS,
+        'payment_statuses': PAYMENT_STATUSES,
+        'note_kinds': NOTE_KINDS,
+        'proposal_statuses': PROPOSAL_STATUSES,
+        'agreement_statuses': AGREEMENT_STATUSES,
+        'handover_sections': client_documents.HANDOVER_CHECKLIST,
+        'handover_total': len(client_documents.HANDOVER_ITEM_IDS),
+        'handover': client.handover,
+        'agreement_disclaimer': client_documents.AGREEMENT_DISCLAIMER,
+        'retec_info': client_documents.RETEC_INFO,
+    }
+
+
+def _apply_client_form(client, form):
+    """Apply submitted client/project fields to a Client row.
+
+    Returns a list of validation error messages (empty when the input is
+    acceptable). Server-side only — the template's `required` attributes are
+    a convenience, never the check.
+    """
+    errors = []
+    name = (form.get('name') or '').strip()
+    if not name:
+        errors.append('Client name is required.')
+    elif len(name) > 100:
+        errors.append('Client name must be 100 characters or fewer.')
+    email = (form.get('email') or '').strip()
+    if email and len(email) > 255:
+        errors.append('Email must be 255 characters or fewer.')
+    fee_raw = (form.get('fee') or '').strip()
+    fee = clean_money(fee_raw) if fee_raw else None
+    if fee_raw and fee is None:
+        errors.append('Project fee must be a number, e.g. 25000.')
+    status = clean_client_status(form.get('status'))
+    if status is None:
+        errors.append('Unknown status.')
+    if errors:
+        return errors
+    client.name = name
+    client.business = (form.get('business') or '').strip()[:200]
+    client.email = email.lower()
+    client.phone = (form.get('phone') or '').strip()[:50]
+    client.location = (form.get('location') or '').strip()[:200]
+    client.role = (form.get('role') or '').strip()[:150]
+    contact_method = (form.get('contact_method') or '').strip()
+    client.contact_method = contact_method if contact_method in CONTACT_METHOD_LABELS else ''
+    client.status = status
+    client.source = clean_client_source(form.get('source'))
+    client.project_title = (form.get('project_title') or '').strip()[:200]
+    client.project_summary = (form.get('project_summary') or '').strip()[:5000]
+    client.problem = (form.get('problem') or '').strip()[:5000]
+    client.requirements = json.dumps([
+        line.strip() for line in (form.get('requirements') or '').splitlines()
+        if line.strip()
+    ][:50])
+    client.budget_range = (form.get('budget_range') or '').strip()[:100]
+    client.timeline_notes = (form.get('timeline_notes') or '').strip()[:3000]
+    client.desired_launch = clean_date_value(form.get('desired_launch'))
+    client.package = clean_client_package(form.get('package'))
+    client.fee = fee
+    client.start_date = clean_date_value(form.get('start_date'))
+    client.expected_delivery = clean_date_value(form.get('expected_delivery'))
+    client.support_period = (form.get('support_period') or '').strip()[:100]
+    return errors
+
+
+def _apply_proposal_form(proposal, form, client):
+    """Apply submitted proposal fields. Returns a list of error messages."""
+    errors = []
+    title = (form.get('title') or '').strip() or (client.project_title or '').strip()
+    summary = (form.get('summary') or '').strip()
+    if not title:
+        errors.append('Project title is required.')
+    if len(title) > 200:
+        errors.append('Project title must be 200 characters or fewer.')
+    if not summary:
+        errors.append('Project summary is required — a proposal cannot be a bare price.')
+    fee_raw = (form.get('fee') or '').strip()
+    fee = clean_money(fee_raw) if fee_raw else None
+    if fee_raw and fee is None:
+        errors.append('Investment must be a number, e.g. 25000.')
+    if errors:
+        return errors
+    proposal.title = title[:200]
+    proposal.summary = summary[:5000]
+    proposal.understanding = (form.get('understanding') or '').strip()[:5000]
+    proposal.solution = (form.get('solution') or '').strip()[:5000]
+    proposal.scope = (form.get('scope') or '').strip()[:8000]
+    proposal.deliverables = (form.get('deliverables') or '').strip()[:5000]
+    proposal.features = (form.get('features') or '').strip()[:5000]
+    proposal.technology = (form.get('technology') or '').strip()[:3000]
+    proposal.timeline = (form.get('timeline') or '').strip()[:3000]
+    proposal.milestones = (form.get('milestones') or '').strip()[:5000]
+    proposal.client_responsibilities = (form.get('client_responsibilities') or '').strip()[:3000]
+    proposal.retec_responsibilities = (form.get('retec_responsibilities') or '').strip()[:3000]
+    proposal.fee = fee
+    proposal.payment_schedule = json.dumps(schedule_rows_from_form(form))
+    proposal.assumptions = (form.get('assumptions') or '').strip()[:5000]
+    proposal.exclusions = (form.get('exclusions') or '').strip()[:5000]
+    proposal.revisions = (form.get('revisions') or '').strip()[:3000]
+    proposal.change_process = (form.get('change_process') or '').strip()[:3000]
+    proposal.support_notes = (form.get('support_notes') or '').strip()[:3000]
+    proposal.validity_days = form_int(form.get('validity_days'), 14, low=1, high=365)
+    return errors
+
+
+def _apply_agreement_form(agreement, form, client):
+    """Apply submitted agreement fields. Returns a list of error messages."""
+    errors = []
+    fee_raw = (form.get('project_fee') or '').strip()
+    fee = clean_money(fee_raw) if fee_raw else None
+    if fee_raw and fee is None:
+        errors.append('Project fee must be a number, e.g. 25000.')
+    deposit_raw = (form.get('deposit_percent') or '').strip()
+    deposit = clean_money(deposit_raw) if deposit_raw else None
+    if deposit is not None and deposit > 100:
+        errors.append('Deposit percentage cannot be above 100.')
+    if errors:
+        return errors
+    agreement.project_fee = fee
+    agreement.deposit_percent = deposit
+    agreement.start_date = clean_date_value(form.get('start_date'))
+    agreement.expected_delivery = clean_date_value(form.get('expected_delivery'))
+    agreement.support_period = (form.get('support_period') or '').strip()[:100]
+    agreement.payment_terms = (form.get('payment_terms') or '').strip()[:3000]
+    agreement.special_terms = (form.get('special_terms') or '').strip()[:5000]
+    agreement.signed_by = (form.get('signed_by') or '').strip()[:100]
+    return errors
+
+
+@app.route('/admin/clients')
+@admin_required
+def admin_clients():
+    page = request.args.get('page', 1, type=int)
+    status = request.args.get('status', '').strip().lower()
+    term = request.args.get('q', '').strip()[:100]
+    query = Client.query
+    if status in CLIENT_STATUS_VALUES:
+        query = query.filter(Client.status == status)
+    else:
+        status = ''
+    if term:
+        pattern = '%%%s%%' % term.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+        query = query.filter(db.or_(
+            Client.name.ilike(pattern),
+            Client.business.ilike(pattern),
+            Client.email.ilike(pattern),
+            Client.project_title.ilike(pattern),
+        ))
+    clients = query.order_by(Client.updated_at.desc()).paginate(page=page, per_page=25)
+    counts = {row[0]: row[1] for row in db.session.query(
+        Client.status, db.func.count(Client.id)
+    ).group_by(Client.status).all()}
+    return render_template(
+        'admin/clients.html', clients=clients, counts=counts,
+        statuses=CLIENT_STATUSES, active_status=status, term=term,
+        active='clients')
+
+
+@app.route('/admin/clients/export.csv')
+@admin_required
+def admin_clients_export():
+    output = io.StringIO()
+    writer = _csv_writer(output)
+    writer.writerow(['Created', 'Status', 'Name', 'Business', 'Email', 'Phone',
+                     'Source', 'Project', 'Package', 'Fee', 'Paid', 'Outstanding',
+                     'Start', 'Expected delivery'])
+    for client in Client.query.order_by(Client.created_at.desc()).all():
+        writer.writerow([
+            _csv_cell(client.created_at), _csv_cell(client.status_label),
+            _csv_cell(client.name), _csv_cell(client.business), _csv_cell(client.email),
+            _csv_cell(client.phone), _csv_cell(client.source_label),
+            _csv_cell(client.project_title), _csv_cell(client.package_label),
+            _csv_cell(client.fee_amount), _csv_cell(client.fee_paid),
+            _csv_cell(client.fee_outstanding), _csv_cell(client.start_date),
+            _csv_cell(client.expected_delivery),
+        ])
+    output.seek(0)
+    return Response(output.getvalue(), mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment;filename=retec-clients.csv'})
+
+
+@app.route('/admin/clients/add', methods=['GET', 'POST'])
+@admin_required
+def admin_client_add():
+    if request.method == 'POST':
+        client = Client()
+        errors = _apply_client_form(client, request.form)
+        if not errors:
+            db.session.add(client)
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                app.logger.exception('Failed to create client record')
+                flash('Could not save the client record. Please try again.', 'error')
+            else:
+                log_client_note(client, 'note', 'Client record created.')
+                db.session.commit()
+                flash('Client record created.', 'success')
+                return redirect(url_for('admin_client_detail', id=client.id))
+        for message in errors:
+            flash(message, 'error')
+    return render_template(
+        'admin/client_form.html', client=None, statuses=CLIENT_STATUSES,
+        sources=CLIENT_SOURCES, contact_methods=CONTACT_METHODS,
+        packages=CLIENT_PACKAGES,
+        budget_choices=[('', 'Not set')] + list(QUESTIONNAIRE_BUDGET_RANGES),
+        active='clients')
+
+
+@app.route('/admin/clients/edit/<int:id>', methods=['GET', 'POST'])
+@admin_required
+def admin_client_edit(id):
+    client = Client.query.get_or_404(id)
+    if request.method == 'POST':
+        errors = _apply_client_form(client, request.form)
+        if not errors:
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                app.logger.exception('Failed to update client %s', id)
+                flash('Could not save the client record. Please try again.', 'error')
+            else:
+                flash('Client record updated.', 'success')
+                return redirect(url_for('admin_client_detail', id=client.id))
+        for message in errors:
+            flash(message, 'error')
+    budget_choices = [('', 'Not set')] + list(QUESTIONNAIRE_BUDGET_RANGES)
+    if client.budget_range and client.budget_range not in QUESTIONNAIRE_BUDGET_LABELS:
+        budget_choices.append((client.budget_range, client.budget_range))
+    return render_template(
+        'admin/client_form.html', client=client, statuses=CLIENT_STATUSES,
+        sources=CLIENT_SOURCES, contact_methods=CONTACT_METHODS,
+        packages=CLIENT_PACKAGES, budget_choices=budget_choices,
+        active='clients')
+
+
+@app.route('/admin/clients/<int:id>')
+@admin_required
+def admin_client_detail(id):
+    client = Client.query.get_or_404(id)
+    tab = _client_tab(request.args.get('tab', 'overview'))
+    return render_template('admin/client_detail.html', active='clients',
+                           **_client_detail_context(client, tab))
+
+
+@app.route('/admin/clients/status/<int:id>', methods=['POST'])
+@admin_required
+def admin_client_status(id):
+    client = Client.query.get_or_404(id)
+    tab = _client_tab(request.form.get('tab', 'overview'))
+    status = clean_client_status(request.form.get('status'))
+    if status is None:
+        # An unrecognised value leaves the stored status untouched, so a
+        # crafted POST cannot invent a stage name.
+        flash('Unknown status — nothing changed.', 'error')
+    elif status != client.status:
+        previous = client.status_label
+        client.status = status
+        log_client_note(client, 'status',
+                        'Status changed from %s to %s.' % (previous, CLIENT_STATUS_LABELS[status]))
+        try:
+            db.session.commit()
+            flash('Status updated to %s.' % CLIENT_STATUS_LABELS[status], 'success')
+        except Exception:
+            db.session.rollback()
+            app.logger.exception('Failed to update status for client %s', id)
+            flash('Could not update the status. Please try again.', 'error')
+    return redirect(url_for('admin_client_detail', id=client.id, tab=tab))
+
+
+@app.route('/admin/clients/delete/<int:id>', methods=['POST'])
+@admin_required
+def admin_client_delete(id):
+    client = Client.query.get_or_404(id)
+    try:
+        db.session.delete(client)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        app.logger.exception('Failed to delete client %s', id)
+        flash('Could not delete the client record.', 'error')
+    else:
+        flash('Client record deleted.', 'success')
+    return redirect(url_for('admin_clients'))
+
+
+# ----- Proposals -----
+
+@app.route('/admin/clients/<int:client_id>/proposal/add', methods=['GET', 'POST'])
+@admin_required
+def admin_client_proposal_add(client_id):
+    client = Client.query.get_or_404(client_id)
+    if request.method == 'POST':
+        proposal = ClientProposal()
+        errors = _apply_proposal_form(proposal, request.form, client)
+        if not errors:
+            proposal.client = client
+            db.session.add(proposal)
+            try:
+                db.session.flush()
+                proposal.reference = 'RETEC-P-%04d' % proposal.id
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                app.logger.exception('Failed to create proposal for client %s', client_id)
+                flash('Could not save the proposal. Please try again.', 'error')
+            else:
+                log_client_note(client, 'note', 'Proposal %s created.' % proposal.reference)
+                db.session.commit()
+                flash('Proposal created as a draft.', 'success')
+                return redirect(url_for('admin_client_proposal_edit',
+                                        client_id=client.id, proposal_id=proposal.id))
+        for message in errors:
+            flash(message, 'error')
+    return render_template(
+        'admin/client/proposal_form.html', proposal=None,
+        defaults=client_documents.PROPOSAL_DEFAULTS,
+        pricing_note=client_documents.PROPOSAL_PRICING_NOTE,
+        active='clients', **_client_detail_context(client, 'documents'))
+
+
+@app.route('/admin/clients/<int:client_id>/proposal/<int:proposal_id>/edit',
+           methods=['GET', 'POST'])
+@admin_required
+def admin_client_proposal_edit(client_id, proposal_id):
+    client = Client.query.get_or_404(client_id)
+    proposal = ClientProposal.query.filter_by(id=proposal_id, client_id=client.id).first_or_404()
+    if request.method == 'POST':
+        errors = _apply_proposal_form(proposal, request.form, client)
+        if not errors:
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                app.logger.exception('Failed to update proposal %s', proposal.id)
+                flash('Could not save the proposal. Please try again.', 'error')
+            else:
+                flash('Proposal updated.', 'success')
+                return redirect(url_for('admin_client_proposal_view',
+                                        client_id=client.id, proposal_id=proposal.id))
+        for message in errors:
+            flash(message, 'error')
+    return render_template(
+        'admin/client/proposal_form.html', proposal=proposal,
+        defaults=client_documents.PROPOSAL_DEFAULTS,
+        pricing_note=client_documents.PROPOSAL_PRICING_NOTE,
+        active='clients', **_client_detail_context(client, 'documents'))
+
+
+@app.route('/admin/clients/<int:client_id>/proposal/<int:proposal_id>')
+@admin_required
+def admin_client_proposal_view(client_id, proposal_id):
+    client = Client.query.get_or_404(client_id)
+    proposal = ClientProposal.query.filter_by(id=proposal_id, client_id=client.id).first_or_404()
+    return render_template(
+        'admin/client/proposal_document.html',
+        proposal=proposal,
+        missing=proposal.missing_fields,
+        pricing_note=client_documents.PROPOSAL_INVESTMENT_NOTE,
+        acceptance_note=client_documents.PROPOSAL_DEFAULTS['acceptance_note'],
+        active='clients', **_client_detail_context(client, 'documents'))
+
+
+@app.route('/admin/clients/<int:client_id>/proposal/<int:proposal_id>/status',
+           methods=['POST'])
+@admin_required
+def admin_client_proposal_status(client_id, proposal_id):
+    client = Client.query.get_or_404(client_id)
+    proposal = ClientProposal.query.filter_by(id=proposal_id, client_id=client.id).first_or_404()
+    status = (request.form.get('status') or '').strip().lower()
+    if status not in PROPOSAL_STATUS_VALUES:
+        flash('Unknown proposal status — nothing changed.', 'error')
+    elif status != proposal.status:
+        proposal.status = status
+        if status == 'sent' and proposal.sent_at is None:
+            proposal.sent_at = datetime.utcnow()
+        if status in ('accepted', 'declined'):
+            proposal.responded_at = datetime.utcnow()
+        note = 'Proposal %s marked as %s.' % (proposal.reference, PROPOSAL_STATUS_LABELS[status])
+        if status == 'accepted' and client.status in CLIENT_AUTO_TRANSITIONS['proposal_accepted']:
+            previous = client.status_label
+            client.status = 'approved'
+            note += ' Status advanced from %s to Approved.' % previous
+        log_client_note(client, 'status', note)
+        try:
+            db.session.commit()
+            flash('Proposal marked as %s.' % PROPOSAL_STATUS_LABELS[status], 'success')
+        except Exception:
+            db.session.rollback()
+            app.logger.exception('Failed to update proposal %s status', proposal.id)
+            flash('Could not update the proposal status.', 'error')
+    return redirect(url_for('admin_client_proposal_view',
+                            client_id=client.id, proposal_id=proposal.id))
+
+
+@app.route('/admin/clients/<int:client_id>/proposal/<int:proposal_id>/delete',
+           methods=['POST'])
+@admin_required
+def admin_client_proposal_delete(client_id, proposal_id):
+    client = Client.query.get_or_404(client_id)
+    proposal = ClientProposal.query.filter_by(id=proposal_id, client_id=client.id).first_or_404()
+    reference = proposal.reference
+    try:
+        db.session.delete(proposal)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        flash('Could not delete the proposal.', 'error')
+    else:
+        flash('Proposal %s deleted.' % reference, 'success')
+    return redirect(url_for('admin_client_detail', id=client.id, tab='documents'))
+
+
+# ----- Agreements -----
+
+def _agreement_context(agreement):
+    values = agreement_placeholder_values(agreement) if agreement else {}
+    clauses, missing = client_documents.render_agreement_clauses(values)
+    return {
+        'clauses': clauses,
+        'missing': missing,
+        'placeholder_values': values,
+        'agreement_note': client_documents.AGREEMENT_NOTE,
+    }
+
+
+@app.route('/admin/clients/<int:client_id>/agreement/add', methods=['GET', 'POST'])
+@admin_required
+def admin_client_agreement_add(client_id):
+    client = Client.query.get_or_404(client_id)
+    if request.method == 'POST':
+        agreement = ClientAgreement()
+        errors = _apply_agreement_form(agreement, request.form, client)
+        if not errors:
+            agreement.client = client
+            db.session.add(agreement)
+            try:
+                db.session.flush()
+                agreement.reference = 'RETEC-A-%04d' % agreement.id
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                app.logger.exception('Failed to create agreement for client %s', client_id)
+                flash('Could not save the agreement. Please try again.', 'error')
+            else:
+                log_client_note(client, 'note', 'Agreement %s created.' % agreement.reference)
+                db.session.commit()
+                flash('Agreement created as a draft.', 'success')
+                return redirect(url_for('admin_client_agreement_edit',
+                                        client_id=client.id, agreement_id=agreement.id))
+        for message in errors:
+            flash(message, 'error')
+    context = _client_detail_context(client, 'documents')
+    context.update(_agreement_context(None))
+    return render_template(
+        'admin/client/agreement_form.html', agreement=None,
+        active='clients', **context)
+
+
+@app.route('/admin/clients/<int:client_id>/agreement/<int:agreement_id>/edit',
+           methods=['GET', 'POST'])
+@admin_required
+def admin_client_agreement_edit(client_id, agreement_id):
+    client = Client.query.get_or_404(client_id)
+    agreement = ClientAgreement.query.filter_by(id=agreement_id, client_id=client.id).first_or_404()
+    if request.method == 'POST':
+        errors = _apply_agreement_form(agreement, request.form, client)
+        if not errors:
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                app.logger.exception('Failed to update agreement %s', agreement.id)
+                flash('Could not save the agreement. Please try again.', 'error')
+            else:
+                flash('Agreement updated.', 'success')
+                return redirect(url_for('admin_client_agreement_view',
+                                        client_id=client.id, agreement_id=agreement.id))
+        for message in errors:
+            flash(message, 'error')
+    context = _client_detail_context(client, 'documents')
+    context.update(_agreement_context(agreement))
+    return render_template(
+        'admin/client/agreement_form.html', agreement=agreement,
+        active='clients', **context)
+
+
+@app.route('/admin/clients/<int:client_id>/agreement/<int:agreement_id>')
+@admin_required
+def admin_client_agreement_view(client_id, agreement_id):
+    client = Client.query.get_or_404(client_id)
+    agreement = ClientAgreement.query.filter_by(id=agreement_id, client_id=client.id).first_or_404()
+    context = _client_detail_context(client, 'documents')
+    context.update(_agreement_context(agreement))
+    return render_template(
+        'admin/client/agreement_document.html',
+        agreement=agreement,
+        active='clients', **context)
+
+
+@app.route('/admin/clients/<int:client_id>/agreement/<int:agreement_id>/status',
+           methods=['POST'])
+@admin_required
+def admin_client_agreement_status(client_id, agreement_id):
+    client = Client.query.get_or_404(client_id)
+    agreement = ClientAgreement.query.filter_by(id=agreement_id, client_id=client.id).first_or_404()
+    status = (request.form.get('status') or '').strip().lower()
+    if status not in AGREEMENT_STATUS_VALUES:
+        flash('Unknown agreement status — nothing changed.', 'error')
+    elif status != agreement.status:
+        agreement.status = status
+        if status == 'signed':
+            agreement.signed_at = datetime.utcnow()
+            signed_by = (request.form.get('signed_by') or '').strip()[:100]
+            if signed_by:
+                agreement.signed_by = signed_by
+        note = 'Agreement %s marked as %s.' % (agreement.reference, AGREEMENT_STATUS_LABELS[status])
+        if status == 'signed' and client.status in CLIENT_AUTO_TRANSITIONS['agreement_signed']:
+            previous = client.status_label
+            client.status = 'signed'
+            note += ' Status advanced from %s to Signed.' % previous
+        log_client_note(client, 'status', note)
+        try:
+            db.session.commit()
+            flash('Agreement marked as %s.' % AGREEMENT_STATUS_LABELS[status], 'success')
+        except Exception:
+            db.session.rollback()
+            app.logger.exception('Failed to update agreement %s status', agreement.id)
+            flash('Could not update the agreement status.', 'error')
+    return redirect(url_for('admin_client_agreement_view',
+                            client_id=client.id, agreement_id=agreement.id))
+
+
+@app.route('/admin/clients/<int:client_id>/agreement/<int:agreement_id>/delete',
+           methods=['POST'])
+@admin_required
+def admin_client_agreement_delete(client_id, agreement_id):
+    client = Client.query.get_or_404(client_id)
+    agreement = ClientAgreement.query.filter_by(id=agreement_id, client_id=client.id).first_or_404()
+    reference = agreement.reference
+    try:
+        db.session.delete(agreement)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        flash('Could not delete the agreement.', 'error')
+    else:
+        flash('Agreement %s deleted.' % reference, 'success')
+    return redirect(url_for('admin_client_detail', id=client.id, tab='documents'))
+
+
+# ----- Payments -----
+
+@app.route('/admin/clients/<int:client_id>/payments/add', methods=['POST'])
+@admin_required
+def admin_client_payment_add(client_id):
+    client = Client.query.get_or_404(client_id)
+    tab = _client_tab(request.form.get('tab', 'payments'))
+    label = (request.form.get('label') or '').strip()[:120]
+    kind = (request.form.get('kind') or '').strip()
+    status = (request.form.get('status') or '').strip()
+    amount = clean_money(request.form.get('amount'))
+    if not label:
+        flash('Payment label is required.', 'error')
+    elif kind not in PAYMENT_KIND_VALUES:
+        flash('Unknown payment type — nothing saved.', 'error')
+    elif status not in PAYMENT_STATUS_VALUES:
+        flash('Unknown payment status — nothing saved.', 'error')
+    elif amount is None or amount <= 0:
+        flash('Payment amount must be a positive number.', 'error')
+    else:
+        paid_date = clean_date_value(request.form.get('paid_date')) if status == 'paid' else None
+        payment = ClientPayment(
+            client=client, label=label, kind=kind, amount=amount, status=status,
+            due_date=clean_date_value(request.form.get('due_date')),
+            paid_date=paid_date,
+            reference=(request.form.get('reference') or '').strip()[:100],
+            notes=(request.form.get('notes') or '').strip()[:2000],
+        )
+        db.session.add(payment)
+        log_client_note(
+            client, 'note',
+            'Payment added: %s (%s) — %s %s, %s.' % (
+                label, PAYMENT_KIND_LABELS[kind], client.currency or 'KSh',
+                _money_filter(amount), PAYMENT_STATUS_LABELS[status]))
+        try:
+            db.session.commit()
+            flash('Payment recorded.', 'success')
+        except Exception:
+            db.session.rollback()
+            app.logger.exception('Failed to record payment for client %s', client_id)
+            flash('Could not save the payment. Please try again.', 'error')
+    return redirect(url_for('admin_client_detail', id=client.id, tab=tab))
+
+
+@app.route('/admin/clients/<int:client_id>/payments/<int:payment_id>/toggle',
+           methods=['POST'])
+@admin_required
+def admin_client_payment_toggle(client_id, payment_id):
+    client = Client.query.get_or_404(client_id)
+    tab = _client_tab(request.form.get('tab', 'payments'))
+    payment = ClientPayment.query.filter_by(id=payment_id, client_id=client.id).first_or_404()
+    if payment.status == 'paid':
+        payment.status = 'pending'
+        payment.paid_date = None
+        action = 'marked as pending'
+    else:
+        payment.status = 'paid'
+        payment.paid_date = datetime.utcnow().date()
+        action = 'confirmed as paid'
+    log_client_note(client, 'note', 'Payment %s %s.' % (payment.label, action))
+    try:
+        db.session.commit()
+        flash('Payment %s.' % action, 'success')
+    except Exception:
+        db.session.rollback()
+        app.logger.exception('Failed to update payment %s', payment_id)
+        flash('Could not update the payment.', 'error')
+    return redirect(url_for('admin_client_detail', id=client.id, tab=tab))
+
+
+@app.route('/admin/clients/<int:client_id>/payments/<int:payment_id>/delete',
+           methods=['POST'])
+@admin_required
+def admin_client_payment_delete(client_id, payment_id):
+    client = Client.query.get_or_404(client_id)
+    tab = _client_tab(request.form.get('tab', 'payments'))
+    payment = ClientPayment.query.filter_by(id=payment_id, client_id=client.id).first_or_404()
+    label = payment.label
+    try:
+        db.session.delete(payment)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        flash('Could not delete the payment.', 'error')
+    else:
+        log_client_note(client, 'note', 'Payment "%s" deleted.' % label)
+        db.session.commit()
+        flash('Payment deleted.', 'success')
+    return redirect(url_for('admin_client_detail', id=client.id, tab=tab))
+
+
+# ----- Notes, tasks, communication history -----
+
+@app.route('/admin/clients/<int:client_id>/notes/add', methods=['POST'])
+@admin_required
+def admin_client_note_add(client_id):
+    client = Client.query.get_or_404(client_id)
+    tab = _client_tab(request.form.get('tab', 'activity'))
+    kind = (request.form.get('kind') or 'note').strip()
+    body = (request.form.get('body') or '').strip()
+    if kind not in NOTE_KIND_VALUES:
+        kind = 'note'
+    if not body:
+        flash('Write something before adding the note.', 'error')
+    elif len(body) > 5000:
+        flash('Notes must be 5000 characters or fewer.', 'error')
+    else:
+        log_client_note(client, kind, body)
+        try:
+            db.session.commit()
+            flash('Added to the activity log.', 'success')
+        except Exception:
+            db.session.rollback()
+            app.logger.exception('Failed to add note for client %s', client_id)
+            flash('Could not save the note.', 'error')
+    return redirect(url_for('admin_client_detail', id=client.id, tab=tab))
+
+
+@app.route('/admin/clients/<int:client_id>/notes/<int:note_id>/toggle', methods=['POST'])
+@admin_required
+def admin_client_note_toggle(client_id, note_id):
+    client = Client.query.get_or_404(client_id)
+    tab = _client_tab(request.form.get('tab', 'activity'))
+    note = ClientNote.query.filter_by(id=note_id, client_id=client.id).first_or_404()
+    if note.kind == 'task':
+        note.done = not note.done
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            flash('Could not update the task.', 'error')
+    return redirect(url_for('admin_client_detail', id=client.id, tab=tab))
+
+
+@app.route('/admin/clients/<int:client_id>/notes/<int:note_id>/delete', methods=['POST'])
+@admin_required
+def admin_client_note_delete(client_id, note_id):
+    client = Client.query.get_or_404(client_id)
+    tab = _client_tab(request.form.get('tab', 'activity'))
+    note = ClientNote.query.filter_by(id=note_id, client_id=client.id).first_or_404()
+    try:
+        db.session.delete(note)
+        db.session.commit()
+        flash('Entry deleted.', 'success')
+    except Exception:
+        db.session.rollback()
+        flash('Could not delete the entry.', 'error')
+    return redirect(url_for('admin_client_detail', id=client.id, tab=tab))
+
+
+# ----- Handover -----
+
+@app.route('/admin/clients/<int:client_id>/handover', methods=['POST'])
+@admin_required
+def admin_client_handover(client_id):
+    client = Client.query.get_or_404(client_id)
+    handover = client.handover
+    if handover is None:
+        handover = ClientHandover(client=client)
+        db.session.add(handover)
+    state = {}
+    for item_id in client_documents.HANDOVER_ITEM_IDS:
+        state[item_id] = bool(request.form.get('item_%s' % item_id))
+    handover.checklist = json.dumps(state)
+    handover.notes = (request.form.get('notes') or '').strip()[:3000]
+    handover.signoff_name = (request.form.get('signoff_name') or '').strip()[:100]
+    handover.signoff_date = clean_date_value(request.form.get('signoff_date'))
+    handover.signoff_method = (request.form.get('signoff_method') or '').strip()[:100]
+    if handover.checked_count == handover.total_count and handover.signoff_name:
+        if handover.completed_at is None:
+            handover.completed_at = datetime.utcnow()
+            log_client_note(client, 'status', 'Handover checklist completed and signed off.')
+    else:
+        handover.completed_at = None
+    try:
+        db.session.commit()
+        flash('Handover checklist saved.', 'success')
+    except Exception:
+        db.session.rollback()
+        app.logger.exception('Failed to save handover for client %s', client_id)
+        flash('Could not save the handover checklist.', 'error')
+    return redirect(url_for('admin_client_detail', id=client.id, tab='handover'))
+
+
+# ----- Enquiry conversion -----
+
+@app.route('/admin/enquiries/convert/<int:id>', methods=['POST'])
+@admin_required
+def admin_enquiry_convert(id):
+    """Turn a contact-form enquiry into a client record (status: lead)."""
+    enquiry = Enquiry.query.get_or_404(id)
+    existing = Client.query.filter_by(enquiry_id=enquiry.id).first()
+    if existing:
+        flash('This enquiry has already been converted to a client record.', 'info')
+        return redirect(url_for('admin_client_detail', id=existing.id))
+    client = Client(
+        name=(enquiry.name or '').strip()[:100] or 'Unnamed lead',
+        business=(enquiry.business or '').strip()[:200],
+        email=(enquiry.email or '').strip().lower()[:255],
+        status='lead',
+        source='enquiry',
+        enquiry_id=enquiry.id,
+        project_title=_short_title(enquiry.project_type or enquiry.message)[:200],
+        problem=(enquiry.message or '').strip(),
+        budget_range=(enquiry.budget or '').strip()[:100],
+    )
+    db.session.add(client)
+    try:
+        db.session.flush()
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        app.logger.exception('Failed to convert enquiry %s', id)
+        flash('Could not convert the enquiry. Please try again.', 'error')
+        return redirect(url_for('admin_enquiries'))
+    log_client_note(client, 'note', 'Converted from contact enquiry #%d.' % enquiry.id)
+    db.session.commit()
+    flash('Enquiry converted to a client record.', 'success')
+    return redirect(url_for('admin_client_detail', id=client.id))
+
 
 with app.app_context():
     try:

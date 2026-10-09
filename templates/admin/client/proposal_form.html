@@ -1,0 +1,150 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ 'Edit' if proposal else 'New' }} Proposal — {{ client.name }}{% endblock %}
+{% set active = "clients" %}
+{% block content %}
+<div class="admin-page">
+    <a class="cs-back" href="{{ url_for('admin_client_detail', id=client.id, tab='documents') }}">
+        <i class="fa-solid fa-arrow-left"></i> {{ client.name }} — documents
+    </a>
+    <div class="admin-page__head">
+        <h1 class="admin-page__title">{{ 'Edit' if proposal else 'New' }} Proposal{% if proposal %} <span class="cd-ref">{{ proposal.reference }}</span>{% endif %}</h1>
+        {% if proposal %}
+        <a class="admin-btn" href="{{ url_for('admin_client_proposal_view', client_id=client.id, proposal_id=proposal.id) }}">
+            <i class="fa-solid fa-eye"></i> Preview document
+        </a>
+        {% endif %}
+    </div>
+
+    <p class="jr-alert"><i class="fa-solid fa-circle-info"></i> {{ pricing_note }}</p>
+
+    <form method="POST" class="admin-form admin-card">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <h2 class="cf-heading">Overview</h2>
+        <div class="cf-grid">
+            <div class="admin-form__group admin-form__group--full">
+                <label for="p_title">Project title *</label>
+                <input type="text" id="p_title" name="title" maxlength="200" required
+                       value="{{ proposal.title if proposal else client.project_title }}">
+            </div>
+            <div class="admin-form__group admin-form__group--full">
+                <label for="p_summary">Project summary * <span class="cf-hint">one or two sentences the client will read first</span></label>
+                <textarea id="p_summary" name="summary" rows="3" maxlength="5000" required>{{ proposal.summary if proposal else client.project_summary }}</textarea>
+            </div>
+            <div class="admin-form__group admin-form__group--full">
+                <label for="p_understanding">Our understanding</label>
+                <textarea id="p_understanding" name="understanding" rows="3" maxlength="5000"
+                          placeholder="What RETEC understands the client needs and why.">{{ proposal.understanding if proposal else '' }}</textarea>
+            </div>
+            <div class="admin-form__group admin-form__group--full">
+                <label for="p_solution">Proposed solution</label>
+                <textarea id="p_solution" name="solution" rows="3" maxlength="5000">{{ proposal.solution if proposal else '' }}</textarea>
+            </div>
+        </div>
+
+        <h2 class="cf-heading">Scope</h2>
+        <div class="cf-grid">
+            <div class="admin-form__group admin-form__group--full">
+                <label for="p_scope">Scope of work * <span class="cf-hint">one item per line</span></label>
+                <textarea id="p_scope" name="scope" rows="5" maxlength="8000" required>{{ proposal.scope if proposal else '' }}</textarea>
+            </div>
+            <div class="admin-form__group admin-form__group--full">
+                <label for="p_deliverables">Deliverables * <span class="cf-hint">one per line</span></label>
+                <textarea id="p_deliverables" name="deliverables" rows="4" maxlength="5000" required>{{ proposal.deliverables if proposal else '' }}</textarea>
+            </div>
+            <div class="admin-form__group admin-form__group--full">
+                <label for="p_features">Features included</label>
+                <textarea id="p_features" name="features" rows="4" maxlength="5000">{{ proposal.features if proposal else '' }}</textarea>
+            </div>
+            <div class="admin-form__group admin-form__group--full">
+                <label for="p_technology">Technology / approach</label>
+                <textarea id="p_technology" name="technology" rows="2" maxlength="3000">{{ proposal.technology if proposal else '' }}</textarea>
+            </div>
+        </div>
+
+        <h2 class="cf-heading">Timeline</h2>
+        <div class="cf-grid">
+            <div class="admin-form__group admin-form__group--full">
+                <label for="p_timeline">Timeline * <span class="cf-hint">e.g. 4 weeks from deposit, or a date range</span></label>
+                <input type="text" id="p_timeline" name="timeline" maxlength="3000" required
+                       value="{{ proposal.timeline if proposal else '' }}">
+            </div>
+            <div class="admin-form__group admin-form__group--full">
+                <label for="p_milestones">Milestones <span class="cf-hint">one per line: milestone — date or week</span></label>
+                <textarea id="p_milestones" name="milestones" rows="4" maxlength="5000">{{ proposal.milestones if proposal else '' }}</textarea>
+            </div>
+            <div class="admin-form__group">
+                <label for="p_client_resp">Client responsibilities</label>
+                <textarea id="p_client_resp" name="client_responsibilities" rows="3" maxlength="3000">{{ proposal.client_responsibilities if proposal else '' }}</textarea>
+            </div>
+            <div class="admin-form__group">
+                <label for="p_retec_resp">RETEC responsibilities</label>
+                <textarea id="p_retec_resp" name="retec_responsibilities" rows="3" maxlength="3000">{{ proposal.retec_responsibilities if proposal else '' }}</textarea>
+            </div>
+        </div>
+
+        <h2 class="cf-heading">Investment</h2>
+        <div class="cf-grid">
+            <div class="admin-form__group">
+                <label for="p_fee">Total investment ({{ client.currency or 'KSh' }}) *</label>
+                <input type="number" id="p_fee" name="fee" min="0" step="0.01" inputmode="decimal" required
+                       value="{{ proposal.fee if proposal and proposal.fee is not none else '' }}">
+            </div>
+            <div class="admin-form__group">
+                <label for="p_validity">Valid for (days)</label>
+                <input type="number" id="p_validity" name="validity_days" min="1" max="365" step="1"
+                       value="{{ proposal.validity_days if proposal else defaults.validity_days }}">
+            </div>
+        </div>
+
+        <h3 class="cf-subheading">Payment schedule</h3>
+        {% set rows = proposal.schedule_rows if proposal else [] %}
+        <div class="cf-schedule">
+            <div class="cf-schedule__row cf-schedule__row--head">
+                <span>Label</span><span>Amount ({{ client.currency or 'KSh' }})</span><span>Timing</span>
+            </div>
+            {% for i in range(1, 5) %}
+            {% set row = rows[i - 1] if rows|length >= i else none %}
+            <div class="cf-schedule__row">
+                <input type="text" name="sched_label_{{ i }}" maxlength="120" placeholder="{% if i == 1 %}Deposit{% elif i == 2 %}Milestone{% elif i == 3 %}Milestone{% else %}Final{% endif %}"
+                       value="{{ row.label if row else '' }}">
+                <input type="number" name="sched_amount_{{ i }}" min="0" step="0.01" inputmode="decimal"
+                       value="{{ row.amount if row else '' }}">
+                <input type="text" name="sched_timing_{{ i }}" maxlength="200" placeholder="e.g. on signing, week 2…"
+                       value="{{ row.timing if row else '' }}">
+            </div>
+            {% endfor %}
+        </div>
+        <p class="cf-hint">Rows need both a label and an amount to be saved. Leave unused rows blank.</p>
+
+        <h2 class="cf-heading">Terms</h2>
+        <div class="cf-grid">
+            <div class="admin-form__group admin-form__group--full">
+                <label for="p_assumptions">Assumptions <span class="cf-hint">one per line</span></label>
+                <textarea id="p_assumptions" name="assumptions" rows="4" maxlength="5000">{{ proposal.assumptions if proposal else defaults.assumptions }}</textarea>
+            </div>
+            <div class="admin-form__group admin-form__group--full">
+                <label for="p_exclusions">Exclusions <span class="cf-hint">one per line</span></label>
+                <textarea id="p_exclusions" name="exclusions" rows="4" maxlength="5000">{{ proposal.exclusions if proposal else defaults.exclusions }}</textarea>
+            </div>
+            <div class="admin-form__group admin-form__group--full">
+                <label for="p_revisions">Revisions</label>
+                <textarea id="p_revisions" name="revisions" rows="2" maxlength="3000">{{ proposal.revisions if proposal else defaults.revisions }}</textarea>
+            </div>
+            <div class="admin-form__group admin-form__group--full">
+                <label for="p_change">Change process</label>
+                <textarea id="p_change" name="change_process" rows="3" maxlength="3000">{{ proposal.change_process if proposal else defaults.change_process }}</textarea>
+            </div>
+            <div class="admin-form__group admin-form__group--full">
+                <label for="p_support">Support after delivery</label>
+                <textarea id="p_support" name="support_notes" rows="2" maxlength="3000">{{ proposal.support_notes if proposal else defaults.support_notes }}</textarea>
+            </div>
+        </div>
+
+        <div class="admin-form__actions">
+            <button type="submit" class="admin-btn admin-btn--primary">{{ 'Save proposal' if proposal else 'Create proposal' }}</button>
+            <a href="{{ url_for('admin_client_detail', id=client.id, tab='documents') }}" class="admin-btn">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

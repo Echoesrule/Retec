@@ -1,0 +1,69 @@
+<div class="cd-grid">
+    <section class="cd-card">
+        <h2 class="cd-card__title">Client details</h2>
+        <dl class="cd-dl">
+            <dt>Name</dt><dd>{{ client.name or '—' }}</dd>
+            <dt>Business</dt><dd>{{ client.business or '—' }}</dd>
+            <dt>Email</dt><dd>{% if client.email %}<a href="mailto:{{ client.email }}">{{ client.email }}</a>{% else %}—{% endif %}</dd>
+            <dt>Phone</dt><dd>{{ client.phone or '—' }}</dd>
+            <dt>Location</dt><dd>{{ client.location or '—' }}</dd>
+            <dt>Role</dt><dd>{{ client.role or '—' }}</dd>
+            <dt>Preferred contact</dt><dd>{{ client.contact_method_label or '—' }}</dd>
+            <dt>Source</dt><dd>{{ client.source_label }}</dd>
+        </dl>
+    </section>
+
+    <section class="cd-card">
+        <h2 class="cd-card__title">Project</h2>
+        <dl class="cd-dl">
+            <dt>Title</dt><dd>{{ client.project_title or '—' }}</dd>
+            <dt>Budget range</dt><dd>{{ client.budget_label or '—' }}</dd>
+            <dt>Package</dt><dd>{{ client.package_label or '—' }}</dd>
+            <dt>Desired launch</dt><dd>{{ client.desired_launch.strftime('%d %b %Y') if client.desired_launch else '—' }}</dd>
+            <dt>Start date</dt><dd>{{ client.start_date.strftime('%d %b %Y') if client.start_date else '—' }}</dd>
+            <dt>Expected delivery</dt><dd>{{ client.expected_delivery.strftime('%d %b %Y') if client.expected_delivery else '—' }}</dd>
+            <dt>Support period</dt><dd>{{ client.support_period or '—' }}</dd>
+        </dl>
+        {% if client.project_summary %}
+        <p class="cd-block"><span class="cs-label">Summary</span>{{ client.project_summary|lines|join(' ') }}</p>
+        {% endif %}
+        {% if client.problem %}
+        <p class="cd-block"><span class="cs-label">Problem</span>{{ client.problem|lines|join(' ') }}</p>
+        {% endif %}
+        {% if client.timeline_notes %}
+        <p class="cd-block"><span class="cs-label">Timeline notes</span>{{ client.timeline_notes|lines|join(' ') }}</p>
+        {% endif %}
+        {% if client.requirements_list %}
+        <p class="cd-block"><span class="cs-label">Requirements</span></p>
+        <ul class="cd-tags">
+            {% for requirement in client.requirements_list %}
+            <li class="jr-tag">{{ requirement_labels.get(requirement, requirement) }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </section>
+
+    <section class="cd-card">
+        <h2 class="cd-card__title">Where it stands</h2>
+        <p class="cd-next"><span class="cs-label">Next action</span>{{ next_action }}</p>
+        {% if client.open_tasks %}
+        <p class="cs-label" style="margin-top:1rem">Open tasks</p>
+        <ul class="cd-list">
+            {% for note in client.open_tasks %}
+            <li>{{ note.body|lines|join(' ') }} <span class="cd-list__meta">{{ note.created_at|localtime|format_datetime }}</span></li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% if questionnaire %}
+        <p class="cd-hint">
+            <i class="fa-solid fa-clipboard-list"></i>
+            <a href="{{ url_for('admin_client_detail', id=client.id, tab='questionnaire') }}">Discovery questionnaire submitted {{ questionnaire.submitted_at|localtime|format_datetime }}</a>
+        </p>
+        {% else %}
+        <p class="cd-hint cd-hint--muted">No questionnaire on file{% if client.source == 'enquiry' %} — converted from a contact enquiry{% endif %}.</p>
+        {% endif %}
+        {% if client.enquiry_id %}
+        <p class="cd-hint"><i class="fa-solid fa-inbox"></i> Converted from enquiry #{{ client.enquiry_id }}.</p>
+        {% endif %}
+    </section>
+</div>
