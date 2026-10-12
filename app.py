@@ -3255,6 +3255,7 @@ def rate_limited(e):
 
 
 @app.route('/healthz')
+@limiter.exempt
 def healthz():
     """Liveness/readiness probe.
 

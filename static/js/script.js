@@ -73,12 +73,20 @@ document.addEventListener('DOMContentLoaded', () => {
             statusEl.className = 'subscribe__status subscribe__status--checking';
             subBtn.disabled = true;
             checkTimeout = setTimeout(() => {
-                fetch('/verify-email', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({email})
-                })
-                .then(r => r.json())
+                const api = window.RETEC_API;
+                const verify = api && api.fetchJSON
+                    ? api.fetchJSON('/verify-email', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({email}),
+                        attempts: 2
+                    })
+                    : fetch('/verify-email', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({email})
+                    }).then(r => r.json());
+                verify
                 .then(data => {
                     statusEl.textContent = data.message;
                     statusEl.className = 'subscribe__status ' + (data.valid
