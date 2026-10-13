@@ -1,0 +1,44 @@
+name: Keep Render warm
+
+# Vercel proxies every request to this Render web service (see vercel.json), so
+# the browser's first byte *is* Render. A free Render instance sleeps after
+# ~15 minutes idle, and its wake-up page is then served as the top-level
+# document -- no frontend code can hide that, because it arrives before any
+# script runs. Pinging the health endpoint on a schedule keeps the instance
+# from ever spinning down.
+#
+# 5-minute interval (GitHub's minimum) leaves a wide safety margin against
+# schedule delays under the ~15-minute idle window. The repo is public, so
+# scheduled Actions minutes are free, and extra pings do not add Render hours
+# -- the instance is either continuously awake or not.
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keep-render-warm
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /healthz
+        run: |
+          set -euo pipefail
+          url="https://retec.onrender.com/healthz"
+          code=$(curl -sS -o /dev/null -w '%{http_code}' \
+            --max-time 90 --retry 2 --retry-delay 5 --retry-all-errors \
+            "$url" || true)
+          echo "GET $url -> $code"
+          # 200 healthy and 503 degraded both mean the instance is awake and
+          # reachable, which is all this job needs to prevent a cold start.
+          case "$code" in
+            200|503) exit 0 ;;
+            *) echo "Unexpected response from Render"; exit 1 ;;
+          esac
