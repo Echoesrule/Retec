@@ -79,7 +79,40 @@
 document.addEventListener('DOMContentLoaded', function() {
     var colors = ['#2f7d6d','#3a8d7c','#4a9d8c','#5aad9c','#1976d2','#388e3c','#e65100','#6a1b9a','#c62828','#555'];
 
-    fetch('/admin/api/analytics/summary').then(function(r){return r.json()}).then(function(d){
+    // All analytics requests go through the shared client, so a Render
+    // startup page or 5xx is a typed error instead of a JSON parse crash.
+    var api = window.RETEC_API;
+    function getJson(url) {
+        if (api && api.fetchJSON) return api.fetchJSON(url);
+        return fetch(url).then(function(r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        });
+    }
+    var failed = false;
+    function markFailed() {
+        if (failed) return;
+        failed = true;
+        var host = document.querySelector('.admin-page__head > div');
+        if (!host) return;
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'admin-btn admin-btn--sm';
+        btn.textContent = 'Retry';
+        btn.addEventListener('click', function() { window.location.reload(); });
+        host.appendChild(btn);
+    }
+    function load(url, render) {
+        return getJson(url).then(render).catch(function(error) {
+            if (error && (error.code === 'aborted' || error.code === 'superseded')) return;
+            markFailed();
+            if (window.console && console.warn) {
+                console.warn('analytics: ' + url + ' failed (' + ((error && (error.code || error.message)) || 'unknown') + ')');
+            }
+        });
+    }
+
+    load('/admin/api/analytics/summary', function(d){
         document.getElementById('statViews').textContent = d.total_views;
         document.getElementById('statUnique').textContent = d.unique_visitors;
         document.getElementById('statInterests').textContent = d.total_interests;
@@ -88,7 +121,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function lineChart(id, url, label, color) {
-        fetch(url).then(function(r){return r.json()}).then(function(d){
+        load(url, function(d){
             new Chart(document.getElementById(id), {
                 type: 'line',
                 data: {
@@ -104,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function barChart(id, url, label) {
-        fetch(url).then(function(r){return r.json()}).then(function(d){
+        load(url, function(d){
             new Chart(document.getElementById(id), {
                 type: 'bar',
                 data: {
@@ -120,7 +153,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function pieChart(id, url) {
-        fetch(url).then(function(r){return r.json()}).then(function(d){
+        load(url, function(d){
             new Chart(document.getElementById(id), {
                 type: 'doughnut',
                 data: {
@@ -141,7 +174,7 @@ document.addEventListener('DOMContentLoaded', function() {
     pieChart('locationsChart', '/admin/api/analytics/locations');
     pieChart('citiesChart', '/admin/api/analytics/cities');
 
-    fetch('/admin/api/analytics/cities').then(function(r){return r.json()}).then(function(d){
+    load('/admin/api/analytics/cities', function(d){
         var tbody = document.querySelector('#locationsTable tbody');
         if (!d.cities || d.cities.length === 0) {
             tbody.textContent = '';

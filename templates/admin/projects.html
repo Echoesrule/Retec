@@ -124,10 +124,16 @@ document.querySelectorAll('.vis-toggle').forEach(function(cb) {
     cb.addEventListener('change', function() {
         var id = this.dataset.id;
         var checked = this.checked;
-        fetch('{{ url_for("toggle_project_visibility", id=0) }}'.replace('/0', '/' + id), {
+        var url = '{{ url_for("toggle_project_visibility", id=0) }}'.replace('/0', '/' + id);
+        var opts = {
             method: 'POST',
             headers: {'X-CSRFToken': '{{ csrf_token() }}', 'Content-Type': 'application/json'}
-        }).then(function(r) { return r.json(); }).then(function(data) {
+        };
+        var api = window.RETEC_API;
+        var req = api && api.fetchJSON
+            ? api.fetchJSON(url, opts)
+            : fetch(url, opts).then(function(r) { return r.json(); });
+        req.then(function(data) {
             if (!data.visible) cb.checked = false;
         }).catch(function() { cb.checked = !checked; });
     });

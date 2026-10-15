@@ -542,16 +542,21 @@
         var payload;
         try { payload = JSON.stringify(body); } catch (e) { return; }
         if (typeof fetch !== 'function') return;
-        fetch(SAVE_URL, {
+        var opts = {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': CSRF_TOKEN
             },
             body: payload
-        }).then(function(res) {
-            return res.json().catch(function() { return {}; });
-        }).then(function(data) {
+        };
+        var api = window.RETEC_API;
+        var req = api && api.fetchJSON
+            ? api.fetchJSON(SAVE_URL, opts)
+            : fetch(SAVE_URL, opts).then(function(res) {
+                return res.json().catch(function() { return {}; });
+            });
+        req.then(function(data) {
             var st = document.getElementById('cube-dev-status');
             if (st) st.textContent = data && data.ok
                 ? 'Saved — ' + (data.count != null ? data.count + ' cubes synced to the site' : '')

@@ -285,8 +285,12 @@
     function upload(file, done) {
         var fd = new FormData();
         fd.append('image', file);
-        fetch('{{ url_for("admin_upload_image") }}', { method: 'POST', body: fd })
-            .then(function (r) { return r.json(); })
+        var opts = { method: 'POST', body: fd };
+        var api = window.RETEC_API;
+        var req = api && api.fetchJSON
+            ? api.fetchJSON('{{ url_for("admin_upload_image") }}', opts)
+            : fetch('{{ url_for("admin_upload_image") }}', opts).then(function (r) { return r.json(); });
+        req
             .then(done)
             .catch(function () { done({}); });
     }

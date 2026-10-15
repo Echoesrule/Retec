@@ -99,8 +99,12 @@ function syncGitHub() {
     btn.disabled = true;
     var form = new FormData();
     form.append('repo_url', url);
-    fetch('/admin/projects/github-sync', {method:'POST', body:form, headers:{'X-CSRFToken':'{{ csrf_token() }}'}})
-        .then(function(r){return r.json()})
+    var opts = {method:'POST', body:form, headers:{'X-CSRFToken':'{{ csrf_token() }}'}};
+    var api = window.RETEC_API;
+    var req = api && api.fetchJSON
+        ? api.fetchJSON('/admin/projects/github-sync', opts)
+        : fetch('/admin/projects/github-sync', opts).then(function(r){return r.json()});
+    req
         .then(function(d){
             if (d.description !== undefined) {
                 document.querySelector('[name="description"]').value = d.description;

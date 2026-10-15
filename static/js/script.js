@@ -60,46 +60,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (emailInput && statusEl && subBtn) {
         let checkTimeout;
+
+        const setStatus = (text, state) => {
+            statusEl.textContent = text;
+            statusEl.className = 'subscribe__status' + (state ? ' subscribe__status--' + state : '');
+        };
+
+        const runVerify = () => {
+            const email = emailInput.value.trim();
+            if (!email) { setStatus('', ''); subBtn.disabled = true; return; }
+            setStatus('Checking...', 'checking');
+            subBtn.disabled = true;
+
+            const api = window.RETEC_API;
+            const request = api && api.fetchJSON
+                ? api.fetchJSON('/verify-email', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({email}),
+                    attempts: 3,
+                    dedupeKey: 'verify-email',
+                    onRetry: () => setStatus('Reconnecting...', 'checking')
+                })
+                : fetch('/verify-email', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({email})
+                }).then(r => r.json());
+
+            request.then(data => {
+                setStatus(data.message, data.valid ? 'valid' : 'invalid');
+                subBtn.disabled = !data.valid;
+            }).catch(() => {
+                setStatus('', 'invalid');
+                const retry = document.createElement('button');
+                retry.type = 'button';
+                retry.textContent = 'Could not verify. Try again';
+                retry.style.cssText = 'background:none;border:0;padding:0;font:inherit;color:inherit;text-decoration:underline;cursor:pointer;';
+                retry.addEventListener('click', runVerify);
+                statusEl.appendChild(retry);
+                subBtn.disabled = true;
+            });
+        };
+
         emailInput.addEventListener('input', () => {
             clearTimeout(checkTimeout);
-            const email = emailInput.value.trim();
-            if (!email) {
-                statusEl.textContent = '';
-                statusEl.className = 'subscribe__status';
+            if (!emailInput.value.trim()) {
+                setStatus('', '');
                 subBtn.disabled = true;
                 return;
             }
-            statusEl.textContent = 'Checking...';
-            statusEl.className = 'subscribe__status subscribe__status--checking';
+            setStatus('Checking...', 'checking');
             subBtn.disabled = true;
-            checkTimeout = setTimeout(() => {
-                const api = window.RETEC_API;
-                const verify = api && api.fetchJSON
-                    ? api.fetchJSON('/verify-email', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({email}),
-                        attempts: 2
-                    })
-                    : fetch('/verify-email', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({email})
-                    }).then(r => r.json());
-                verify
-                .then(data => {
-                    statusEl.textContent = data.message;
-                    statusEl.className = 'subscribe__status ' + (data.valid
-                        ? 'subscribe__status--valid'
-                        : 'subscribe__status--invalid');
-                    subBtn.disabled = !data.valid;
-                })
-                .catch(() => {
-                    statusEl.textContent = 'Could not verify.';
-                    statusEl.className = 'subscribe__status subscribe__status--invalid';
-                    subBtn.disabled = true;
-                });
-            }, 600);
+            checkTimeout = setTimeout(runVerify, 600);
         });
     }
 
