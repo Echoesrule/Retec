@@ -595,9 +595,16 @@
     }
 
     // Position source priority: baked CUBE_CONFIG -> saved (localStorage) -> random.
+    var defaultPositions = [];
+    for (var k = 0; k < count; k++) {
+        if (k === 0) defaultPositions.push({x: 8, y: 22});
+        else if (k === 1) defaultPositions.push({x: 68, y: 45});
+        else if (k === 2) defaultPositions.push({x: 36, y: 78});
+        else defaultPositions.push(randomPos());
+    }
     var positions = (CUBE_CONFIG.positions && CUBE_CONFIG.positions.length === count)
         ? CUBE_CONFIG.positions.map(normalizePos)
-        : null;
+        : defaultPositions;
     if (!positions) {
         var saved = null;
         try {
