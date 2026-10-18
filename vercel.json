@@ -19,7 +19,7 @@
   ],
   "routes": [
     {
-      "src": "/static/(.*)",
+      "src": "/static/(?!uploads/)(.*)",
       "dest": "/static/$1"
     },
     {

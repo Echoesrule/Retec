@@ -6153,7 +6153,7 @@ def api_home():
                 'name': t.name,
                 'role': t.role,
                 'text': t.text,
-                'avatar_filename': t.avatar_filename,
+                'avatar_url': get_image_url(t.avatar_filename),
             })
         blog_posts = []
         for b in data['blog_posts']:
@@ -6162,10 +6162,14 @@ def api_home():
                 'title': b.title,
                 'slug': b.slug,
                 'summary': b.summary,
-                'image_filename': b.image_filename,
-                'hero_image': b.hero_image if hasattr(b, 'hero_image') else '',
-                'published_at': b.published_at.isoformat() if b.published_at else None,
-                'display_date': b.display_date.isoformat() if hasattr(b, 'display_date') and b.display_date else None,
+                'hero_image': b.hero_image,
+                'content_type_label': b.content_type_label,
+                'category': b.category,
+                'source_name': b.source_name,
+                'author': b.author,
+                'reading_time': b.estimated_reading_time(),
+                'display_date': b.display_date.strftime('%Y-%m-%d') if b.display_date else None,
+                'display_date_label': b.display_date.strftime('%B %d, %Y') if b.display_date else '',
             })
         fun_facts = []
         for ff in FunFact.query.filter_by(active=True).order_by(FunFact.sort_order).all():
