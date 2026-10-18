@@ -515,7 +515,7 @@
         count: {{ cube_count | default(3) }},
         // Server-saved positions (SiteSetting `cube_positions`). null until the
         // admin tunes + saves; the positioner panel writes here automatically.
-        positions: {{ cube_positions | tojson }}
+        positions: (function(){ try { var p={{ cube_positions | tojson }}; if(p && p.length) return p; } catch(e){} return [{"x":8,"y":22},{"x":68,"y":45},{"x":36,"y":78}]; })()
         // positions: [ { x: 8, y: 22 }, { x: 68, y: 45 }, { x: 36, y: 78 } ],
     };
 
