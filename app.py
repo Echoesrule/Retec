@@ -2970,14 +2970,17 @@ def _load_cube_positions(raw):
     write, a hand-edited row -- raised out of the context processor and took the
     whole homepage down with a 500, rather than just losing the cube layout.
     """
+    fallback = [{'x': 8, 'y': 22}, {'x': 68, 'y': 45}, {'x': 36, 'y': 78}]
     if not raw:
-        return None
+        return fallback
     try:
         data = json.loads(raw)
     except (TypeError, ValueError):
         app.logger.warning('Ignoring malformed cube_positions setting (%d bytes)', len(raw))
-        return None
-    return data if isinstance(data, list) and data else None
+        return fallback
+    if isinstance(data, list) and data:
+        return data
+    return fallback
 
 def _asset_version():
     """A cache-busting stamp for `?v=` on CSS and JS that only changes on deploy.
