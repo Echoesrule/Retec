@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+    /* Boot gate. Added before first paint so the page is never seen uncovered.
+       If the motion system has not released it in time, the gate is treated as
+       failed and the loader is hidden — the visitor is never trapped. */
+    (function () {
+        try {
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            var root = document.documentElement;
+            root.classList.add('retec-motion-boot');
+            window.setTimeout(function () {
+                if (!root.classList.contains('retec-motion-boot')) return;
+                /* Defer to a live motion system: loader.js now settles on its
+                   own budget instead of awaiting window load, so a healthy
+                   entrance releases well before this gate fires. Only fail over
+                   when the animation system never came up at all (core.js
+                   missing or broken), so a slow first load is no longer
+                   preempted mid-entrance. */
+                var motion = window.RETEC_MOTION;
+                if (motion && typeof motion.live === 'function') {
+                    try { if (motion.live()) return; } catch (_) {}
+                }
+                root.classList.remove('retec-motion-boot');
+                root.classList.add('retec-motion-boot-failed');
+            }, 2200);
+        } catch (_) {}
+    })();
+    </script>
+    <meta name="description" content="RETEC builds modern websites, web applications, custom software, and digital solutions for businesses, creators, and organizations.">
+    <meta name="keywords" content="RETEC, web development, web applications, custom software, digital solutions, Kenya, Python, Flask">
+    <title>Retec-Biz Yako.Tech Yetu</title>
+    <link rel="canonical" href="https://retec-studio.vercel.app/">
+    
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta property="og:site_name" content="RETEC">
+    <meta property="og:title" content="Retec-Biz Yako.Tech Yetu">
+    <meta property="og:description" content="RETEC builds modern websites, web applications, custom software, and digital solutions for businesses, creators, and organizations.">
+    <meta property="og:url" content="https://retec-studio.vercel.app/">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://retec-studio.vercel.app/static/images/og-default.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Retec-Biz Yako.Tech Yetu">
+    <meta name="twitter:description" content="RETEC builds modern websites, web applications, custom software, and digital solutions for businesses, creators, and organizations.">
+    <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "ProfessionalService",
+        "name": "RETEC",
+        "description": "RETEC builds modern websites, web applications, custom software, and digital solutions for businesses, creators, and organizations.",
+        "slogan": "Biz Yako. Tech Yetu.",
+        "email": "contact.retec@gmail.com",
+        "areaServed": "KE",
+        "founder": {"@type": "Person", "name": "Retro"},
+        "knowsAbout": ["Web Development", "Web Applications", "Custom Software", "API Development", "Python", "Flask"],
+        "sameAs": ["https://github.com/echoesrule", "https://www.linkedin.com/in/emmanuel-kiprono-14a800389"]
+    }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/variables.css?v=1792334878">
+    <link rel="stylesheet" href="/static/css/fonts.css?v=1792334878">
+    <link rel="stylesheet" href="/static/css/style.css?v=1792334878">
+    <link rel="stylesheet" href="/static/css/motion.css?v=1792334878">
+
+    <!-- Backend warm-up + safe API access. Loaded first so the wake-up request
+         starts as soon as parsing finishes, before the motion stack. -->
+    <script defer src="/static/js/api-client.js?v=1792334878"></script>
+    <script defer src="/static/js/hydrate-home.js?v=1792334878"></script>
+    <script defer src="/static/js/hydrate-home.js?v=1792334878"></script>
+
+    <!-- Motion stack. Order matters: core publishes the runtime every other
+         module depends on, and it must be present before any of them run. -->
+    <script defer src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollToPlugin.min.js"></script>
+    <script defer src="https://unpkg.com/lenis@1.3.26/dist/lenis.min.js"></script>
+    <script defer src="/static/js/motion/core.js?v=1792334878"></script>
+    <script defer src="/static/js/motion/loader.js?v=1792334878"></script>
+    <script defer src="/static/js/motion/page-transitions.js?v=1792334878"></script>
+    <script defer src="/static/js/motion/hero.js?v=1792334878"></script>
+    <script defer src="/static/js/motion/reveal.js?v=1792334878"></script>
+    <script defer src="/static/js/motion/questionnaire.js?v=1792334878"></script>
+    <script defer src="/static/js/motion/images.js?v=1792334878"></script>
+    <script defer src="/static/js/motion/liquid-button.js?v=1792334878"></script>
+    <script defer src="/static/js/motion/magnetic.js?v=1792334878"></script>
+    <script defer src="/static/js/motion/cards.js?v=1792334878"></script>
+    <script defer src="/static/js/motion/projects.js?v=1792334878"></script>
+    <script defer src="/static/js/motion/cursor.js?v=1792334878"></script>
+    <script defer src="/static/js/motion/navigation.js?v=1792334878"></script>
+    
+</head>
+<body class="home-page">
+
+    <div class="retec-page-loader" role="status" aria-label="Loading RETEC">
+        <span class="retec-page-loader__wordmark">RETEC</span>
+        <span class="retec-page-loader__foot">
+            <span class="retec-page-loader__track"><span class="retec-page-loader__bar"></span></span>
+            <span class="retec-page-loader__count" aria-hidden="true">0%</span>
+        </span>
+    </div>
+
+    <div class="retec-curtain" aria-hidden="true">
+        <span class="retec-curtain__mark">RETEC</span>
+    </div>
+
+    <header class="header" id="header">
+        <div class="container">
+            <nav class="nav">
+                <a href="/" class="nav__logo">
+                    <svg width="100" height="28" viewBox="0 0 100 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <g transform="translate(0, 2)">
+                            <line x1="0" y1="6" x2="14" y2="6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="7" y1="6" x2="7" y2="20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M 7 8 A 5 5 0 0 1 7 17" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="12" y1="15" x2="16" y2="20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </g>
+                        <text x="24" y="22" font-family="'MADE Mirage', Georgia, serif" font-size="16" font-weight="700" letter-spacing="3" fill="currentColor">RETEC</text>
+                    </svg>
+                </a>
+                <div class="nav__menu" id="nav-menu">
+                    <ul class="nav__list">
+                        <li><a href="#hero" class="nav__link nav__link--active" aria-label="Home" data-nav-section="hero">
+                            <svg class="nav__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5L12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-8.5z"/></svg>
+                            <span class="nav__label">Home</span>
+                        </a></li>
+                          <li><a href="/#about" class="nav__link" aria-label="About" data-nav-section="about">
+                            <svg class="nav__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-5 0-9 2.5-9 5v2h18v-2c0-2.5-4-5-9-5z"/></svg>
+                            <span class="nav__label">About</span>
+                        </a></li>
+                        <li><a href="/#work" class="nav__link" aria-label="Work" data-nav-section="work">
+                            <svg class="nav__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h4V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1h4v13H3V7zm6 0h6V6H9v1z"/></svg>
+                            <span class="nav__label">Work</span>
+                        </a></li>
+                        <li><a href="/#services" class="nav__link" aria-label="Services" data-nav-section="services">
+                            <svg class="nav__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm8.94 3.5l-1.2-.2a7.9 7.9 0 0 0-.6-1.4l.7-1.1-1.5-1.5-1.1.7a7.9 7.9 0 0 0-1.4-.6l-.2-1.2h-2l-.2 1.2c-.5.1-1 .3-1.4.6l-1.1-.7-1.5 1.5.7 1.1c-.3.4-.5.9-.6 1.4L3.26 11.5v2l1.2.2c.1.5.3 1 .6 1.4l-.7 1.1 1.5 1.5 1.1-.7c.4.3.9.5 1.4.6l.2 1.2h2l.2-1.2c.5-.1 1-.3 1.4-.6l1.1.7 1.5-1.5-.7-1.1c.3-.4.5-.9.6-1.4l1.2-.2v-2z"/></svg>
+                            <span class="nav__label">Services</span>
+                        </a></li>
+                      
+                        <li><a href="/blog" class="nav__link " aria-label="Journal" data-nav-section="blog">
+                            <svg class="nav__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v2H4V4zm2 5h12v10H6V9zm2 2v6h8v-6H8z"/></svg>
+                            <span class="nav__label">Journal</span>
+                        </a></li>
+                      
+                        <li>
+                            <a href="/#contact" class="nav__btn nav__chat" aria-label="Start a Project">
+                                <span class="nav__chat__avatar">
+                                    <img src="https://i.pinimg.com/736x/7b/91/87/7b91871d2d00cc68de059df6a34c836b.jpg" alt="Avatar">
+                                </span>
+                                <span class="nav__chat__bubble">Start a Project</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <button class="nav__toggle" id="nav-toggle" aria-label="Menu" aria-expanded="false" aria-controls="nav-menu">
+                    <span></span><span></span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    
+
+    <a href="/cv" class="floating-cv" aria-label="CV / Resume">
+        <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
+    </a>
+
+    <a href="https://wa.me/+254114581500" target="_blank" rel="noopener" class="floating-whatsapp" aria-label="WhatsApp">
+        <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+        <svg class="social-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3.4a8.4 8.4 0 0 0-7.2 12.8L4 21l4.9-1.3A8.4 8.4 0 1 0 12 3.4Zm0 15.2c-1.4 0-2.7-.4-3.8-1.2l-.3-.2-2.1.6.6-2.1-.2-.3a6.8 6.8 0 1 1 5.8 3.2Zm3.8-5.1c-.2-.1-1.3-.7-1.5-.7s-.4-.1-.5.1c-.2.2-.6.7-.7.8-.1.2-.3.2-.5.1a5.6 5.6 0 0 1-2.8-2.4c-.2-.3 0-.4.1-.6l.4-.4c.1-.1.2-.3.3-.4.1-.2 0-.3 0-.5l-.7-1.6c-.2-.4-.4-.4-.5-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 2s.8 2.3.9 2.5c.1.2 1.6 2.7 4.1 3.7 2 .8 2.5.5 3 .4.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1 0-.2-.2-.3-.4-.4Z"/>
+        </svg>
+    </a>
+
+    <main class="page-content" id="pageContent">
+        
+        
+        
+        
+
+<!-- ===== HERO ===== -->
+<section class="hero-industrial" id="hero">
+    <div class="container hero-industrial__container">
+        <div class="hero-industrial__frame">
+            <div class="hero-industrial__masthead">
+                <a class="hero-industrial__tag" href="#about">Independent digital studio</a>
+                <span class="hero-industrial__wordmark" aria-label="RETEC">RETEC</span>
+                <a class="hero-industrial__menu" href="#services" aria-label="Explore our services">
+                    <span></span><span></span><span></span>
+                </a>
+            </div>
+
+            <div class="hero-industrial__main">
+                <div class="hero-industrial__heading">
+                    <h1>Technology,<br class="hero-industrial__mobile-break"> made useful.</h1>
+                    <div class="hero-industrial__intro">
+                        <span class="hero-industrial__dash" aria-hidden="true"></span>
+                        <h2>Digital systems for<br>businesses moving forward.</h2>
+                        <a class="hero-industrial__cta" href="#contact" data-cursor="arrow">
+                            Start a project <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="hero-industrial__visual" data-motion="image">
+                    <img src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&amp;w=2670&amp;auto=format&amp;fit=crop" alt="A visual from RETEC's featured digital work" class="hero-industrial__image" loading="eager" decoding="async">
+                    <div class="hero-industrial__status" aria-hidden="true">
+                        <span>STATUS: READY</span>
+                        <span>MODE: BUILD / SHIP / SUPPORT</span>
+                    </div>
+                    <div class="hero-industrial__telemetry" aria-hidden="true">
+                        <span>01 — DISCOVER THE OPPORTUNITY</span>
+                        <span>02 — DESIGN A USEFUL SYSTEM</span>
+                        <span>03 — BUILD FOR WHAT'S NEXT</span>
+                    </div>
+                    <div class="hero-industrial__focus" aria-hidden="true"><span></span></div>
+                </div>
+            </div>
+
+            <footer class="hero-industrial__footer">
+                <span class="hero-industrial__footer-label">Selected RETEC projects</span>
+                <div class="hero-industrial__projects" role="group" aria-label="Selected RETEC projects">
+                    <div class="hero-industrial__projects-track" id="selectedWorkList">
+                        
+                        
+                        <div class="hero-industrial__projects-group" >
+                            
+                                
+                                <span><img src="https://cdn.simpleicons.org/github" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="hero-industrial__project-name">Retec</span></span>
+                                
+                                <span><img src="https://cdn.simpleicons.org/python" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="hero-industrial__project-name">Task Sniffer</span></span>
+                                
+                                <span><img src="https://cdn.simpleicons.org/flask" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="hero-industrial__project-name">Echoesrule</span></span>
+                                
+                                <span><img src="https://cdn.simpleicons.org/html5" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="hero-industrial__project-name">Btop Readme Api</span></span>
+                                
+                                <span><img src="https://cdn.simpleicons.org/css" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="hero-industrial__project-name">Kemboi Cv</span></span>
+                                
+                                <span><img src="https://cdn.simpleicons.org/javascript" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="hero-industrial__project-name">Kabura Ventures</span></span>
+                                
+                                
+                            
+                        </div>
+                        
+                        <div class="hero-industrial__projects-group" aria-hidden="true">
+                            
+                                
+                                <span><img src="https://cdn.simpleicons.org/github" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="hero-industrial__project-name">Retec</span></span>
+                                
+                                <span><img src="https://cdn.simpleicons.org/python" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="hero-industrial__project-name">Task Sniffer</span></span>
+                                
+                                <span><img src="https://cdn.simpleicons.org/flask" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="hero-industrial__project-name">Echoesrule</span></span>
+                                
+                                <span><img src="https://cdn.simpleicons.org/html5" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="hero-industrial__project-name">Btop Readme Api</span></span>
+                                
+                                <span><img src="https://cdn.simpleicons.org/css" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="hero-industrial__project-name">Kemboi Cv</span></span>
+                                
+                                <span><img src="https://cdn.simpleicons.org/javascript" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="hero-industrial__project-name">Kabura Ventures</span></span>
+                                
+                                
+                            
+                        </div>
+                        
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+</section>
+
+<!-- ===== ABOUT ===== -->
+<section class="section about section--light" id="about">
+    <div class="container">
+
+        <div class="services__intro" data-motion="reveal">
+            <div class="services__intro-heading">
+                <p class="section__eyebrow">About</p>
+                <h2 class="section__title">What is<br><span>Retec?</span></h2>
+            </div>
+            <div class="services__intro-copy">
+                <p>A small studio for useful, well-made technology.</p>
+                <p>RETEC is an independent software and digital solutions studio building practical technology for businesses, creators, and organizations.</p>
+                <p>From professional websites to custom web applications and business tools, we turn ideas and real-world problems into reliable digital products.</p>
+                <a href="#contact" class="section__cta">Start a Project <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+        </div>
+
+        <div class="about__details" aria-label="RETEC studio details">
+            <span class="about__detail"><span class="about__detail-num">01</span> Independent</span>
+            <span class="about__detail"><span class="about__detail-num">02</span> Practical</span>
+            <span class="about__detail"><span class="about__detail-num">03</span> Built with care</span>
+        </div>
+
+        <div class="founder-feature" data-motion="reveal">
+            <div class="founder-feature__topline">
+                <span>software engineer</span>
+                <span>RETEC / 2026</span>
+            </div>
+            <div class="founder-feature__heading">
+                <p class="founder-feature__kicker">Meet the Founder</p>
+                <h2>Meet<br>the Founder</h2>
+            </div>
+            <div class="founder-feature__portrait" data-motion="image" data-parallax>
+                <img src="/static/images/founder.png" alt="Retro, founder of RETEC" loading="eager" decoding="async">
+            </div>
+            <div class="founder-feature__footer">
+                <div>
+                    <span class="founder-feature__name">Retro</span>
+                    <span class="founder-feature__role">Founder / Software Developer</span>
+                </div>
+                <p>Focused on Python, Flask, modern web development, and practical technology for real-world needs.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== CAPABILITIES ===== -->
+<section class="section columns section--light">
+    <div class="container">
+        <div class="columns__grid">
+            <div class="columns__item" data-motion="reveal" data-motion-delay="0">
+                <div class="columns__icon">
+                    <img src="/static/images/brain-circuit.png" alt="">
+                </div>
+                <h3 class="columns__heading">Idea</h3>
+                <ul class="columns__list">
+                    <li>Discover the opportunity</li>
+                    <li>Clarify the real problem</li>
+                </ul>
+            </div>
+            <div class="columns__item" data-motion="reveal" data-motion-delay="100">
+                <div class="columns__icon">
+                    <img src="/static/images/transparency.png" alt="">
+                </div>
+                <h3 class="columns__heading">Design</h3>
+                <ul class="columns__list">
+                    <li>Shape the experience</li>
+                    <li>Make every detail useful</li>
+                </ul>
+            </div>
+            <div class="columns__item" data-motion="reveal" data-motion-delay="200">
+                <div class="columns__icon">
+                    <img src="/static/images/binary.png" alt="">
+                </div>
+                <h3 class="columns__heading">Development</h3>
+                <ul class="columns__list">
+                    <li>Build with care</li>
+                    <li>Keep the foundation reliable</li>
+                </ul>
+            </div>
+            <div class="columns__item" data-motion="reveal" data-motion-delay="300">
+                <div class="columns__icon">
+                    <img src="/static/images/registration-paper.png" alt="">
+                </div>
+                <h3 class="columns__heading">Success</h3>
+                <ul class="columns__list">
+                    <li>Launch with confidence</li>
+                    <li>Grow from something solid</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== WORK ===== -->
+<section class="section work section--light" id="work">
+    <div class="container">
+        <div class="services__intro" data-motion="reveal" data-motion-slow>
+            <div class="services__intro-heading">
+                <p class="section__eyebrow">Our Work</p>
+                <h2 class="section__title">Selected<br><span><img src="/static/images/app-development.png" alt="" aria-hidden="true">Work</span></h2>
+            </div>
+            <div class="services__intro-copy">
+                <p>A selection of digital products, web applications, and technical projects built through RETEC.</p>
+                <a href="#contact" class="section__cta">Start a Project <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+        </div>
+        
+        
+        <div class="work__grid">
+            
+            <article class="work__card" data-category="">
+                <div class="work__image" data-motion="image" data-parallax data-cursor="view">
+                    <div class="work__image-placeholder">
+                        
+                        <img src="https://avatars.githubusercontent.com/u/183910135?v=4" alt="Retec" class="work__image-img" loading="lazy">
+                        
+                    </div>
+                </div>
+                <div class="work__info">
+                    
+                    <h3 class="work__title">Retec</h3>
+                    <p class="work__description">Software company aiming to promote small businesses online  by offering web services</p>
+                    <div class="work__tags">
+                        
+                        <span class="work__tag">Python</span>
+                        
+                        <span class="work__tag">business</span>
+                        
+                        <span class="work__tag">client-project</span>
+                        
+                        <span class="work__tag">client-serving</span>
+                        
+                        <span class="work__tag">client-sites</span>
+                        
+                    </div>
+                    <div class="work__actions">
+                        
+                        <a href="https://github.com/Echoesrule/Retec" target="_blank" rel="noopener noreferrer" class="work__link">
+                            <i class="fa-brands fa-github"></i>
+                            Source
+                        </a>
+                    </div>
+                </div>
+            </article>
+            
+            <article class="work__card" data-category="">
+                <div class="work__image" data-motion="image" data-parallax data-cursor="view">
+                    <div class="work__image-placeholder">
+                        
+                        <img src="https://avatars.githubusercontent.com/u/183910135?v=4" alt="Task Sniffer" class="work__image-img" loading="lazy">
+                        
+                    </div>
+                </div>
+                <div class="work__info">
+                    
+                    <h3 class="work__title">Task Sniffer</h3>
+                    <p class="work__description">Find your Dream job at the comfort of your home with our AI powered bot</p>
+                    <div class="work__tags">
+                        
+                        <span class="work__tag">Python</span>
+                        
+                    </div>
+                    <div class="work__actions">
+                        
+                        <a href="https://github.com/Echoesrule/Task-Sniffer" target="_blank" rel="noopener noreferrer" class="work__link">
+                            <i class="fa-brands fa-github"></i>
+                            Source
+                        </a>
+                    </div>
+                </div>
+            </article>
+            
+            <article class="work__card" data-category="">
+                <div class="work__image" data-motion="image" data-parallax data-cursor="view">
+                    <div class="work__image-placeholder">
+                        
+                        <img src="https://avatars.githubusercontent.com/u/183910135?v=4" alt="Echoesrule" class="work__image-img" loading="lazy">
+                        
+                    </div>
+                </div>
+                <div class="work__info">
+                    
+                    <h3 class="work__title">Echoesrule</h3>
+                    <p class="work__description">Config files for my GitHub profile.</p>
+                    <div class="work__tags">
+                        
+                        <span class="work__tag">config</span>
+                        
+                        <span class="work__tag">github-config</span>
+                        
+                    </div>
+                    <div class="work__actions">
+                        
+                        <a href="https://github.com/Echoesrule/Echoesrule" target="_blank" rel="noopener noreferrer" class="work__link">
+                            <i class="fa-brands fa-github"></i>
+                            Source
+                        </a>
+                    </div>
+                </div>
+            </article>
+            
+            <article class="work__card" data-category="">
+                <div class="work__image" data-motion="image" data-parallax data-cursor="view">
+                    <div class="work__image-placeholder">
+                        
+                        <img src="https://avatars.githubusercontent.com/u/183910135?v=4" alt="Btop Readme Api" class="work__image-img" loading="lazy">
+                        
+                    </div>
+                </div>
+                <div class="work__info">
+                    
+                    <h3 class="work__title">Btop Readme Api</h3>
+                    <p class="work__description">btop</p>
+                    <div class="work__tags">
+                        
+                        <span class="work__tag">HTML</span>
+                        
+                    </div>
+                    <div class="work__actions">
+                        
+                        <a href="https://github.com/Echoesrule/btop-readme-api" target="_blank" rel="noopener noreferrer" class="work__link">
+                            <i class="fa-brands fa-github"></i>
+                            Source
+                        </a>
+                    </div>
+                </div>
+            </article>
+            
+            <article class="work__card" data-category="">
+                <div class="work__image" data-motion="image" data-parallax data-cursor="view">
+                    <div class="work__image-placeholder">
+                        
+                        <img src="https://avatars.githubusercontent.com/u/183910135?v=4" alt="Kemboi Cv" class="work__image-img" loading="lazy">
+                        
+                    </div>
+                </div>
+                <div class="work__info">
+                    
+                    <h3 class="work__title">Kemboi Cv</h3>
+                    <p class="work__description">My Ats and Proffesional CV</p>
+                    <div class="work__tags">
+                        
+                        <span class="work__tag">HTML</span>
+                        
+                    </div>
+                    <div class="work__actions">
+                        
+                        <a href="https://github.com/Echoesrule/Kemboi-CV" target="_blank" rel="noopener noreferrer" class="work__link">
+                            <i class="fa-brands fa-github"></i>
+                            Source
+                        </a>
+                    </div>
+                </div>
+            </article>
+            
+            <article class="work__card" data-category="">
+                <div class="work__image" data-motion="image" data-parallax data-cursor="view">
+                    <div class="work__image-placeholder">
+                        
+                        <img src="https://avatars.githubusercontent.com/u/183910135?v=4" alt="Kabura Ventures" class="work__image-img" loading="lazy">
+                        
+                    </div>
+                </div>
+                <div class="work__info">
+                    
+                    <h3 class="work__title">Kabura Ventures</h3>
+                    <p class="work__description">Tourist booking and management platform</p>
+                    <div class="work__tags">
+                        
+                        <span class="work__tag">JavaScript</span>
+                        
+                    </div>
+                    <div class="work__actions">
+                        
+                        <a href="https://github.com/Echoesrule/kabura-ventures" target="_blank" rel="noopener noreferrer" class="work__link">
+                            <i class="fa-brands fa-github"></i>
+                            Source
+                        </a>
+                    </div>
+                </div>
+            </article>
+            
+        </div>
+        <div class="work__cta">
+            <p class="work__cta-text">Looking for something you don't see here? We build custom digital solutions for businesses.</p>
+            <div class="work__cta-actions">
+                <a href="#services" class="section__cta section__cta--outline">Explore Services <i class="fa-solid fa-arrow-right"></i></a>
+                <a href="#contact" class="section__cta">Start a Project <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== CABLE BAND: Services → Insights ===== -->
+<div class="cable-band">
+    <!-- Cube sketches (2-4) are injected here by the CUBE_CONFIG script below -->
+    <div class="cable-band__cubes" aria-hidden="true"></div>
+
+<!-- ===== SERVICES ===== -->
+<section class="section services section--light" id="services">
+    <div class="container">
+        <div class="services__intro" data-motion="reveal">
+            <div class="services__intro-heading">
+                <p class="section__eyebrow">How We Can Help You</p>
+                <h2 class="section__title">Services<br><span><img src="/static/images/user-headset.png" alt="" aria-hidden="true">We Offer</span></h2>
+            </div>
+            <div class="services__intro-copy">
+                <p>Practical digital solutions that improve how your business works, communicates, and grows.</p>
+                <p>From a focused website to a custom application, we build useful systems with a clear purpose and a solid foundation.</p>
+                <a href="#contact" class="section__cta">Let's Talk <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+        </div>
+        <div class="services__grid">
+            
+            <div class="service__item" data-motion="reveal" data-motion-delay="0">
+                <span class="service__number">01</span>
+                <div class="service__body">
+                    <h3 class="service__name">Website Development</h3>
+                    <p class="service__desc">Modern, responsive websites designed around your brand, audience, and business goals.</p>
+                    <div class="service__price">From KSh 15,000</div>
+                </div>
+            </div>
+            
+            <div class="service__item" data-motion="reveal" data-motion-delay="80">
+                <span class="service__number">02</span>
+                <div class="service__body">
+                    <h3 class="service__name">Web Applications</h3>
+                    <p class="service__desc">Custom applications for bookings, dashboards, customer portals, management systems, and other business workflows.</p>
+                    <div class="service__price">Custom quote</div>
+                </div>
+            </div>
+            
+            <div class="service__item" data-motion="reveal" data-motion-delay="160">
+                <span class="service__number">03</span>
+                <div class="service__body">
+                    <h3 class="service__name">Custom Software</h3>
+                    <p class="service__desc">Python-powered software built around specific business requirements and processes.</p>
+                    <div class="service__price">Custom quote</div>
+                </div>
+            </div>
+            
+            <div class="service__item" data-motion="reveal" data-motion-delay="240">
+                <span class="service__number">04</span>
+                <div class="service__body">
+                    <h3 class="service__name">API &amp; Backend Development</h3>
+                    <p class="service__desc">Reliable backend systems and APIs that connect applications, services, and data.</p>
+                    <div class="service__price">Custom quote</div>
+                </div>
+            </div>
+            
+            <div class="service__item" data-motion="reveal" data-motion-delay="320">
+                <span class="service__number">05</span>
+                <div class="service__body">
+                    <h3 class="service__name">Website Maintenance</h3>
+                    <p class="service__desc">Ongoing updates, fixes, improvements, and technical support for existing websites.</p>
+                    <div class="service__price">Quoted per project</div>
+                </div>
+            </div>
+            
+            <div class="service__item" data-motion="reveal" data-motion-delay="400">
+                <span class="service__number">06</span>
+                <div class="service__body">
+                    <h3 class="service__name">Digital Consulting</h3>
+                    <p class="service__desc">Practical guidance on choosing and planning technology before investing in development.</p>
+                    <div class="service__price">Quoted per project</div>
+                </div>
+            </div>
+            
+        </div>
+        <div class="services__cta" data-motion="reveal">
+            <p class="services__cta-text">Not sure which service fits your business? Tell us what you need and we'll recommend the most practical option.</p>
+            <a href="#contact" class="section__cta section__cta--outline">Start a Project <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+    </div>
+</section>
+
+<!-- ===== TESTIMONIALS ===== -->
+
+
+<!-- ===== INSIGHTS PREVIEW ===== -->
+
+</div>
+<!-- ===== /CABLE BAND ===== -->
+
+<!-- ===== PROCESS ===== -->
+<section class="section process section--light" id="process">
+    <div class="container">
+        <div class="services__intro" data-motion="reveal">
+            <div class="services__intro-heading">
+                <p class="section__eyebrow">Our Process</p>
+                <h2 class="section__title">How<br><span><img src="/static/images/briefcase-dollar.png" alt="" aria-hidden="true">We Work</span></h2>
+            </div>
+            <div class="services__intro-copy">
+                <p>A clear process so you know exactly what happens after you start a project with RETEC.</p>
+                <a href="#contact" class="section__cta">Start a Project <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+        </div>
+        <div class="process__grid">
+            
+            <div class="process__item" data-motion="reveal" data-motion-delay="0">
+                <span class="process__number">01</span>
+                <h3 class="process__title">Discover</h3>
+                <p class="process__desc">We understand your business, goals, audience, requirements, and the problem you are trying to solve.</p>
+            </div>
+            
+            <div class="process__item" data-motion="reveal" data-motion-delay="80">
+                <span class="process__number">02</span>
+                <h3 class="process__title">Plan</h3>
+                <p class="process__desc">We define the project scope, functionality, technology, and delivery approach.</p>
+            </div>
+            
+            <div class="process__item" data-motion="reveal" data-motion-delay="160">
+                <span class="process__number">03</span>
+                <h3 class="process__title">Build</h3>
+                <p class="process__desc">We design and develop the solution while keeping the project practical, maintainable, and focused on its goals.</p>
+            </div>
+            
+            <div class="process__item" data-motion="reveal" data-motion-delay="240">
+                <span class="process__number">04</span>
+                <h3 class="process__title">Launch</h3>
+                <p class="process__desc">We test, deploy, and prepare the product for real users.</p>
+            </div>
+            
+            <div class="process__item" data-motion="reveal" data-motion-delay="320">
+                <span class="process__number">05</span>
+                <h3 class="process__title">Support</h3>
+                <p class="process__desc">We can continue improving, maintaining, and supporting the solution after launch.</p>
+            </div>
+            
+        </div>
+        <div class="process__cta" data-motion="reveal">
+            <a href="#contact" class="section__cta">Start a Project <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+    </div>
+</section>
+
+<!-- ===== CONTACT ===== -->
+<section class="section contact section--light" id="contact">
+    <div class="container">
+        <div class="contact__inner">
+            <div class="services__intro contact__intro" data-motion="reveal">
+                <div class="services__intro-heading">
+                    <p class="section__eyebrow">Contact</p>
+                    <h2 class="section__title">Have a Project<br><span><img src="/static/images/paper-plane.png" alt="" aria-hidden="true">in Mind?</span></h2>
+                </div>
+                <div class="services__intro-copy">
+                    <p>Tell us what you're trying to build, what problem you're solving, and what success looks like. We'll help you figure out the most practical next step. <a href="/start-a-project" class="contact__questionnaire">Start with the discovery questionnaire <i class="fa-solid fa-arrow-right"></i></a></p>
+                </div>
+            </div>
+            <div class="contact__main" data-motion="reveal">
+            <form class="contact__form" method="POST" action="/contact">
+                <input type="hidden" name="csrf_token" value="ImUzMzUzODdlNGFmMGY0OTU3NzYxNjhmOGJjMzFiMzNmNDE1NjkzOGQi.atTdzg.ikO-hIEd8bvzXYsf93vIojEBp2I">
+                <input type="text" name="website" tabindex="-1" autocomplete="off" class="form__honeypot" aria-hidden="true">
+                <div class="form__row">
+                    <div class="form__group">
+                        <label for="name" class="form__label">Name</label>
+                        <input type="text" id="name" name="name" class="form__input" data-cursor="text" placeholder="Your name" value="" required>
+                        
+                    </div>
+                    <div class="form__group">
+                        <label for="email" class="form__label">Email</label>
+                        <input type="email" id="email" name="email" class="form__input" data-cursor="text" placeholder="you@example.com" value="" required>
+                        
+                    </div>
+                </div>
+                <div class="form__row">
+                    <div class="form__group">
+                        <label for="business" class="form__label">Business / Organization</label>
+                        <input type="text" id="business" name="business" class="form__input" data-cursor="text" placeholder="Optional" value="">
+                        
+                    </div>
+                    <div class="form__group">
+                        <label for="project_type" class="form__label">Project Type</label>
+                        <select id="project_type" name="project_type" class="form__input">
+                            
+                            <option value="" >Select a project type</option>
+                            
+                            <option value="Business Website" >Business Website</option>
+                            
+                            <option value="Web Application" >Web Application</option>
+                            
+                            <option value="Custom Software" >Custom Software</option>
+                            
+                            <option value="API / Backend" >API / Backend</option>
+                            
+                            <option value="Website Maintenance" >Website Maintenance</option>
+                            
+                            <option value="Other" >Other</option>
+                            
+                        </select>
+                        
+                    </div>
+                </div>
+                <div class="form__group">
+                    <label for="budget" class="form__label">Budget</label>
+                    <select id="budget" name="budget" class="form__input">
+                        
+                        <option value="" >Select a budget range</option>
+                        
+                        <option value="Under KSh 15,000" >Under KSh 15,000</option>
+                        
+                        <option value="KSh 15,000-30,000" >KSh 15,000-30,000</option>
+                        
+                        <option value="KSh 30,000-50,000" >KSh 30,000-50,000</option>
+                        
+                        <option value="KSh 50,000+" >KSh 50,000+</option>
+                        
+                        <option value="Not sure yet" >Not sure yet</option>
+                        
+                    </select>
+                    
+                </div>
+                <div class="form__group">
+                    <label for="message" class="form__label">Project Details</label>
+                    <textarea id="message" name="message" class="form__textarea" required rows="4" placeholder="What are you trying to build, and what should success look like?"></textarea>
+                    
+                </div>
+                <button type="submit" class="form__submit">Send Inquiry <i class="fa-solid fa-arrow-right"></i></button>
+            </form>
+                <div class="contact__image">
+                    <img src="/static/images/phone2.jpg" alt="Replace this placeholder with your own image" loading="lazy">
+                </div>
+            </div>
+            <div class="contact__details" data-motion="reveal">
+                <p class="contact__text contact__text--pricing">Basic websites typically start from around KSh 15,000–25,000. Web applications and custom software are quoted based on requirements.</p>
+                <div class="contact__links">
+                    <a href="mailto:contact.retec@gmail.com" class="contact__link">
+                        <i class="fa-solid fa-envelope"></i>
+                        contact.retec@gmail.com
+                    </a>
+                    <a href="https://wa.me/+254114581500" target="_blank" rel="noopener" class="contact__link">
+                        <i class="fa-brands fa-whatsapp"></i>
+                        Chat on WhatsApp
+                    </a>
+                    <a href="https://github.com/echoesrule" target="_blank" rel="noopener" class="contact__link">
+                        <i class="fa-brands fa-github"></i>
+                        GitHub
+                    </a>
+                    <a href="https://www.linkedin.com/in/emmanuel-kiprono-14a800389" target="_blank" rel="noopener" class="contact__link">
+                        <i class="fa-brands fa-linkedin-in"></i>
+                        LinkedIn
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== SUBSCRIBE / NEWSLETTER ===== -->
+<section class="section subscribe section--light" id="subscribe">
+    <div class="container">
+        <div class="subscribe__inner" data-motion="reveal">
+            <div class="services__intro">
+                <div class="services__intro-heading">
+                    <p class="section__eyebrow">Newsletter</p>
+                    <h2 class="section__title">Stay<br><span><img src="/static/images/auto-update.png" alt="" aria-hidden="true">Updated</span></h2>
+                </div>
+                <div class="services__intro-copy">
+                    <p>Get monthly updates on new projects, tools, and tips — no spam, unsubscribe anytime.</p>
+                </div>
+            </div>
+            <form class="subscribe__form" method="POST" action="/subscribe">
+                <input type="hidden" name="csrf_token" value="ImUzMzUzODdlNGFmMGY0OTU3NzYxNjhmOGJjMzFiMzNmNDE1NjkzOGQi.atTdzg.ikO-hIEd8bvzXYsf93vIojEBp2I">
+                <input type="text" name="website" tabindex="-1" autocomplete="off" class="form__honeypot" aria-hidden="true">
+                <label for="subscribe-email" class="subscribe__label">Email</label>
+                <div class="subscribe__fields">
+                    <input type="email" id="subscribe-email" name="email" class="subscribe__input" placeholder="you@example.com" required aria-label="Email address">
+                    <button type="submit" id="subscribe-btn" class="subscribe__btn" disabled>Subscribe <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+                </div>
+                <p id="subscribe-status" class="subscribe__status"></p>
+            </form>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================
+     CUBE CONFIG — cube sketches in the cable band.
+     - count: 2–4 cubes.
+     - positions: uncomment to LOCK exact spots. Each entry is
+       { x: <percent of band width>, y: <percent of band height>,
+         w: <width px, optional>, o: <opacity 0–1, optional> },
+       measured from the top-left, centered on the cube. Generated
+       randomly (capped at 1 decimal) when left as null.
+     - While the dev positioner panel is present, tweaks are also
+       saved to localStorage (key below) and restored on reload.
+       Precedence: CUBE_CONFIG.positions > localStorage > random.
+     ============================================================ -->
+<script>
+(function() {
+    var CUBE_CONFIG = {
+        count: 3,
+        // Server-saved positions (SiteSetting `cube_positions`). null until the
+        // admin tunes + saves; the positioner panel writes here automatically.
+        positions: null
+        // positions: [ { x: 8, y: 22 }, { x: 68, y: 45 }, { x: 36, y: 78 } ],
+    };
+
+    var cubeSrc = "/static/images/cube.png";
+    var band = document.querySelector('.cable-band');
+    if (!band) return;
+
+    var count = Math.max(2, Math.min(4, CUBE_CONFIG.count || 3));
+
+    var STORE_KEY = 'retec_cube_positions_v1';
+    var SAVE_URL = "/admin/api/cube-positions";
+    var CSRF_TOKEN = "ImUzMzUzODdlNGFmMGY0OTU3NzYxNjhmOGJjMzFiMzNmNDE1NjkzOGQi.atTdzg.ikO-hIEd8bvzXYsf93vIojEBp2I";
+
+    // Debounced AJAX save to the server. Only ever wired up when the dev
+    // panel is present (admin + positioner enabled), so it never runs for
+    // visitors. localStorage stays as a same-browser fallback.
+    var saveTimer = null;
+    var savePending = false;
+    var savedStatusEl = null;
+
+    function saveToServer(clear) {
+        var body = { positions: exportPositions() };
+        if (clear) body.clear = true;
+        var payload;
+        try { payload = JSON.stringify(body); } catch (e) { return; }
+        if (typeof fetch !== 'function') return;
+        var opts = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            },
+            body: payload
+        };
+        var api = window.RETEC_API;
+        var req = api && api.fetchJSON
+            ? api.fetchJSON(SAVE_URL, opts)
+            : fetch(SAVE_URL, opts).then(function(res) {
+                return res.json().catch(function() { return {}; });
+            });
+        req.then(function(data) {
+            var st = document.getElementById('cube-dev-status');
+            if (st) st.textContent = data && data.ok
+                ? 'Saved — ' + (data.count != null ? data.count + ' cubes synced to the site' : '')
+                : ((data && data.error) ? 'Server: ' + data.error : 'Server: not saved');
+        }).catch(function() {
+            var st = document.getElementById('cube-dev-status');
+            if (st) st.textContent = 'Offline — kept on this browser';
+        });
+    }
+
+    function scheduleServerSave() {
+        if (saveTimer) window.clearTimeout(saveTimer);
+        if (savePending) { saveTimer = window.setTimeout(scheduleServerSave, 500); return; }
+        savePending = true;
+        saveTimer = window.setTimeout(function() {
+            savePending = false;
+            saveTimer = null;
+            saveToServer(false);
+        }, 500);
+    }
+
+    function randomPos() {
+        return {
+            x: Math.round((4 + Math.random() * 88) * 10) / 10,
+            y: Math.round((4 + Math.random() * 88) * 10) / 10
+        };
+    }
+
+    function normalizePos(p) {
+        return {
+            x: +p.x || 0,
+            y: +p.y || 0,
+            w: (p.w != null && p.w !== '') ? +p.w : null,
+            o: (p.o != null && p.o !== '') ? Math.min(1, Math.max(0, +p.o)) : null
+        };
+    }
+
+    // Position source priority: baked CUBE_CONFIG -> saved (localStorage) -> random.
+    var positions = (CUBE_CONFIG.positions && CUBE_CONFIG.positions.length === count)
+        ? CUBE_CONFIG.positions.map(normalizePos)
+        : null;
+    if (!positions) {
+        var saved = null;
+        try {
+            saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+        } catch (e) { saved = null; }
+        if (saved && Array.isArray(saved) && saved.length === count) {
+            positions = saved.map(normalizePos);
+        }
+    }
+    if (!positions) {
+        positions = [];
+        for (var i = 0; i < count; i++) positions.push(randomPos());
+    }
+
+    // Called after any tweak; writes the current layout to localStorage
+    // (only while the temp dev panel exists in the page).
+    var notifyPersist = function() {};
+
+    function persistDev() {
+        var dev = document.getElementById('cube-dev-ui');
+        if (!dev) return;
+        var exportPos = positions.map(function(p) {
+            var e = { x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10 };
+            if (p.w != null) e.w = p.w;
+            if (p.o != null) e.o = p.o;
+            return e;
+        });
+        try {
+            localStorage.setItem(STORE_KEY, JSON.stringify(exportPos));
+        } catch (e) {}
+        var st = document.getElementById('cube-dev-status');
+        if (st) st.textContent = 'Saved on this browser';
+    }
+
+    var container = band.querySelector('.cable-band__cubes');
+    var cubes = [];
+    for (var j = 0; j < count; j++) {
+        var img = document.createElement('img');
+        img.className = 'cable-band__cube';
+        img.src = cubeSrc;
+        img.alt = '';
+        img.setAttribute('aria-hidden', 'true');
+        img.setAttribute('decoding', 'async');
+        img.setAttribute('loading', 'lazy');
+        img.style.left = positions[j].x + '%';
+        img.style.top = positions[j].y + '%';
+        img.style.transform = 'translate(-50%, -50%)';
+        if (positions[j].w != null) img.style.width = positions[j].w + 'px';
+        if (positions[j].o != null) img.style.opacity = positions[j].o;
+        img.dataset.cubeIndex = j;
+        container.appendChild(img);
+        cubes.push(img);
+    }
+
+    function applySize(idx, w) {
+        w = Math.max(40, Math.min(600, Math.round(w)));
+        positions[idx].w = w;
+        cubes[idx].style.width = w + 'px';
+    }
+
+    function applyOpacity(idx, o) {
+        o = Math.max(0, Math.min(1, +o));
+        positions[idx].o = Math.round(o * 100) / 100;
+        cubes[idx].style.opacity = positions[idx].o;
+    }
+
+    function setPosition(idx, x, y) {
+        positions[idx].x = Math.round(x * 10) / 10;
+        positions[idx].y = Math.round(y * 10) / 10;
+        var el = cubes[idx];
+        el.style.left = positions[idx].x + '%';
+        el.style.top = positions[idx].y + '%';
+    }
+
+    /* ============================================================
+       TEMP: CUBE POSITIONER UI (DEVELOPMENT ONLY)
+       Delete this whole block (below the marker) when you are happy
+       with the positions. The cubes themselves stay; only the UI and
+       its inline styles go away. Use "Copy config" to lock positions
+       into CUBE_CONFIG above.
+       ============================================================ */
+    function initDevUI() {
+        var uiBody = document.getElementById('cube-dev-ui');
+        if (!uiBody) return;
+        var active = 0;
+        var xRange = document.getElementById('cube-dev-x');
+        var yRange = document.getElementById('cube-dev-y');
+        var xNum = document.getElementById('cube-dev-xnum');
+        var yNum = document.getElementById('cube-dev-ynum');
+        var wRange = document.getElementById('cube-dev-w');
+        var wNum = document.getElementById('cube-dev-wnum');
+        var oRange = document.getElementById('cube-dev-o');
+        var oNum = document.getElementById('cube-dev-onum');
+        var sel = document.getElementById('cube-dev-select');
+        var out = document.getElementById('cube-dev-output');
+
+        notifyPersist = persistDev;
+
+        function currentStyle(idx, prop) {
+            return parseFloat(window.getComputedStyle(cubes[idx])[prop]);
+        }
+
+        function refresh() {
+            Array.prototype.forEach.call(sel.children, function(b, i) {
+                b.classList.toggle('cube-dev__sel-active', i === active);
+            });
+            xRange.value = positions[active].x;
+            yRange.value = positions[active].y;
+            xNum.value = positions[active].x;
+            yNum.value = positions[active].y;
+            var wv = positions[active].w != null ? positions[active].w : Math.round(currentStyle(active, 'width'));
+            var ov = positions[active].o != null ? positions[active].o : currentStyle(active, 'opacity');
+            wRange.value = wv;
+            wNum.value = wv;
+            oRange.value = ov;
+            oNum.value = ov;
+        }
+
+        sel.addEventListener('click', function(e) {
+            var btn = e.target.closest('button[data-i]');
+            if (!btn) return;
+            active = +btn.dataset.i;
+            refresh();
+        });
+
+        function bind(range, num, applyFn) {
+            range.addEventListener('input', function() {
+                num.value = +range.value;
+                applyFn(active, +range.value);
+                notifyPersist();
+            });
+            num.addEventListener('input', function() {
+                range.value = +num.value;
+                applyFn(active, +num.value);
+                notifyPersist();
+            });
+        }
+        bind(xRange, xNum, function(i, v) { setPosition(i, v, positions[i].y); });
+        bind(yRange, yNum, function(i, v) { setPosition(i, positions[i].x, v); });
+        bind(wRange, wNum, applySize);
+        bind(oRange, oNum, applyOpacity);
+
+        document.getElementById('cube-dev-random').addEventListener('click', function() {
+            for (var i = 0; i < count; i++) setPosition(i, randomPos().x, randomPos().y);
+            refresh();
+            notifyPersist();
+        });
+
+        document.getElementById('cube-dev-reset').addEventListener('click', function() {
+            try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+            for (var i = 0; i < count; i++) {
+                positions[i].w = null;
+                positions[i].o = null;
+                cubes[i].style.removeProperty('width');
+                cubes[i].style.removeProperty('opacity');
+                setPosition(i, randomPos().x, randomPos().y);
+            }
+            var st = document.getElementById('cube-dev-status');
+            if (st) st.textContent = 'Cleared \u2014 randomises on next reload';
+            refresh();
+        });
+
+        document.getElementById('cube-dev-copy').addEventListener('click', function() {
+            var exportPos = positions.map(function(p) {
+                var e = {
+                    x: Math.round(p.x * 10) / 10,
+                    y: Math.round(p.y * 10) / 10
+                };
+                if (p.w != null) e.w = p.w;
+                if (p.o != null) e.o = p.o;
+                return e;
+            });
+            var txt = 'positions: ' + JSON.stringify(exportPos, null, 2) + ',';
+            out.value = txt;
+            out.select();
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(txt).catch(function() {});
+            } else if (document.execCommand) {
+                try { document.execCommand('copy'); } catch (e) {}
+            }
+        });
+
+        refresh();
+        persistDev();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initDevUI);
+    } else {
+        initDevUI();
+    }
+    /* ============= /TEMP: CUBE POSITIONER UI ============= */
+})();
+</script>
+
+
+
+    </main>
+
+    <footer class="footer footer--dark">
+        <div class="container">
+            <div class="footer__grid">
+                <div class="footer__group">
+                    <h3>Products</h3>
+                    <ul>
+                        <li><a href="/#services">Apps</a></li>
+                        <li><a href="/#services">Workflows</a></li>
+                        <li><a href="/#services">Database</a></li>
+                        <li><a href="/#services">Mobile</a></li>
+                    </ul>
+                </div>
+                <div class="footer__group">
+                    <h3>Solutions</h3>
+                    <ul>
+                        <li><a href="/#services">AI apps</a></li>
+                        <li><a href="/#services">External apps</a></li>
+                        <li><a href="/#services">Integrations</a></li>
+                        <li><a href="/#services">Self-hosting</a></li>
+                    </ul>
+                </div>
+                <div class="footer__group">
+                    <h3>Resources</h3>
+                    <ul>
+                        <li><a href="/blog">Journal</a></li>
+                        <li><a href="/blog">Reports</a></li>
+                    </ul>
+                </div>
+                <div class="footer__group">
+                    <h3>Developers</h3>
+                    <ul>
+                        <li><a href="/cv">Documentation</a></li>
+                        <li><a href="/cv">Changelog</a></li>
+                        <li><a href="/cv">Status</a></li>
+                        <li><a href="/cv">Developer Network</a></li>
+                    </ul>
+                </div>
+                <div class="footer__group">
+                    <h3>Company</h3>
+                    <ul>
+                        <li><a href="/#about">About</a></li>
+                        <li><a href="/#about">Careers</a></li>
+                        <li><a href="/partner">Become a Partner</a></li>
+                    </ul>
+                </div>
+                <div class="footer__aside">
+                    <a href="/#contact" class="footer__btn footer__btn--primary">Start for free</a>
+                    <a href="/#contact" class="footer__btn footer__btn--secondary">Book a demo</a>
+                    <ul class="footer__meta-links">
+                        <li><a href="/privacy">Privacy policy</a></li>
+                        <li><a href="/terms">Terms of use</a></li>
+                        <li><a href="/security">Security</a></li>
+                        <li><a href="/admin">Admin</a></li>
+                    </ul>
+                    <div class="footer__copyright"><span class="footer__dot">●</span> RETEC 2026</div>
+                </div>
+            </div>
+
+            <div class="footer__brand-mark">
+                <svg class="footer__logo-svg" viewBox="0 0 560 140" role="img" aria-label="RETEC logo" xmlns="http://www.w3.org/2000/svg">
+                    <g transform="translate(6, 18)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="0" y1="18" x2="42" y2="18" stroke-width="4"/>
+                        <line x1="21" y1="18" x2="21" y2="62" stroke-width="4"/>
+                        <path d="M21 24 A14 14 0 0 1 21 52" stroke-width="4"/>
+                        <path d="M32 48 L42 60" stroke-width="4"/>
+                    </g>
+                    <text x="280" y="86" text-anchor="middle" fill="currentColor" font-family="'MADE Mirage', 'Georgia', serif" font-size="82" font-weight="300" letter-spacing="8">RETEC</text>
+                </svg>
+            </div>
+        </div>
+    </footer>
+
+    
+    <script src="/static/js/script.js?v=1792334878"></script>
+    <script src="/static/js/flash-messages.js?v=1792334878"></script>
+    <script src="/static/js/analytics.js?v=1792334878"></script>
+</body>
+</html>

@@ -1,6 +1,22 @@
 {
   "rewrites": [
     {
+      "source": "/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/static/(.*)",
+      "destination": "/static/$1"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/robots.txt"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/sitemap.xml"
+    },
+    {
       "source": "/(.*)",
       "destination": "https://retec.onrender.com/$1"
     }

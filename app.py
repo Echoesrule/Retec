@@ -6119,3 +6119,67 @@ with app.app_context():
 
 if __name__ == '__main__':
     app.run(debug=not _is_production, host='0.0.0.0', port=5000)
+
+# ===== PUBLIC API (read-only) for homepage hydration =====
+
+@app.route('/api/home', methods=['GET'])
+@limiter.exempt
+def api_home():
+    """Return homepage data in JSON for client-side hydration."""
+    try:
+        data = get_homepage_data()
+        # Convert SQLAlchemy objects to serializable dicts
+        projects = []
+        for p in data['projects']:
+            projects.append({
+                'title': p.get('title') if isinstance(p, dict) else getattr(p, 'title', ''),
+                'description': p.get('description') if isinstance(p, dict) else getattr(p, 'description', ''),
+                'tags': p.get('tags') if isinstance(p, dict) else (p.tag_list() if hasattr(p, 'tag_list') else []),
+                'github': p.get('github') if isinstance(p, dict) else getattr(p, 'github_url', p.get('github', '#')) if isinstance(p, dict) else getattr(p, 'github_url', '#'),
+                'demo_url': p.get('demo_url') if isinstance(p, dict) else getattr(p, 'demo_url', ''),
+                'image': p.get('image') if isinstance(p, dict) else (get_image_url(getattr(p, 'image_filename', '')) if hasattr(p, 'image_filename') else ''),
+                'id': p.get('id') if isinstance(p, dict) else getattr(p, 'id'),
+                'category': p.get('category') if isinstance(p, dict) else getattr(p, 'category', ''),
+                'status': p.get('status') if isinstance(p, dict) else clean_project_status(getattr(p, 'status', '')),
+                'status_label': p.get('status_label') if isinstance(p, dict) else PROJECT_STATUS_LABELS.get(clean_project_status(getattr(p, 'status', '')), ''),
+            })
+        # get_homepage_data returns list of dicts for projects (see implementation)
+        # but handle both
+        if projects and isinstance(data['projects'], list) and data['projects'] and isinstance(data['projects'][0], dict):
+            projects = data['projects']
+        testimonials = []
+        for t in data['testimonials']:
+            testimonials.append({
+                'name': t.name,
+                'role': t.role,
+                'text': t.text,
+                'avatar_filename': t.avatar_filename,
+            })
+        blog_posts = []
+        for b in data['blog_posts']:
+            blog_posts.append({
+                'id': b.id,
+                'title': b.title,
+                'slug': b.slug,
+                'summary': b.summary,
+                'image_filename': b.image_filename,
+                'hero_image': b.hero_image if hasattr(b, 'hero_image') else '',
+                'published_at': b.published_at.isoformat() if b.published_at else None,
+                'display_date': b.display_date.isoformat() if hasattr(b, 'display_date') and b.display_date else None,
+            })
+        fun_facts = []
+        for ff in FunFact.query.filter_by(active=True).order_by(FunFact.sort_order).all():
+            fun_facts.append({'text': ff.text, 'duration_seconds': ff.duration_seconds})
+        return jsonify({
+            'projects': projects if (isinstance(data['projects'], list) and data['projects'] and isinstance(data['projects'][0], dict)) else projects,
+            'testimonials': testimonials,
+            'blog_posts': blog_posts,
+            'fun_facts': fun_facts,
+            'services': data['services'],
+            'process': data['process'],
+            'project_types': data['project_types'],
+            'budget_options': data['budget_options'],
+        }), 200
+    except Exception as e:
+        app.logger.exception('api_home error')
+        return jsonify({'error': 'internal_error'}), 500

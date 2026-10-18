@@ -6,4 +6,4 @@ Disallow: /subscribe
 Disallow: /unsubscribe
 Disallow: /verify-email
 
-Sitemap: https://retec.onrender.com/sitemap.xml
+Sitemap: https://retec-studio.vercel.app/sitemap.xml

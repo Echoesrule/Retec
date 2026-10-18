@@ -1,42 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://retec.onrender.com/</loc>
+    <loc>https://retec-studio.vercel.app/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://retec.onrender.com/cv</loc>
+    <loc>https://retec-studio.vercel.app/cv</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://retec.onrender.com/blog</loc>
+    <loc>https://retec-studio.vercel.app/blog</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://retec.onrender.com/contact</loc>
+    <loc>https://retec-studio.vercel.app/contact</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://retec.onrender.com/partner</loc>
+    <loc>https://retec-studio.vercel.app/partner</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://retec.onrender.com/privacy</loc>
+    <loc>https://retec-studio.vercel.app/privacy</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://retec.onrender.com/terms</loc>
+    <loc>https://retec-studio.vercel.app/terms</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://retec.onrender.com/security</loc>
+    <loc>https://retec-studio.vercel.app/security</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
