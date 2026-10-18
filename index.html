@@ -932,7 +932,7 @@
             </div>
             <div class="contact__main" data-motion="reveal">
             <form class="contact__form" method="POST" action="/contact">
-                <input type="hidden" name="csrf_token" value="IjgzMmMwYjEwNTNmMjY1NDg4ZmIyNGZjZWEyYjQxZWM2ZDk0ZmNjNTQi.atT_4w.xQXsmDwDnAk4tHM8_X2n_g96pHg">
+                <input type="hidden" name="csrf_token" value="IjAyYzhjM2QwMTllYjhhYWJlZmFhMGEyYjIzZmQ4MDgwNTJkZGUzOWMi.atUKrA.dD0htsoYUriYnwvcwdw5bjFqZE0">
                 <input type="text" name="website" tabindex="-1" autocomplete="off" class="form__honeypot" aria-hidden="true">
                 <div class="form__row">
                     <div class="form__group">
@@ -1043,7 +1043,7 @@
                 </div>
             </div>
             <form class="subscribe__form" method="POST" action="/subscribe">
-                <input type="hidden" name="csrf_token" value="IjgzMmMwYjEwNTNmMjY1NDg4ZmIyNGZjZWEyYjQxZWM2ZDk0ZmNjNTQi.atT_4w.xQXsmDwDnAk4tHM8_X2n_g96pHg">
+                <input type="hidden" name="csrf_token" value="IjAyYzhjM2QwMTllYjhhYWJlZmFhMGEyYjIzZmQ4MDgwNTJkZGUzOWMi.atUKrA.dD0htsoYUriYnwvcwdw5bjFqZE0">
                 <input type="text" name="website" tabindex="-1" autocomplete="off" class="form__honeypot" aria-hidden="true">
                 <label for="subscribe-email" class="subscribe__label">Email</label>
                 <div class="subscribe__fields">
@@ -1074,7 +1074,7 @@
         count: 3,
         // Server-saved positions (SiteSetting `cube_positions`). null until the
         // admin tunes + saves; the positioner panel writes here automatically.
-        positions: [{"x": 8, "y": 22}, {"x": 68, "y": 45}, {"x": 36, "y": 78}]
+        positions: (function(){ try { var p=[{"x": 8, "y": 22}, {"x": 68, "y": 45}, {"x": 36, "y": 78}]; if(p && p.length) return p; } catch(e){} return [{"x":8,"y":22},{"x":68,"y":45},{"x":36,"y":78}]; })()
         // positions: [ { x: 8, y: 22 }, { x: 68, y: 45 }, { x: 36, y: 78 } ],
     };
 
@@ -1086,7 +1086,7 @@
 
     var STORE_KEY = 'retec_cube_positions_v1';
     var SAVE_URL = "/admin/api/cube-positions";
-    var CSRF_TOKEN = "IjgzMmMwYjEwNTNmMjY1NDg4ZmIyNGZjZWEyYjQxZWM2ZDk0ZmNjNTQi.atT_4w.xQXsmDwDnAk4tHM8_X2n_g96pHg";
+    var CSRF_TOKEN = "IjAyYzhjM2QwMTllYjhhYWJlZmFhMGEyYjIzZmQ4MDgwNTJkZGUzOWMi.atUKrA.dD0htsoYUriYnwvcwdw5bjFqZE0";
 
     // Debounced AJAX save to the server. Only ever wired up when the dev
     // panel is present (admin + positioner enabled), so it never runs for
