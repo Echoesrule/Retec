@@ -111,7 +111,7 @@
                                 {%- endif %}
                             </div>
                         </td>
-                        <td data-label="Category">{{ s.category or '—' }}</td>
+                        <td data-label="Category">{{ s.category or '-' }}</td>
                         <td data-label="Health"><span class="jr-health jr-health--{{ s.health }}">{{ s.health }}</span></td>
                         <td data-label="Last fetch">
                             {%- if s.last_fetched_at %}
@@ -182,7 +182,7 @@
                 <tbody>
                 {%- for r in recent_runs %}
                     <tr class="jr-row{% if not r.ok %} jr-row--inactive{% endif %}">
-                        <td data-label="When">{{ r.started_at.strftime('%Y-%m-%d %H:%M') if r.started_at else '—' }}</td>
+                        <td data-label="When">{{ r.started_at.strftime('%Y-%m-%d %H:%M') if r.started_at else '-' }}</td>
                         <td data-label="Source">{{ r.source.name if r.source else 'All sources' }}</td>
                         <td data-label="Trigger">{{ r.trigger }}</td>
                         <td data-label="Seen">{{ r.entries_seen }}</td>

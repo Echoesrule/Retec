@@ -107,12 +107,12 @@
                             </a>
                             {%- else %}&mdash;{% endif %}
                         </td>
-                        <td data-label="Category">{{ a.category or '—' }}</td>
+                        <td data-label="Category">{{ a.category or '-' }}</td>
                         <td data-label="Original">
-                            {{ a.source_published_at.strftime('%Y-%m-%d') if a.source_published_at else '—' }}
+                            {{ a.source_published_at.strftime('%Y-%m-%d') if a.source_published_at else '-' }}
                         </td>
                         <td data-label="Fetched">
-                            {{ a.fetched_at.strftime('%Y-%m-%d') if a.fetched_at else '—' }}
+                            {{ a.fetched_at.strftime('%Y-%m-%d') if a.fetched_at else '-' }}
                         </td>
                         <td data-label="Status">
                             <span class="jr-status jr-status--{{ a.status }}">{{ a.status_label }}</span>

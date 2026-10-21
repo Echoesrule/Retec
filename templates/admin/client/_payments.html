@@ -23,10 +23,10 @@
                 </td>
                 <td class="admin-card__label" data-label="Type">{{ p.kind_label }}{% if not p.counts_towards_fee %} <span class="jr-tag">not fee</span>{% endif %}</td>
                 <td class="admin-card__label" data-label="Amount">{{ client.currency or 'KSh' }} {{ p.amount_value|money }}</td>
-                <td class="admin-card__label" data-label="Due">{{ p.due_date.strftime('%d %b %Y') if p.due_date else '—' }}</td>
-                <td class="admin-card__label" data-label="Paid">{{ p.paid_date.strftime('%d %b %Y') if p.paid_date else '—' }}</td>
+                <td class="admin-card__label" data-label="Due">{{ p.due_date.strftime('%d %b %Y') if p.due_date else '-' }}</td>
+                <td class="admin-card__label" data-label="Paid">{{ p.paid_date.strftime('%d %b %Y') if p.paid_date else '-' }}</td>
                 <td class="admin-card__label" data-label="Status"><span class="jr-status jr-status--{{ 'ok' if p.status == 'paid' else p.status }}">{{ p.status_label }}</span></td>
-                <td class="admin-card__label" data-label="Ref">{{ p.reference or '—' }}</td>
+                <td class="admin-card__label" data-label="Ref">{{ p.reference or '-' }}</td>
                 <td class="admin-card__label" data-label="">
                     <div class="admin-actions">
                         <form method="POST" action="{{ url_for('admin_client_payment_toggle', client_id=client.id, payment_id=p.id) }}">

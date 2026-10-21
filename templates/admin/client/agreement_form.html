@@ -1,10 +1,10 @@
 {% extends "admin/base.html" %}
-{% block title %}{{ 'Edit' if agreement else 'New' }} Agreement — {{ client.name }}{% endblock %}
+{% block title %}{{ 'Edit' if agreement else 'New' }} Agreement - {{ client.name }}{% endblock %}
 {% set active = "clients" %}
 {% block content %}
 <div class="admin-page">
     <a class="cs-back" href="{{ url_for('admin_client_detail', id=client.id, tab='documents') }}">
-        <i class="fa-solid fa-arrow-left"></i> {{ client.name }} — documents
+        <i class="fa-solid fa-arrow-left"></i> {{ client.name }} - documents
     </a>
     <div class="admin-page__head">
         <h1 class="admin-page__title">{{ 'Edit' if agreement else 'New' }} Agreement{% if agreement %} <span class="cd-ref">{{ agreement.reference }}</span>{% endif %}</h1>

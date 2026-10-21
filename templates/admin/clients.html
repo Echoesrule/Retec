@@ -60,7 +60,7 @@
                     <td class="admin-card__label" data-label="Status">
                         <span class="jr-status jr-status--{{ c.status }}">{{ c.status_label }}</span>
                     </td>
-                    <td class="admin-card__label admin-truncate" data-label="Project">{{ c.project_title or '—' }}</td>
+                    <td class="admin-card__label admin-truncate" data-label="Project">{{ c.project_title or '-' }}</td>
                     <td class="admin-card__label" data-label="Fee">{{ c.fee_amount|money }}</td>
                     <td class="admin-card__label" data-label="Paid">{{ c.fee_paid|money }}</td>
                     <td class="admin-card__label" data-label="Source">{{ c.source_label }}</td>

@@ -1,10 +1,10 @@
 {% extends "admin/base.html" %}
-{% block title %}{{ 'Edit' if proposal else 'New' }} Proposal — {{ client.name }}{% endblock %}
+{% block title %}{{ 'Edit' if proposal else 'New' }} Proposal - {{ client.name }}{% endblock %}
 {% set active = "clients" %}
 {% block content %}
 <div class="admin-page">
     <a class="cs-back" href="{{ url_for('admin_client_detail', id=client.id, tab='documents') }}">
-        <i class="fa-solid fa-arrow-left"></i> {{ client.name }} — documents
+        <i class="fa-solid fa-arrow-left"></i> {{ client.name }} - documents
     </a>
     <div class="admin-page__head">
         <h1 class="admin-page__title">{{ 'Edit' if proposal else 'New' }} Proposal{% if proposal %} <span class="cd-ref">{{ proposal.reference }}</span>{% endif %}</h1>
@@ -70,7 +70,7 @@
                        value="{{ proposal.timeline if proposal else '' }}">
             </div>
             <div class="admin-form__group admin-form__group--full">
-                <label for="p_milestones">Milestones <span class="cf-hint">one per line: milestone — date or week</span></label>
+                <label for="p_milestones">Milestones <span class="cf-hint">one per line: milestone - date or week</span></label>
                 <textarea id="p_milestones" name="milestones" rows="4" maxlength="5000">{{ proposal.milestones if proposal else '' }}</textarea>
             </div>
             <div class="admin-form__group">

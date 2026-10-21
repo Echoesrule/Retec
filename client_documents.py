@@ -20,7 +20,7 @@ RETEC_INFO = {
     'tagline': 'Biz Yako. Tech Yetu.',
     'email': 'contact.retec@gmail.com',
     'phone': '+254 114 581500',
-    'whatsapp': 'https://wa.me/+254114581500',
+    'whatsapp': 'https://wa.me/254785479867',
     'website': 'https://retec.onrender.com',
 }
 

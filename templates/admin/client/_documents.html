@@ -17,7 +17,7 @@
                 <td class="admin-card__primary" data-label="Ref">
                     <a href="{{ url_for('admin_client_proposal_view', client_id=client.id, proposal_id=p.id) }}"><strong>{{ p.reference or 'Draft' }}</strong></a>
                 </td>
-                <td class="admin-card__label admin-truncate" data-label="Project">{{ p.title or '—' }}</td>
+                <td class="admin-card__label admin-truncate" data-label="Project">{{ p.title or '-' }}</td>
                 <td class="admin-card__label" data-label="Status"><span class="jr-status jr-status--{{ p.status }}">{{ p.status_label }}</span></td>
                 <td class="admin-card__label" data-label="Investment">{{ client.currency or 'KSh' }} {{ p.fee_amount|money }}</td>
                 <td class="admin-card__label" data-label="Created">{{ p.created_at|localtime|format_datetime('%d %b %Y') }}</td>
@@ -75,10 +75,10 @@
                 <td class="admin-card__label" data-label="Status"><span class="jr-status jr-status--{{ a.status }}">{{ a.status_label }}</span></td>
                 <td class="admin-card__label" data-label="Fee">{{ client.currency or 'KSh' }} {{ a.fee_amount|money }}</td>
                 <td class="admin-card__label" data-label="Deposit">
-                    {{ a.deposit_percent|int if a.deposit_percent is not none else '—' }}%
+                    {{ a.deposit_percent|int if a.deposit_percent is not none else '-' }}%
                     {% if a.deposit_amount is not none %}<span style="color:#888">({{ client.currency or 'KSh' }} {{ a.deposit_amount|money }})</span>{% endif %}
                 </td>
-                <td class="admin-card__label" data-label="Signed">{{ a.signed_at|localtime|format_datetime('%d %b %Y') if a.signed_at else '—' }}</td>
+                <td class="admin-card__label" data-label="Signed">{{ a.signed_at|localtime|format_datetime('%d %b %Y') if a.signed_at else '-' }}</td>
                 <td class="admin-card__label" data-label="">
                     <div class="admin-actions">
                         <a class="admin-btn admin-btn--sm" href="{{ url_for('admin_client_agreement_view', client_id=client.id, agreement_id=a.id) }}">View</a>

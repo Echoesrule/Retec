@@ -1,10 +1,10 @@
 {% extends "admin/base.html" %}
-{% block title %}{{ proposal.reference or 'Proposal' }} — {{ client.name }}{% endblock %}
+{% block title %}{{ proposal.reference or 'Proposal' }} - {{ client.name }}{% endblock %}
 {% set active = "clients" %}
 {% block content %}
 <div class="admin-page">
     <a class="cs-back" href="{{ url_for('admin_client_detail', id=client.id, tab='documents') }}">
-        <i class="fa-solid fa-arrow-left"></i> {{ client.name }} — documents
+        <i class="fa-solid fa-arrow-left"></i> {{ client.name }} - documents
     </a>
 
     <div class="admin-page__head">
@@ -145,7 +145,7 @@
                     <tr>
                         <td>{{ row.label }}</td>
                         <td>{{ client.currency or 'KSh' }} {{ row.amount|money }}</td>
-                        <td>{{ row.timing or '—' }}</td>
+                        <td>{{ row.timing or '-' }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

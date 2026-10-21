@@ -157,7 +157,7 @@ body {
   </header>
   %(sections)s
   <p class="footnote">Prefer to talk first? Email contact.retec@gmail.com or message
-  us on WhatsApp at +254 114 581 500. Thank you — we will be in touch shortly.</p>
+  us on WhatsApp at +254 785 479 867. Thank you — we will be in touch shortly.</p>
 </body></html>""" % {
         'fonts': fonts,
         'logo': _logo_svg(),

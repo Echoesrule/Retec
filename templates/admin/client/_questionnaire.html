@@ -26,9 +26,9 @@
             {% elif field.type in ('select', 'radio') %}
                 {% if value %}
                     {% for v, l in field.options if v == value %}{{ l }}{% else %}{{ value }}{% endfor %}
-                {% else %}—{% endif %}
+                {% else %}-{% endif %}
             {% else %}
-                {% if value %}{{ value }}{% else %}—{% endif %}
+                {% if value %}{{ value }}{% else %}-{% endif %}
             {% endif %}
         </dd>
         {% endfor %}

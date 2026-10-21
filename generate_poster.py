@@ -57,7 +57,7 @@ draw.rectangle([100, 700, W - 100, 702], fill=BLACK)
 wa_x = 140
 wa_y = 1050
 draw.text((wa_x, wa_y - 30), "Let's Connect", fill=BLACK, font=f_body, anchor="mm")
-draw.text((wa_x, wa_y + 20), "+254 114 581 500", fill=BLACK, font=f_wa, anchor="mm")
+draw.text((wa_x, wa_y + 20), "+254 785 479 867", fill=BLACK, font=f_wa, anchor="mm")
 draw.text((wa_x, wa_y + 65), "WhatsApp", fill=GRAY, font=f_tag, anchor="mm")
 
 # Vertical separator

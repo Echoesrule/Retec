@@ -16,7 +16,7 @@
         {% set ns = namespace(errors=[], first='') %}
         {% for section in sections %}{% for field in section.fields %}
         {% if field.type != 'checkboxes' and form[field.name].errors %}
-        {% set ns.errors = ns.errors + [field.label ~ ' — ' ~ form[field.name].errors[0]] %}
+        {% set ns.errors = ns.errors + [field.label ~ ' - ' ~ form[field.name].errors[0]] %}
         {% if not ns.first %}{% set ns.first = section.key %}{% endif %}
         {% endif %}
         {% endfor %}{% endfor %}
@@ -141,7 +141,7 @@
                     Submit Questionnaire <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
                 </button>
             </div>
-            <p class="qs-submit__note">Prefer to talk first? Email <a href="mailto:contact.retec@gmail.com">contact.retec@gmail.com</a> or message us on <a href="https://wa.me/+254114581500" target="_blank" rel="noopener">WhatsApp</a>.</p>
+            <p class="qs-submit__note">Prefer to talk first? Email <a href="mailto:contact.retec@gmail.com">contact.retec@gmail.com</a> or message us on <a href="https://wa.me/254785479867" target="_blank" rel="noopener">WhatsApp</a>.</p>
         </form>
 
         <noscript>

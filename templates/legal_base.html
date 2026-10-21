@@ -6,7 +6,7 @@
   blocks only:
 
       {% block legal_page %}   the full page descriptor from legal.py
-      {% block page_scripts %} usually not needed — legal.js is loaded here
+      {% block page_scripts %} usually not needed - legal.js is loaded here
 
   Everything below the hero is deliberately dumb: it renders the section list,
   and static/js/legal.js watches the scroll position. No page-specific markup.
@@ -14,7 +14,7 @@
   Motion: the hero and each section opt into the existing reveal system with
   data-motion. Those reveals are the same masked-line and small-travel
   animations the rest of the site uses, and motion.css keeps them inert when
-  prefers-reduced-motion is set — which is also the only case where the
+  prefers-reduced-motion is set - which is also the only case where the
   scroll-spy is not needed at all.
 #}
 {% extends "base.html" %}
@@ -32,7 +32,6 @@
     <section class="legal__hero" aria-labelledby="legal-title">
         <div class="container">
             <div class="legal__hero-inner">
-                <p class="section__eyebrow legal__eyebrow" data-motion="reveal">{{ legal_page.eyebrow }}</p>
                 <h1 class="legal__title" id="legal-title" data-motion="reveal">{{ legal_page.title }}</h1>
                 <p class="legal__lede" data-motion="reveal" data-motion-delay="80">{{ legal_page.lede }}</p>
 
