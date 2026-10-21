@@ -282,11 +282,16 @@
 
                 var timeline = gsap.timeline({ paused: true });
                 var cursor = 0;
+                var addedTweens = 0;
                 units.forEach(function (unit) {
                     var at = cursor;
                     cursor += gapAfter(unit, scale);
-                    timeline.add(tweenFor(gsap, motion, unit, scale), at);
+                    var tween = tweenFor(gsap, motion, unit, scale);
+                    if (!tween) return;
+                    timeline.add(tween, at);
+                    addedTweens += 1;
                 });
+                if (!addedTweens) return;
                 timeline.eventCallback('onComplete', function () { markRevealed(root); });
 
                 ScrollTrigger.create({

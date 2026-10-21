@@ -50,7 +50,10 @@ def clean_env_int(value, default, low=None, high=None):
 import db_guard
 
 app = Flask(__name__)
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
+# Vercel proxies public requests to Render. Trust its forwarded host as well as
+# the client IP and scheme so HTTPS CSRF referer validation compares against
+# the browser-facing hostname (for example, retec-studio.vercel.app).
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 _is_production = (
     os.environ.get('APP_ENV', '').lower() == 'production'
     or os.environ.get('FLASK_ENV', '').lower() == 'production'
