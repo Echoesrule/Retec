@@ -32,7 +32,7 @@
     },
     {
       "src": "/",
-      "dest": "/index.html"
+      "dest": "https://retec.onrender.com/"
     },
     {
       "src": "/(.*)",
